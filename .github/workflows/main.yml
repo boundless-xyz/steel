@@ -312,6 +312,3 @@ jobs:
       - run: cargo +nightly-2025-04-03 doc -p risc0-steel --all-features --no-deps
         env:
           RUSTDOCFLAGS: "--cfg docsrs -D warnings"
-      - run: cargo +nightly-2025-04-03 doc -p risc0-build-ethereum --all-features --no-deps
-        env:
-          RUSTDOCFLAGS: "--cfg docsrs -D warnings"
