@@ -34,7 +34,7 @@ jobs:
         include:
           - os: Linux
             feature: cuda
-            device: nvidia_rtx_a5000
+            device: g6.4xlarge
         # Exclude Bonsai proving on non-release branches.
         exclude:
           - release: false
