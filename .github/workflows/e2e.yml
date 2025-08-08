@@ -34,7 +34,7 @@ jobs:
         include:
           - os: Linux
             feature: cuda
-            device: g6.4xlarge
+            device: gpu
         # Exclude Bonsai proving on non-release branches.
         exclude:
           - release: false
