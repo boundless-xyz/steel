@@ -1,0 +1,12 @@
+[profile.default]
+src = "src"
+out = "out"
+test = "test"
+libs = ["../lib"]
+
+[fmt]
+line_length = 120
+tab_width = 4
+quote_style = "double"
+
+# See more config options https://book.getfoundry.sh/static/config.default.toml
