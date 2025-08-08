@@ -34,11 +34,11 @@ jobs:
 
       - uses: risc0/risc0/.github/actions/rustup@main
         with:
-          toolchain: nightly-2025-02-20
+          toolchain: nightly-2025-05-15
 
       - name: Build documentation
         run: |
-          if ! cargo +nightly-2025-02-20 doc -p risc0-steel --all-features --no-deps; then
+          if ! cargo +nightly-2025-05-15 doc -p risc0-steel --all-features --no-deps; then
             echo "Documentation build failed"
             exit 1
           fi
