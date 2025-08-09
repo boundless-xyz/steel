@@ -10,6 +10,6 @@ lto = true
 risc0-zkvm = { version = "2.3" }
 risc0-build = { version = "2.3" }
 risc0-op-steel = { path = "../../crates/op-steel" }
-risc0-ethereum-contracts = { path = "../../contracts" }
+risc0-ethereum-contracts = { version = "2.2" }
 examples-common = { path = "common" }
 alloy = "1.0"

@@ -8,13 +8,11 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
-# Intra-workspace dependencies
-risc0-build-ethereum = { path = "../../build" }
-risc0-ethereum-contracts = { path = "../../contracts" }
-
-# risc0 monorepo dependencies.
+# risc0 dependencies
 risc0-build = { version = "2.3", features = ["docker"] }
 risc0-zkvm = { version = "2.3" }
+risc0-build-ethereum = { version = "2.2" }
+risc0-ethereum-contracts = { version = "2.2" }
 
 alloy-primitives = { version = "1.0", default-features = false, features = ["rlp", "serde", "std"] }
 alloy-sol-types = { version = "1.0" }
