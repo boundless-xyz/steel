@@ -61,8 +61,6 @@ jobs:
         # Set the secret as an env so that it can be used in an if statement.
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_CI_USER }}
-      - name: setup sccache + s3
-        uses: boundless-xyz/boundless/.github/actions/sccache@176475f2791452793ef633b5dbd336b1ed183488
       - if: matrix.feature == 'cuda'
         uses: risc0/risc0/.github/actions/cuda@352dea62857ba57331053cd0986a12c1a4708732
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
@@ -120,4 +118,3 @@ jobs:
       - name: Stop local Ethereum testnet
         if: always()
         run: kurtosis enclave rm -f local-eth-testnet
-      - run: sccache --show-stats
