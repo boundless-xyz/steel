@@ -91,8 +91,8 @@ interface IDisputeGame {
 }
 
 // https://github.com/ethereum-optimism/optimism/blob/v1.9.3/packages/contracts-bedrock/src/dispute/lib/Types.sol
-    enum GameStatus {
-        IN_PROGRESS,
-        CHALLENGER_WINS,
-        DEFENDER_WINS
-    }
+enum GameStatus {
+    IN_PROGRESS,
+    CHALLENGER_WINS,
+    DEFENDER_WINS
+}
