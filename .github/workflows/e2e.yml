@@ -61,12 +61,11 @@ jobs:
         # Set the secret as an env so that it can be used in an if statement.
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_CI_USER }}
+      - name: setup sccache + s3
+        uses: boundless-xyz/boundless/.github/actions/sccache@176475f2791452793ef633b5dbd336b1ed183488
       - if: matrix.feature == 'cuda'
-        uses: risc0/risc0/.github/actions/cuda@fbe1d0bb75c21fe36cefd87bae25f424b711b291
-      - uses: risc0/risc0/.github/actions/rustup@fbe1d0bb75c21fe36cefd87bae25f424b711b291
-      - uses: risc0/risc0/.github/actions/sccache@fbe1d0bb75c21fe36cefd87bae25f424b711b291
-        with:
-          key: ${{ matrix.os }}-${{ matrix.feature }}
+        uses: risc0/risc0/.github/actions/cuda@352dea62857ba57331053cd0986a12c1a4708732
+      - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
