@@ -3,7 +3,6 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-version = "2.3.0"
 edition = "2021"
 license = "Apache-2.0"
 homepage = "https://beboundless.xyz/"
