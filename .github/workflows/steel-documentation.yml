@@ -17,10 +17,6 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 
-env:
-  RISC0_TOOLCHAIN_VERSION: 1.88.0
-  RISC0_MONOREPO_REF: "main"
-
 jobs:
   build:
     runs-on: ubuntu-latest
