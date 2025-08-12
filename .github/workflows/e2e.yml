@@ -18,29 +18,25 @@ permissions:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   RISC0_TOOLCHAIN_VERSION: 1.88.0
+  RISC0_CRATE_VERSION: "2.3.0"
   FOUNDRY_VERSION: v1.0.0
-  RISC0_MONOREPO_REF: "main"
 
 jobs:
   e2e-tests:
-    runs-on: [ self-hosted, prod, "${{ matrix.os }}", "${{ matrix.device }}" ]
+    runs-on: [ self-hosted, Linux, X64, prod, cuda, g6.4xlarge ]
     strategy:
       fail-fast: false
       matrix:
         prover: [ bonsai, local ]
         release:
           - ${{ startsWith(github.base_ref, 'release-') || startsWith(github.base_ref, 'refs/heads/release-') }}
-        # Run on Linux with GPU for faster local proving.
-        include:
-          - os: Linux
-            feature: cuda
-            device: nvidia_rtx_a5000
         # Exclude Bonsai proving on non-release branches.
         exclude:
           - release: false
             prover: bonsai
     env:
       RUST_BACKTRACE: full
+      NVCC_APPEND_FLAGS: -arch=sm_89
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
       - run: "git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :"
@@ -61,21 +57,16 @@ jobs:
         # Set the secret as an env so that it can be used in an if statement.
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_CI_USER }}
-      - if: matrix.feature == 'cuda'
-        uses: risc0/risc0/.github/actions/cuda@fbe1d0bb75c21fe36cefd87bae25f424b711b291
-      - uses: risc0/risc0/.github/actions/rustup@fbe1d0bb75c21fe36cefd87bae25f424b711b291
-      - uses: risc0/risc0/.github/actions/sccache@fbe1d0bb75c21fe36cefd87bae25f424b711b291
+      - uses: risc0/risc0/.github/actions/cuda@352dea62857ba57331053cd0986a12c1a4708732
+      - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
+      - uses: ./.github/actions/cargo-risczero-install
         with:
-          key: ${{ matrix.os }}-${{ matrix.feature }}
+          risczero-version: ${{ env.RISC0_CRATE_VERSION }}
+          toolchain-version: ${{ env.RISC0_TOOLCHAIN_VERSION }}
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: ${{ env.FOUNDRY_VERSION }}
-      - uses: ./.github/actions/cargo-risczero-install
-        with:
-          ref: ${{ env.RISC0_MONOREPO_REF }}
-          toolchain-version: ${{ env.RISC0_TOOLCHAIN_VERSION }}
-          features: ${{ matrix.feature }}
       - name: Install Kurtosis
         run: |
           echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | sudo tee /etc/apt/sources.list.d/kurtosis.list
@@ -121,4 +112,3 @@ jobs:
       - name: Stop local Ethereum testnet
         if: always()
         run: kurtosis enclave rm -f local-eth-testnet
-      - run: sccache --show-stats
