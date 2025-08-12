@@ -9,7 +9,6 @@ methods = ["guest"]
 [build-dependencies]
 risc0-build = { workspace = true, features = ["unstable"] }
 risc0-build-ethereum = { workspace = true }
-risc0-zkp = { workspace = true }
 
 [dev-dependencies]
 alloy-primitives = { workspace = true }
