@@ -21,7 +21,7 @@ import "forge-std/console.sol";
 import {Receipt as RiscZeroReceipt} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroMockVerifier} from "risc0/test/RiscZeroMockVerifier.sol";
 import {Counter} from "../src/Counter.sol";
-import {Steel, Beacon, Encoding} from "risc0/steel/Steel.sol";
+import {Steel, Beacon, Encoding} from "steel/Steel.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 
 contract ERC20FixedSupply is ERC20 {

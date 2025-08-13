@@ -17,7 +17,7 @@
 pragma solidity ^0.8.20;
 
 import {IRiscZeroVerifier} from "risc0/IRiscZeroVerifier.sol";
-import {Steel} from "risc0/steel/Steel.sol";
+import {Steel} from "steel/Steel.sol";
 import {ICounter} from "./ICounter.sol";
 import {ImageID} from "./ImageID.sol"; // auto-generated contract after running `cargo build`.
 
