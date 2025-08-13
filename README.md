@@ -39,8 +39,8 @@ Steel Documentation can be found on the [Boundless Docs]. `risc0-steel` also has
 
 The RISC Zero [dev docs][dev-docs] are a great place to start to understand the zkVM in detail. If you have any questions, and/or just want to hang out with other builders, please join the [RISC Zero Discord][risczero-discord].
 
-[Steel examples]: examples
-[ERC20 Counter]: examples/erc20-counter
+[Steel examples]: examples/
+[ERC20 Counter]: examples/erc20-counter/
 [create-steel-app]: crates/steel/docs/create-steel-app
 [crate documentation]: https://boundless-xyz.github.io/steel/risc0_steel/
 [Introducing Steel 1.0]: https://risczero.com/blog/introducing-steel-1.0]
