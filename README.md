@@ -19,7 +19,7 @@ The recommended place is to start is [Steel examples], specifically the [ERC20 C
 The [create-steel-app] script will allow you to set up the erc20-counter example locally in one command:
 
 ```sh
-sh <(curl -fsSL https://raw.githubusercontent.com/risc0/risc0-ethereum/refs/heads/main/crates/steel/docs/create-steel-app/create-steel-app)
+sh <(curl -fsSL https://raw.githubusercontent.com/boundless-xyz/steel/refs/heads/main/crates/steel/docs/create-steel-app/create-steel-app)
 ```
 
 This example acts as your skeleton project structure for further development. Once the script is finished, you can run through a test workflow with either local proving or Bonsai proving. The documentation below uses the ERC20-counter example as a guide to explain Steel in detail.
@@ -39,10 +39,10 @@ Steel Documentation can be found on the [Boundless Docs]. `risc0-steel` also has
 
 The RISC Zero [dev docs][dev-docs] are a great place to start to understand the zkVM in detail. If you have any questions, and/or just want to hang out with other builders, please join the [RISC Zero Discord][risczero-discord].
 
-[Steel examples]: https://github.com/risc0/risc0-ethereum/blob/main/examples
-[ERC20 Counter]: https://github.com/risc0/risc0-ethereum/blob/main/examples/erc20-counter
-[create-steel-app]: https://github.com/risc0/risc0-ethereum/blob/main/crates/steel/docs/create-steel-app
-[crate documentation]: https://risc0.github.io/risc0-ethereum/risc0_steel/
+[Steel examples]: examples/
+[ERC20 Counter]: examples/erc20-counter/
+[create-steel-app]: crates/steel/docs/create-steel-app
+[crate documentation]: https://boundless-xyz.github.io/steel/risc0_steel/
 [Introducing Steel 1.0]: https://risczero.com/blog/introducing-steel-1.0]
 [Boundless Docs]: https://docs.beboundless.xyz/developers/steel/what-is-steel
 [What is Steel?]: https://docs.beboundless.xyz/developers/steel/what-is-steel

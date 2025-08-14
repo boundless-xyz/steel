@@ -19,8 +19,8 @@ pragma solidity ^0.8.9;
 import {ControlID, RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
 import {RiscZeroVerifierRouter, IRiscZeroVerifier} from "risc0/RiscZeroVerifierRouter.sol";
 import {RiscZeroMockVerifier} from "risc0/test/RiscZeroMockVerifier.sol";
-import {Steel} from "risc0/steel/Steel.sol";
-import {OpCommitmentValidator} from "risc0/steel/OpSteel.sol";
+import {Steel} from "steel/Steel.sol";
+import {OpCommitmentValidator} from "steel/OpSteel.sol";
 
 contract Verifier is OpCommitmentValidator {
     address internal constant MAINNET_OPTIMISM_PORTAL_PROXY = address(0xbEb5Fc579115071764c7423A4f12eDde41f106Ed);

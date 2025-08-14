@@ -30,9 +30,6 @@ thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
 url = { workspace = true, optional = true }
 
-[dev-dependencies]
-risc0-op-steel = { workspace = true, features = ["host"] }
-
 [features]
 default = []
 host = ["dep:alloy", "dep:tokio", "dep:url", "risc0-steel/host", "alloy-primitives/rand"]
