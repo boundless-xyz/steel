@@ -18,10 +18,9 @@
 
 /// Re-export of [alloy], provided to ensure that the correct version of the types used in the
 /// public API are available in case multiple versions of [alloy] are in use.
-///
-/// Because [alloy] is a v0.x crate, it is not covered under the semver policy of this crate.
 #[cfg(feature = "host")]
 pub use alloy;
+pub use revm;
 
 use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use alloy_evm::{Database, Evm, EvmError, IntoTxEnv};
