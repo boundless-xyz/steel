@@ -10,8 +10,8 @@ repository = "https://github.com/boundless-xyz/steel/"
 
 [workspace.dependencies]
 # Intra-workspace dependencies
-risc0-op-steel = { version = "0.7.0-alpha.1", default-features = false, path = "crates/op-steel" }
-risc0-steel = { version = "2.3.0-alpha.1", default-features = false, path = "crates/steel" }
+risc0-op-steel = { path = "crates/op-steel", default-features = false }
+risc0-steel = { path = "crates/steel", default-features = false }
 
 # Alloy guest dependencies
 alloy-consensus = { version = "1.0" }
