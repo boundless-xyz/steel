@@ -2,7 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [2.3.0](https://github.com/boundless-xyz/steel/releases/tag/v2.3.0)
+
+The crates `steel` and `op-steel` have been moved to the new repository [github.com/boundless-xyz/steel](https://github.com/boundless-xyz/steel).
+
+### ⚙️ Miscellaneous
+
+- Updated dependencies: `alloy-evm` (to 0.18), `revm` (to 28.0).
+- Disable default features for `alloy`.
 
 ## [2.2.0](https://github.com/risc0/risc0-ethereum/releases/tag/v2.2.0)
 
