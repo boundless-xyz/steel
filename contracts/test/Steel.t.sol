@@ -18,7 +18,7 @@ pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 
-import {Steel, Beacon, Encoding} from "../src/Steel.sol";
+import {Steel, Beacon, Encoding, ChainSpec} from "../src/Steel.sol";
 
 contract SteelVerifier {
     function validateCommitment(Steel.Commitment memory commitment) external view returns (bool) {
@@ -35,11 +35,14 @@ contract SteelTest is Test {
 
     function createCommitment(uint240 claimID, uint16 version, bytes32 digest)
         internal
-        pure
+        view
         returns (Steel.Commitment memory)
     {
-        return
-            Steel.Commitment({id: Encoding.encodeVersionedID(claimID, version), digest: digest, configID: bytes32(0)});
+        return Steel.Commitment({
+            id: Encoding.encodeVersionedID(claimID, version),
+            digest: digest,
+            configID: ChainSpec.configID()
+        });
     }
 
     function test_ValidateCommitment_V0_Block_Success() public {
@@ -133,7 +136,7 @@ contract SteelTest is Test {
             3, // Any version > 2 not explicitly handled
             keccak256(abi.encodePacked("any_digest_v3"))
         );
-        vm.expectRevert(Steel.InvalidCommitmentVersion.selector);
+        vm.expectRevert(abi.encodeWithSelector(Steel.InvalidCommitmentVersion.selector, 3));
         verifier.validateCommitment(c);
     }
 }
