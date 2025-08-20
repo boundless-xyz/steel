@@ -65,6 +65,20 @@ contract SteelTest is Test {
         assertFalse(verifier.validateCommitment(c), "V0 wrong block hash should be invalid");
     }
 
+    function test_ValidateCommitment_WrongConfigID() public {
+        vm.roll(block.number + 10);
+        uint256 targetBlockNumber = block.number - 5;
+        bytes32 targetBlockHash = blockhash(targetBlockNumber);
+        assertTrue(targetBlockHash != bytes32(0), "Test setup: blockhash(target) is zero");
+
+        Steel.Commitment memory c = createCommitment(uint240(targetBlockNumber), 0, targetBlockHash);
+        c.configID = ChainSpec.configID(1); // Use the mainnet config ID, while we are using Anvi.
+        vm.expectRevert(
+            abi.encodeWithSelector(Steel.InvalidConfigID.selector, ChainSpec.configID(), ChainSpec.configID(1))
+        );
+        verifier.validateCommitment(c);
+    }
+
     function test_ValidateCommitment_V0_Block_TooOld() public {
         vm.roll(block.number + 300);
         uint256 oldBlockNumber = 1;
