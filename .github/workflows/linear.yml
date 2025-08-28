@@ -30,4 +30,4 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           linear-api-key: ${{ secrets.LINEAR_API_KEY }}
           linear-team-key: "WEB3"
-          linear-created-issue-state-id: "2505ebd6-1fbe-4b25-b2a8-792dfaa50ad9" # in progress
+          linear-created-issue-state-id: "88aaa9db-b7cc-4672-8e8d-24c3adbae963" # in progress
