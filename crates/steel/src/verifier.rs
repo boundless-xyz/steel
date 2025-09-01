@@ -142,7 +142,7 @@ mod host {
             commitment: &Commitment,
             config_id: B256,
         ) -> anyhow::Result<()> {
-            log::info!("Executing preflight verifying {commitment:?}");
+            log::debug!("Executing preflight verifying {commitment:?}");
 
             ensure!(commitment.configID == config_id, "invalid config ID");
             let (id, version) = commitment.decode_id();
