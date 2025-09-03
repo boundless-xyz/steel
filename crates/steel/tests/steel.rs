@@ -27,7 +27,7 @@ use alloy_trie::EMPTY_ROOT_HASH;
 use common::CallOptions;
 use risc0_steel::{
     account::AccountInfo,
-    ethereum::{EthEvmEnv, TESTNET_CHAIN_SPEC},
+    ethereum::{EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
     Account, Contract,
 };
 use sha2::{Digest, Sha256};
@@ -130,8 +130,8 @@ alloy::sol!(
 
 /// Returns an Anvil provider with the deployed [SteelTest] contract.
 async fn test_provider() -> impl Provider + Clone {
-    let chain_id = TESTNET_CHAIN_SPEC.chain_id();
-    let fork = TESTNET_CHAIN_SPEC.active_fork(0, 0).unwrap();
+    let chain_id = STEEL_TEST_PRAGUE_CHAIN_SPEC.chain_id();
+    let fork = STEEL_TEST_PRAGUE_CHAIN_SPEC.active_fork(0, 0).unwrap();
     let provider = ProviderBuilder::new()
         .connect_anvil_with_wallet_and_config(|anvil| {
             anvil
@@ -153,7 +153,7 @@ where
 {
     let mut env = EthEvmEnv::builder()
         .provider(provider)
-        .chain_spec(&TESTNET_CHAIN_SPEC)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
         .build()
         .await
         .unwrap();
@@ -166,7 +166,7 @@ where
     };
 
     let input = env.into_input().await.unwrap();
-    let env = input.into_env(&TESTNET_CHAIN_SPEC);
+    let env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
     let commitment = env.commitment();
     assert_eq!(commitment.digest, block_hash, "invalid commitment");
     assert_eq!(
@@ -229,7 +229,7 @@ mod event {
 
         let mut env = EthEvmEnv::builder()
             .provider(provider)
-            .chain_spec(&TESTNET_CHAIN_SPEC)
+            .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
             .build()
             .await
             .unwrap();
@@ -241,7 +241,7 @@ mod event {
         };
 
         let input = env.into_input().await.unwrap();
-        let env = input.into_env(&TESTNET_CHAIN_SPEC);
+        let env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
 
         let logs = {
             let event =
@@ -272,7 +272,7 @@ mod event {
 
         let mut env = EthEvmEnv::builder()
             .provider(provider)
-            .chain_spec(&TESTNET_CHAIN_SPEC)
+            .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
             .build()
             .await
             .unwrap();
@@ -283,7 +283,7 @@ mod event {
         };
 
         let input = env.into_input().await.unwrap();
-        let env = input.into_env(&TESTNET_CHAIN_SPEC);
+        let env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
 
         let logs = {
             let event = Event::new::<SteelTest::Event>(&env).address(STEEL_TEST_CONTRACT);
@@ -400,7 +400,7 @@ async fn chainid() {
         CallOptions::new(),
     )
     .await;
-    assert_eq!(result, U256::from(TESTNET_CHAIN_SPEC.chain_id()));
+    assert_eq!(result, U256::from(STEEL_TEST_PRAGUE_CHAIN_SPEC.chain_id()));
 }
 
 #[test(tokio::test)]
@@ -457,7 +457,7 @@ async fn multi_contract_calls() {
 async fn call_eoa() {
     let mut env = EthEvmEnv::builder()
         .provider(test_provider().await)
-        .chain_spec(&TESTNET_CHAIN_SPEC)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
         .build()
         .await
         .unwrap();
@@ -473,7 +473,7 @@ async fn call_eoa() {
 async fn no_preflight() {
     let env = EthEvmEnv::builder()
         .provider(test_provider().await)
-        .chain_spec(&TESTNET_CHAIN_SPEC)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
         .build()
         .await
         .unwrap();

@@ -157,6 +157,11 @@ library Encoding {
 }
 
 library ChainSpec {
+    uint256 internal constant ETHEREUM_MAINNET_CHAIN_ID = 1;
+    uint256 internal constant ETHEREUM_SEPOLIA_CHAIN_ID = 11155111;
+    uint256 internal constant ETHEREUM_HOLESKY_CHAIN_ID = 17000;
+    uint256 internal constant STEEL_TEST_PRAGUE_CHAIN_ID = 5733100018;
+
     /// @dev Error selector: 0x45b21e77
     error UnknownChainId(uint256 chainID);
 
@@ -166,20 +171,16 @@ library ChainSpec {
 
     // TODO(povw): Add something to keep this in sync with the Rust.
     function configID(uint256 chainID) internal pure returns (bytes32) {
-        // Mainnet
-        if (chainID == 1) {
+        if (chainID == ETHEREUM_MAINNET_CHAIN_ID) {
             return hex"9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839";
         }
-        // Sepolia
-        if (chainID == 11155111) {
+        if (chainID == ETHEREUM_SEPOLIA_CHAIN_ID) {
             return hex"5c9552dc9bfad8572ded4f818bb35b0f4260660c1554236986b768ae999b4b60";
         }
-        // Holesky
-        if (chainID == 17000) {
+        if (chainID == ETHEREUM_HOLESKY_CHAIN_ID) {
             return hex"8eae1ba5f877e6ad7007bf6985f5245be7d758457fb4eb7e6a72d47f49bea389";
         }
-        // Steel Testnet - Electra
-        if (chainID == 5733100018) {
+        if (chainID == STEEL_TEST_PRAGUE_CHAIN_ID) {
             return hex"33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87";
         }
         revert UnknownChainId(chainID);

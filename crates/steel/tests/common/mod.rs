@@ -19,7 +19,7 @@ use alloy_primitives::{Address, U256};
 use alloy_sol_types::SolCall;
 use revm::context::TxEnv;
 use risc0_steel::{
-    ethereum::{EthEvmEnv, TESTNET_CHAIN_SPEC},
+    ethereum::{EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
     CallBuilder, Contract,
 };
 
@@ -37,7 +37,7 @@ where
 {
     let mut env = EthEvmEnv::builder()
         .provider(provider)
-        .chain_spec(&TESTNET_CHAIN_SPEC)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
         .build()
         .await
         .unwrap();
@@ -54,7 +54,7 @@ where
     };
 
     let input = env.into_input().await.unwrap();
-    let env = input.into_env(&TESTNET_CHAIN_SPEC);
+    let env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
 
     let commitment = env.commitment();
     assert_eq!(commitment.digest, block_hash, "invalid commitment");

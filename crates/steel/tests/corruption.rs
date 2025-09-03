@@ -26,7 +26,7 @@ use anyhow::Context;
 use risc0_steel::{
     ethereum::{
         EthBlockHeader, EthEvmEnv, EthEvmFactory, EthEvmInput, ETH_SEPOLIA_CHAIN_SPEC,
-        TESTNET_CHAIN_SPEC,
+        STEEL_TEST_PRAGUE_CHAIN_SPEC,
     },
     host::BlockNumberOrTag,
     Commitment, Contract, EvmFactory, StateAccount,
@@ -94,7 +94,7 @@ async fn anvil_provider() -> impl Provider {
 async fn anvil_input() -> anyhow::Result<EthEvmInput> {
     let mut env = EthEvmEnv::builder()
         .provider(anvil_provider().await)
-        .chain_spec(&TESTNET_CHAIN_SPEC)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
         .build()
         .await?;
     Contract::preflight(ANVIL_CONTRACT_ADDRESS, &mut env)
@@ -111,7 +111,7 @@ async fn anvil_input() -> anyhow::Result<EthEvmInput> {
 
 /// Executes `Pair.a()` and `Pair.b()` on the input just as the guest would.
 fn mock_anvil_guest(input: EthEvmInput) -> Commitment {
-    let env = input.into_env(&TESTNET_CHAIN_SPEC);
+    let env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
     Contract::new(ANVIL_CONTRACT_ADDRESS, &env)
         .call_builder(&sol::Pair::aCall {})
         .call();
@@ -293,7 +293,7 @@ async fn corrupt_ancestor() {
     // create the corresponding input
     let mut env = EthEvmEnv::builder()
         .provider(provider)
-        .chain_spec(&TESTNET_CHAIN_SPEC)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
         .build()
         .await
         .unwrap();
