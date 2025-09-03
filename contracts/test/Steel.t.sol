@@ -24,6 +24,14 @@ contract SteelVerifier {
     function validateCommitment(Steel.Commitment memory commitment) external view returns (bool) {
         return Steel.validateCommitment(commitment);
     }
+
+    function validateCommitmentWithConfig(Steel.Commitment memory commitment, bytes32 configID)
+        external
+        view
+        returns (bool)
+    {
+        return Steel.validateCommitmentWithConfig(commitment, configID);
+    }
 }
 
 contract SteelTest is Test {
@@ -72,12 +80,20 @@ contract SteelTest is Test {
         bytes32 targetBlockHash = blockhash(targetBlockNumber);
         assertTrue(targetBlockHash != bytes32(0), "Test setup: blockhash(target) is zero");
 
-        Steel.Commitment memory c = createCommitment(uint240(targetBlockNumber), 0, targetBlockHash);
-        c.configID = ChainSpec.configID(1); // Use the mainnet config ID, while we are using Anvi.
+        // Use the mainnet config ID in the commit, while we are verifying with testnet config.
+        Steel.Commitment memory c1 = createCommitment(uint240(targetBlockNumber), 0, targetBlockHash);
+        c1.configID = ChainSpec.configID(1);
         vm.expectRevert(
             abi.encodeWithSelector(Steel.InvalidConfigID.selector, ChainSpec.configID(), ChainSpec.configID(1))
         );
-        verifier.validateCommitment(c);
+        verifier.validateCommitment(c1);
+
+        // Use the Anvil config ID in the commit, while we are verifying with mainnet config.
+        Steel.Commitment memory c2 = createCommitment(uint240(targetBlockNumber), 0, targetBlockHash);
+        vm.expectRevert(
+            abi.encodeWithSelector(Steel.InvalidConfigID.selector, ChainSpec.configID(1), ChainSpec.configID())
+        );
+        verifier.validateCommitmentWithConfig(c2, ChainSpec.configID(1));
     }
 
     function test_ValidateCommitment_V0_Block_TooOld() public {
