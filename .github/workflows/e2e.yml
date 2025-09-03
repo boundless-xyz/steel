@@ -66,7 +66,6 @@ jobs:
         with:
           risczero-version: ${{ env.RISC0_CRATE_VERSION }}
           toolchain-version: ${{ env.RISC0_TOOLCHAIN_VERSION }}
-          install-groth16: false
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:

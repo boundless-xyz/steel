@@ -34,7 +34,7 @@ if [[ ${HISTORY_BLOCKS} -gt 0 ]]; then
   PUBLISHER_FEATURES="history"
 fi
 if [[ -n "${RISC0_CUDA}" ]]; then
-  PUBLISHER_FEATURES=$PUBLISHER_FEATURES + ",cuda"
+  PUBLISHER_FEATURES=$PUBLISHER_FEATURES",cuda"
 fi
 
 echo "Waiting for block ${COMMITMENT_BLOCK} to have one confirmation..."
