@@ -14,11 +14,13 @@
 
 use alloy::providers::ProviderBuilder;
 use anyhow::Context;
+use risc0_op_steel::config::ChainSpec;
 use risc0_zkvm::{sha::Digest, Receipt};
 use url::Url;
 
-pub async fn verify_on_chain(
+pub async fn verify_on_chain<S: Ord + serde::Serialize>(
     receipt: Receipt,
+    chain_spec: &ChainSpec<S>,
     image_id: Digest,
     rpc_url: Url,
 ) -> anyhow::Result<()> {
@@ -41,6 +43,7 @@ pub async fn verify_on_chain(
         .context("failed to deploy Verifier")?;
     let verify = verifier.verify(
         journal.into(),
+        chain_spec.digest().into(),
         seal.into(),
         <[u8; 32]>::from(image_id).into(),
     );
