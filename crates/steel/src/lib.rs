@@ -287,6 +287,8 @@ pub trait EvmBlockHeader: Sealable {
 
 // Keep everything in the Steel library private except the commitment.
 mod private {
+    use serde::{Deserialize, Serialize};
+
     alloy_sol_types::sol! {
         /// A Solidity struct representing a commitment used for validation within Steel proofs.
         ///
@@ -295,7 +297,7 @@ mod private {
         /// and a specific instance identifier (e.g., block number), the claim digest itself, and a
         /// configuration ID to ensure the commitment is valid for the intended network configuration.
         /// This structure is designed to be ABI-compatible with Solidity for on-chain verification.
-        #[derive(Default, PartialEq, Eq, Hash)]
+        #[derive(Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
         struct Commitment {
             /// Packed commitment identifier and version.
             ///

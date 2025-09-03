@@ -1,9 +1,10 @@
 participants:
   - el_type: geth
-    el_image: "ethereum/client-go:v1.15.10"
+    el_image: "ethereum/client-go:v1.15.11"
     cl_type: teku
-    cl_image: "consensys/teku:25.4.0"
-additional_services:
-  - tx_spammer
+    cl_image: "consensys/teku:25.6.0"
 network_params:
+  network_id: "5733100018"
   preset: mainnet
+additional_services:
+  - tx_fuzz

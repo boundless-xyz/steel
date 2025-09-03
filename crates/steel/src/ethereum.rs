@@ -63,6 +63,10 @@ pub static ETH_MAINNET_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| Cha
     ]),
 });
 
+/// [ChainSpec] for a custom Steel Testnet using the Prague EVM.
+pub static STEEL_TEST_PRAGUE_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
+    LazyLock::new(|| ChainSpec::new_single(5733100018, SpecId::PRAGUE));
+
 /// [EvmFactory] for Ethereum.
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -178,5 +182,49 @@ impl EvmBlockHeader for EthBlockHeader {
             prevrandao: (spec >= SpecId::MERGE).then_some(header.mix_hash),
             blob_excess_gas_and_price,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use alloy::primitives::b256;
+
+    use super::{
+        ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
+        STEEL_TEST_PRAGUE_CHAIN_SPEC,
+    };
+
+    // NOTE: If these are updated here, make sure to update them in Steel.sol
+
+    #[test]
+    fn mainnet_spec_digest() {
+        assert_eq!(
+            ETH_MAINNET_CHAIN_SPEC.digest(),
+            b256!("0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839")
+        );
+    }
+
+    #[test]
+    fn sepolia_spec_digest() {
+        assert_eq!(
+            ETH_SEPOLIA_CHAIN_SPEC.digest(),
+            b256!("0x5c9552dc9bfad8572ded4f818bb35b0f4260660c1554236986b768ae999b4b60")
+        );
+    }
+
+    #[test]
+    fn holesky_spec_digest() {
+        assert_eq!(
+            ETH_HOLESKY_CHAIN_SPEC.digest(),
+            b256!("0x8eae1ba5f877e6ad7007bf6985f5245be7d758457fb4eb7e6a72d47f49bea389")
+        );
+    }
+
+    #[test]
+    fn testnet_spec_digest() {
+        assert_eq!(
+            STEEL_TEST_PRAGUE_CHAIN_SPEC.digest(),
+            b256!("0x33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87")
+        );
     }
 }

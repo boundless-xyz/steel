@@ -18,11 +18,19 @@ pragma solidity ^0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 
-import {Steel, Beacon, Encoding} from "../src/Steel.sol";
+import {Steel, Beacon, Encoding, ChainSpec} from "../src/Steel.sol";
 
 contract SteelVerifier {
     function validateCommitment(Steel.Commitment memory commitment) external view returns (bool) {
         return Steel.validateCommitment(commitment);
+    }
+
+    function validateCommitmentWithConfig(Steel.Commitment memory commitment, bytes32 configID)
+        external
+        view
+        returns (bool)
+    {
+        return Steel.validateCommitmentWithConfig(commitment, configID);
     }
 }
 
@@ -30,16 +38,20 @@ contract SteelTest is Test {
     SteelVerifier internal verifier;
 
     function setUp() public {
+        vm.chainId(ChainSpec.STEEL_TEST_PRAGUE_CHAIN_ID);
         verifier = new SteelVerifier();
     }
 
     function createCommitment(uint240 claimID, uint16 version, bytes32 digest)
         internal
-        pure
+        view
         returns (Steel.Commitment memory)
     {
-        return
-            Steel.Commitment({id: Encoding.encodeVersionedID(claimID, version), digest: digest, configID: bytes32(0)});
+        return Steel.Commitment({
+            id: Encoding.encodeVersionedID(claimID, version),
+            digest: digest,
+            configID: ChainSpec.configID()
+        });
     }
 
     function test_ValidateCommitment_V0_Block_Success() public {
@@ -60,6 +72,28 @@ contract SteelTest is Test {
 
         Steel.Commitment memory c = createCommitment(uint240(targetBlockNumber), 0, wrongHash);
         assertFalse(verifier.validateCommitment(c), "V0 wrong block hash should be invalid");
+    }
+
+    function test_ValidateCommitment_WrongConfigID() public {
+        vm.roll(block.number + 10);
+        uint256 targetBlockNumber = block.number - 5;
+        bytes32 targetBlockHash = blockhash(targetBlockNumber);
+        assertTrue(targetBlockHash != bytes32(0), "Test setup: blockhash(target) is zero");
+
+        // Use the mainnet config ID in the commit, while we are verifying with testnet config.
+        Steel.Commitment memory c1 = createCommitment(uint240(targetBlockNumber), 0, targetBlockHash);
+        c1.configID = ChainSpec.configID(1);
+        vm.expectRevert(
+            abi.encodeWithSelector(Steel.InvalidConfigID.selector, ChainSpec.configID(), ChainSpec.configID(1))
+        );
+        verifier.validateCommitment(c1);
+
+        // Use the Anvil config ID in the commit, while we are verifying with mainnet config.
+        Steel.Commitment memory c2 = createCommitment(uint240(targetBlockNumber), 0, targetBlockHash);
+        vm.expectRevert(
+            abi.encodeWithSelector(Steel.InvalidConfigID.selector, ChainSpec.configID(1), ChainSpec.configID())
+        );
+        verifier.validateCommitmentWithConfig(c2, ChainSpec.configID(1));
     }
 
     function test_ValidateCommitment_V0_Block_TooOld() public {
@@ -133,7 +167,7 @@ contract SteelTest is Test {
             3, // Any version > 2 not explicitly handled
             keccak256(abi.encodePacked("any_digest_v3"))
         );
-        vm.expectRevert(Steel.InvalidCommitmentVersion.selector);
+        vm.expectRevert(abi.encodeWithSelector(Steel.InvalidCommitmentVersion.selector, 3));
         verifier.validateCommitment(c);
     }
 }

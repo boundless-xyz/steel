@@ -39,7 +39,7 @@ use std::{
     str::FromStr,
 };
 
-pub use builder::EvmEnvBuilder;
+pub use builder::{Beacon, EvmEnvBuilder, History};
 
 mod builder;
 pub mod db;
@@ -133,6 +133,12 @@ impl FromStr for BlockNumberOrTag {
             }
         };
         Ok(block)
+    }
+}
+
+impl From<u64> for BlockNumberOrTag {
+    fn from(number: u64) -> Self {
+        Self::Number(number)
     }
 }
 

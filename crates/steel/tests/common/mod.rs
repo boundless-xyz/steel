@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{fmt::Debug, sync::LazyLock};
+use std::fmt::Debug;
 
 use alloy::{eips::eip2930::AccessList, network::Ethereum, providers::Provider};
 use alloy_primitives::{Address, U256};
 use alloy_sol_types::SolCall;
-use revm::{context::TxEnv, primitives::hardfork::SpecId};
-use risc0_steel::{config::ChainSpec, ethereum::EthEvmEnv, CallBuilder, Contract};
-
-pub static ANVIL_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
-    LazyLock::new(|| ChainSpec::new_single(31337, SpecId::CANCUN));
+use revm::context::TxEnv;
+use risc0_steel::{
+    ethereum::{EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
+    CallBuilder, Contract,
+};
 
 /// Executes a new [SolCall] using steel.
 pub async fn eth_call<P, S>(
@@ -37,7 +37,7 @@ where
 {
     let mut env = EthEvmEnv::builder()
         .provider(provider)
-        .chain_spec(&ANVIL_CHAIN_SPEC)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
         .build()
         .await
         .unwrap();
@@ -54,7 +54,7 @@ where
     };
 
     let input = env.into_input().await.unwrap();
-    let env = input.into_env(&ANVIL_CHAIN_SPEC);
+    let env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
 
     let commitment = env.commitment();
     assert_eq!(commitment.digest, block_hash, "invalid commitment");
