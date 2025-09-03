@@ -193,6 +193,8 @@ mod tests {
         ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC, TESTNET_CHAIN_SPEC,
     };
 
+    // NOTE: If these are updated here, make sure to update them in Steel.sol
+
     #[test]
     fn mainnet_spec_digest() {
         assert_eq!(
