@@ -43,7 +43,7 @@ pub async fn verify_on_chain<S: Ord + serde::Serialize>(
         .context("failed to deploy Verifier")?;
     let verify = verifier.verify(
         journal.into(),
-        chain_spec.digest().into(),
+        chain_spec.digest(),
         seal.into(),
         <[u8; 32]>::from(image_id).into(),
     );
