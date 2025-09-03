@@ -23,6 +23,7 @@ All notable changes to this project will be documented in this file.
     - If the guest program is using a `ChainSpec` that does not match the queried chain, then the guest should be updated (e.g. if using `ETH_SEPOLIA_CHAIN_SPEC` while querying Ethereum Mainnet).
     - If the verifier needs to use a custom EVM config, then the `Steel.validateCommitmentWithConfig` function can be used.
     - In Forge tests, `vm.chainId(ChainSpec.STEEL_TEST_PRAGUE_CHAIN_ID)` can be used to setup the chain with can ID used by Steel for a testnet, using the Prague hardfork.
+* In `OpSteel`, the `OpSteel.validateCommitment` function has been removed in this version. Please use `OpSteel.validateCommitmentWithConfig`.
 
 ## [2.3.0](https://github.com/boundless-xyz/steel/releases/tag/v2.3.0)
 
