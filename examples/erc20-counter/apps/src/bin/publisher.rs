@@ -29,7 +29,7 @@ use risc0_steel::alloy::{
     sol_types::{SolCall, SolValue},
 };
 use risc0_steel::{
-    ethereum::{EthEvmEnv, TESTNET_CHAIN_SPEC},
+    ethereum::{EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
     host::BlockNumberOrTag,
     Commitment, Contract,
 };
@@ -125,7 +125,10 @@ async fn main() -> Result<()> {
     #[cfg(feature = "history")]
     let builder = builder.commitment_block_number_or_tag(args.commitment_block);
 
-    let mut env = builder.chain_spec(&TESTNET_CHAIN_SPEC).build().await?;
+    let mut env = builder
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
+        .build()
+        .await?;
 
     // Prepare the function call
     let call = IERC20::balanceOfCall {
