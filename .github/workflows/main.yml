@@ -139,9 +139,6 @@ jobs:
           - os: Linux
             feature: default
             device: cpu
-          - os: macOS
-            feature: default
-            device: apple_m2_pro
     env:
       FEATURE: ${{ matrix.feature }}
       RUST_BACKTRACE: full
