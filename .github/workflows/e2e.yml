@@ -36,6 +36,7 @@ jobs:
             prover: bonsai
     env:
       RUST_BACKTRACE: full
+      RISC0_CUDA: true
       NVCC_APPEND_FLAGS: -arch=sm_89
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
@@ -59,10 +60,13 @@ jobs:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_CI_USER }}
       - uses: risc0/risc0/.github/actions/cuda@352dea62857ba57331053cd0986a12c1a4708732
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
-      - uses: ./.github/actions/cargo-risczero-install
+
+      - name: install cargo risczero
+        uses: boundless-xyz/boundless/.github/actions/actions/bininstall-risc0@a064ebba645e8eb8421c386d40033a352235334d
         with:
           risczero-version: ${{ env.RISC0_CRATE_VERSION }}
           toolchain-version: ${{ env.RISC0_TOOLCHAIN_VERSION }}
+          install-groth16: false
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:

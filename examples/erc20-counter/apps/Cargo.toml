@@ -19,3 +19,5 @@ url = { workspace = true }
 [features]
 beacon = []
 history = []
+# Run the R0VM tests on NVIDIA GPUs using the CUDA
+cuda = ["risc0-zkvm/cuda"]
