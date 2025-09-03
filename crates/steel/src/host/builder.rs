@@ -224,7 +224,7 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, ()> {
         <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
     {
         let header = self.get_header(None).await?;
-        log::info!(
+        log::debug!(
             "Environment initialized with block {} ({})",
             header.number(),
             header.seal()
@@ -365,7 +365,7 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
         P: Provider<Ethereum>,
     {
         let header = self.get_header(None).await?;
-        log::info!(
+        log::debug!(
             "Environment initialized with block {} ({})",
             header.number(),
             header.seal()
@@ -410,7 +410,7 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
             "EVM execution block not before commitment block"
         );
 
-        log::info!(
+        log::debug!(
             "Environment initialized with block {} ({})",
             evm_header.number(),
             evm_header.seal()

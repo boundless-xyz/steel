@@ -40,13 +40,13 @@ contract Verifier is OpCommitmentValidator {
         riscZeroVerifier = router;
     }
 
-    function verify(bytes calldata journal, bytes calldata seal, bytes32 imageID)
+    function verify(bytes calldata journal, bytes32 configID, bytes calldata seal, bytes32 imageID)
         external
         view
         returns (bytes memory payload)
     {
         Steel.Commitment memory commitment = abi.decode(journal[:96], (Steel.Commitment));
-        require(validateCommitment(commitment), "Invalid commitment");
+        require(validateCommitmentWithConfig(commitment, configID), "Invalid commitment");
 
         riscZeroVerifier.verify(seal, imageID, sha256(journal));
 

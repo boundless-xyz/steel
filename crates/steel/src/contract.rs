@@ -303,7 +303,7 @@ mod host {
         ///
         /// Returns the decoded return value of the call or an error if execution fails.
         pub async fn call(self) -> Result<S::Return> {
-            log::info!("Executing preflight calling '{}'", S::SIGNATURE);
+            log::debug!("Executing preflight calling '{}'", S::SIGNATURE);
 
             // as mutable references are not possible, the DB must be moved in and out of the task
             let mut db = self.env.db.take().unwrap();

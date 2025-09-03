@@ -78,7 +78,13 @@ async fn main() -> Result<()> {
     log::debug!("Finished proving {}: {:?}", image_id, prove_info.stats);
 
     #[cfg(feature = "verify")]
-    examples_common::verify_on_chain(prove_info.receipt, image_id, args.l2_rpc_url).await?;
+    examples_common::verify_on_chain(
+        prove_info.receipt,
+        &OP_MAINNET_CHAIN_SPEC,
+        image_id,
+        args.l2_rpc_url,
+    )
+    .await?;
 
     Ok(())
 }
