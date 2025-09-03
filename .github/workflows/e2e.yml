@@ -43,9 +43,10 @@ jobs:
         # Set the secret as an env so that it can be used in an if statement.
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_CI_USER }}
-      - uses: risc0/risc0/.github/actions/cuda@352dea62857ba57331053cd0986a12c1a4708732
-      - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
-
+      - uses: boundless-xyz/boundless/.github/actions/sccache@a064ebba645e8eb8421c386d40033a352235334d
+      - uses: risc0/risc0/.github/actions/cuda@v3.0.3
+      - uses: risc0/risc0/.github/actions/protoc@v3.0.3
+      - uses: risc0/risc0/.github/actions/rustup@v3.0.3
       - name: install cargo risczero
         uses: boundless-xyz/boundless/.github/actions/bininstall-risc0@a064ebba645e8eb8421c386d40033a352235334d
         with:
@@ -97,6 +98,8 @@ jobs:
           ETH_WALLET_ADDRESS: "0x802dCbE1B1A97554B4F50DB5119E37E8e7336417"
           ETH_WALLET_PRIVATE_KEY: "0x5d2344259f42259f82d2c140aa66102ba89b57b4883ee441a8b312622bd42491"
         working-directory: examples/erc20-counter
+      - name: sccache stats
+        run: sccache --show-stats
       - name: Stop local Ethereum testnet
         if: always()
         run: kurtosis enclave rm -f local-eth-testnet
