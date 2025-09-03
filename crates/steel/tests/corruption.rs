@@ -17,7 +17,6 @@
 
 use std::{fs::File, io::BufReader, path::Path};
 
-use crate::common::ANVIL_CHAIN_SPEC;
 use alloy::{
     providers::{ext::AnvilApi, Provider, ProviderBuilder},
     transports::BoxFuture,
@@ -25,7 +24,10 @@ use alloy::{
 use alloy_primitives::{address, Address, Bytes, B256, U256};
 use anyhow::Context;
 use risc0_steel::{
-    ethereum::{EthBlockHeader, EthEvmEnv, EthEvmFactory, EthEvmInput, ETH_SEPOLIA_CHAIN_SPEC},
+    ethereum::{
+        EthBlockHeader, EthEvmEnv, EthEvmFactory, EthEvmInput, ETH_SEPOLIA_CHAIN_SPEC,
+        TESTNET_CHAIN_SPEC,
+    },
     host::BlockNumberOrTag,
     Commitment, Contract, EvmFactory, StateAccount,
 };
@@ -92,7 +94,7 @@ async fn anvil_provider() -> impl Provider {
 async fn anvil_input() -> anyhow::Result<EthEvmInput> {
     let mut env = EthEvmEnv::builder()
         .provider(anvil_provider().await)
-        .chain_spec(&ANVIL_CHAIN_SPEC)
+        .chain_spec(&TESTNET_CHAIN_SPEC)
         .build()
         .await?;
     Contract::preflight(ANVIL_CONTRACT_ADDRESS, &mut env)
@@ -109,7 +111,7 @@ async fn anvil_input() -> anyhow::Result<EthEvmInput> {
 
 /// Executes `Pair.a()` and `Pair.b()` on the input just as the guest would.
 fn mock_anvil_guest(input: EthEvmInput) -> Commitment {
-    let env = input.into_env(&ANVIL_CHAIN_SPEC);
+    let env = input.into_env(&TESTNET_CHAIN_SPEC);
     Contract::new(ANVIL_CONTRACT_ADDRESS, &env)
         .call_builder(&sol::Pair::aCall {})
         .call();
@@ -291,7 +293,7 @@ async fn corrupt_ancestor() {
     // create the corresponding input
     let mut env = EthEvmEnv::builder()
         .provider(provider)
-        .chain_spec(&ANVIL_CHAIN_SPEC)
+        .chain_spec(&TESTNET_CHAIN_SPEC)
         .build()
         .await
         .unwrap();

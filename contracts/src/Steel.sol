@@ -174,10 +174,9 @@ library ChainSpec {
         if (chainID == 17000) {
             return hex"8eae1ba5f877e6ad7007bf6985f5245be7d758457fb4eb7e6a72d47f49bea389";
         }
-        // Anvil / Hardhat
-        if (chainID == 31337) {
-            // TODO: This is only the chain spec for a specific config of Anvil.
-            return hex"9c769887f8e753e3f67d1806eaebd55c24b2e59bc7218363221c2f01d8dd6420";
+        // Steel Testnet - Electra
+        if (chainID == 5733100018) {
+            return hex"33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87";
         }
         revert UnknownChainId(chainID);
     }

@@ -30,6 +30,7 @@ contract SteelTest is Test {
     SteelVerifier internal verifier;
 
     function setUp() public {
+        vm.chainId(5733100018);
         verifier = new SteelVerifier();
     }
 

@@ -5,7 +5,7 @@ set -e -o pipefail
 export TOKEN_OWNER=${ETH_WALLET_ADDRESS:?}
 
 # Determine the chain ID
-CHAIN_ID=$(cast rpc --rpc-url ${ETH_RPC_URL:?} eth_chainId | jq -re)
+CHAIN_ID=$(RUST_LOG="" cast rpc --rpc-url ${ETH_RPC_URL:?} eth_chainId | jq -re)
 CHAIN_ID=$((CHAIN_ID))
 
 # Deploy the Counter contract
@@ -35,7 +35,7 @@ if [[ ${HISTORY_BLOCKS} -gt 0 ]]; then
 fi
 
 echo "Waiting for block ${COMMITMENT_BLOCK} to have one confirmation..."
-while [[ $(cast rpc --rpc-url "${ETH_RPC_URL:?}" eth_blockNumber | jq -re) -le ${COMMITMENT_BLOCK} ]]; do sleep 3; done
+while [[ $(RUST_LOG="" cast rpc --rpc-url "${ETH_RPC_URL:?}" eth_blockNumber | jq -re) -le ${COMMITMENT_BLOCK} ]]; do sleep 3; done
 
 # Publish a new state
 echo "Publishing a new state..."
@@ -49,7 +49,7 @@ RISC0_INFO=1 RUST_LOG=${RUST_LOG:-info,risc0_steel=debug} cargo run --bin publis
 
 # Attempt to verify counter value as part of the script logic
 echo "Verifying state..."
-COUNTER_VALUE=$(cast call --rpc-url ${ETH_RPC_URL:?} ${COUNTER_ADDRESS:?} 'get()(uint256)')
+COUNTER_VALUE=$(RUST_LOG="" cast call --rpc-url ${ETH_RPC_URL:?} ${COUNTER_ADDRESS:?} 'get()(uint256)')
 if [ "$COUNTER_VALUE" != "1" ]; then
     echo "Counter value is not 1 as expected, but $COUNTER_VALUE."
     exit 1
