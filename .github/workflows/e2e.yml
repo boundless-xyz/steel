@@ -62,7 +62,7 @@ jobs:
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
 
       - name: install cargo risczero
-        uses: boundless-xyz/boundless/.github/actions/actions/bininstall-risc0@a064ebba645e8eb8421c386d40033a352235334d
+        uses: boundless-xyz/boundless/.github/actions/bininstall-risc0@a064ebba645e8eb8421c386d40033a352235334d
         with:
           risczero-version: ${{ env.RISC0_CRATE_VERSION }}
           toolchain-version: ${{ env.RISC0_TOOLCHAIN_VERSION }}
