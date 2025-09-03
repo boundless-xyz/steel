@@ -131,7 +131,7 @@ alloy::sol!(
 /// Returns an Anvil provider with the deployed [SteelTest] contract.
 async fn test_provider() -> impl Provider + Clone {
     let chain_id = TESTNET_CHAIN_SPEC.chain_id();
-    let fork = TESTNET_CHAIN_SPEC.forks.first_key_value().unwrap().0;
+    let fork = TESTNET_CHAIN_SPEC.active_fork(0, 0).unwrap();
     let provider = ProviderBuilder::new()
         .connect_anvil_with_wallet_and_config(|anvil| {
             anvil
