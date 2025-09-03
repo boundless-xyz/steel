@@ -63,10 +63,9 @@ pub static ETH_MAINNET_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| Cha
     ]),
 });
 
-// TODO: Make this a function of the spec ID.
-/// [ChainSpec] for an Anvil chain using the Cancun EVM.
-pub static ANVIL_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
-    LazyLock::new(|| ChainSpec::new_single(31337, SpecId::CANCUN));
+/// [ChainSpec] for a custom Steel Testnet using the Prague EVM.
+pub static TESTNET_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
+    LazyLock::new(|| ChainSpec::new_single(5733100018, SpecId::PRAGUE));
 
 /// [EvmFactory] for Ethereum.
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
@@ -191,7 +190,7 @@ mod tests {
     use alloy::primitives::b256;
 
     use super::{
-        ANVIL_CHAIN_SPEC, ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
+        ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC, TESTNET_CHAIN_SPEC,
     };
 
     #[test]
@@ -218,12 +217,11 @@ mod tests {
         );
     }
 
-    // TODO: This is only the chain spec for a specific config of Anvil.
     #[test]
-    fn anvil_spec_digest() {
+    fn testnet_spec_digest() {
         assert_eq!(
-            ANVIL_CHAIN_SPEC.digest(),
-            b256!("0x9c769887f8e753e3f67d1806eaebd55c24b2e59bc7218363221c2f01d8dd6420")
+            TESTNET_CHAIN_SPEC.digest(),
+            b256!("0x33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87")
         );
     }
 }
