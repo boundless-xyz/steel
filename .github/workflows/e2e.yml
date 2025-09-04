@@ -18,7 +18,7 @@ permissions:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   RISC0_TOOLCHAIN_VERSION: 1.88.0
-  RISC0_CRATE_VERSION: "3.0.3"
+  RISC0_CRATE_VERSION: "2.3.0"
   FOUNDRY_VERSION: v1.0.0
 
 jobs:
@@ -42,9 +42,8 @@ jobs:
         # Set the secret as an env so that it can be used in an if statement.
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_CI_USER }}
-      - uses: risc0/risc0/.github/actions/cuda@v3.0.3
-      - uses: risc0/risc0/.github/actions/protoc@v3.0.3
-      - uses: risc0/risc0/.github/actions/rustup@v3.0.3
+      - uses: risc0/risc0/.github/actions/cuda@352dea62857ba57331053cd0986a12c1a4708732
+      - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
       - uses: ./.github/actions/cargo-risczero-install
         with:
           risczero-version: ${{ env.RISC0_CRATE_VERSION }}
