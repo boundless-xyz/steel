@@ -24,30 +24,14 @@ env:
 jobs:
   e2e-tests:
     runs-on: [ self-hosted, Linux, X64, prod, cuda, g6.4xlarge ]
-    strategy:
-      fail-fast: false
-      matrix:
-        prover: [ bonsai, local ]
-        release:
-          - ${{ startsWith(github.base_ref, 'release-') || startsWith(github.base_ref, 'refs/heads/release-') }}
-        # Exclude Bonsai proving on non-release branches.
-        exclude:
-          - release: false
-            prover: bonsai
     env:
       RUST_BACKTRACE: full
-      NVCC_APPEND_FLAGS: -arch=sm_89
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
       - run: "git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :"
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Use Bonsai for release branches
-        if: matrix.prover == 'bonsai'
-        run: |
-          echo "BONSAI_API_URL=${{ secrets.BONSAI_API_URL }}" >> $GITHUB_ENV
-          echo "BONSAI_API_KEY=${{ secrets.BONSAI_API_KEY }}" >> $GITHUB_ENV
       - name: Login to Docker Hub
         if: env.DOCKERHUB_USER
         uses: docker/login-action@v3
@@ -57,7 +41,6 @@ jobs:
         # Set the secret as an env so that it can be used in an if statement.
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_CI_USER }}
-      - uses: risc0/risc0/.github/actions/cuda@352dea62857ba57331053cd0986a12c1a4708732
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
       - uses: ./.github/actions/cargo-risczero-install
         with:
