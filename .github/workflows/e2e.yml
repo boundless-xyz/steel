@@ -26,7 +26,6 @@ jobs:
     runs-on: [ self-hosted, Linux, X64, prod, cuda, g6.4xlarge ]
     env:
       RUST_BACKTRACE: full
-      NVCC_APPEND_FLAGS: -arch=sm_89
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
       - run: "git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :"
@@ -42,15 +41,15 @@ jobs:
         # Set the secret as an env so that it can be used in an if statement.
         env:
           DOCKERHUB_USER: ${{ secrets.DOCKERHUB_CI_USER }}
+<<<<<<< Updated upstream
       - uses: risc0/risc0/.github/actions/cuda@352dea62857ba57331053cd0986a12c1a4708732
+=======
+>>>>>>> Stashed changes
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
       - uses: ./.github/actions/cargo-risczero-install
         with:
           risczero-version: ${{ env.RISC0_CRATE_VERSION }}
           toolchain-version: ${{ env.RISC0_TOOLCHAIN_VERSION }}
-      - name: Install cargo risczero
-        run: cargo install --force cargo-risczero@${{ env.RISC0_CRATE_VERSION }} -F cuda
-        shell: bash
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
