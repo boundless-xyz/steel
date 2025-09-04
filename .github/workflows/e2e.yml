@@ -26,7 +26,6 @@ jobs:
     runs-on: [ self-hosted, Linux, X64, prod, cuda, g6.4xlarge ]
     env:
       RUST_BACKTRACE: full
-      RISC0_CUDA: true
       NVCC_APPEND_FLAGS: -arch=sm_89
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
@@ -50,7 +49,7 @@ jobs:
           risczero-version: ${{ env.RISC0_CRATE_VERSION }}
           toolchain-version: ${{ env.RISC0_TOOLCHAIN_VERSION }}
       - name: Install cargo risczero
-        run: cargo install --force cargo-risczero -F cuda
+        run: cargo install --force cargo-risczero@${{ env.RISC0_CRATE_VERSION }} -F cuda
         shell: bash
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
