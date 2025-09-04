@@ -8,5 +8,7 @@ alloy = { workspace = true, features = ["consensus", "node-bindings"] }
 anyhow = "1.0"
 log = "0.4"
 risc0-ethereum-contracts = { workspace = true }
+risc0-op-steel = { workspace = true }
 risc0-zkvm = { workspace = true }
+serde = { workspace = true }
 url = "2.5"

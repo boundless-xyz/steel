@@ -180,7 +180,7 @@ mod host {
         ///
         /// [EvmEnv]: crate::EvmEnv
         pub async fn info(self) -> Result<AccountInfo> {
-            log::info!("Executing preflight querying account {}", &self.address);
+            log::debug!("Executing preflight querying account {}", &self.address);
 
             let account = self
                 .env

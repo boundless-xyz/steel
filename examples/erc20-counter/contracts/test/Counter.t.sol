@@ -21,7 +21,7 @@ import "forge-std/console.sol";
 import {Receipt as RiscZeroReceipt} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroMockVerifier} from "risc0/test/RiscZeroMockVerifier.sol";
 import {Counter} from "../src/Counter.sol";
-import {Steel, Beacon, Encoding} from "steel/Steel.sol";
+import {Steel, Beacon, Encoding, ChainSpec} from "steel/Steel.sol";
 import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
 
 contract ERC20FixedSupply is ERC20 {
@@ -56,7 +56,7 @@ contract CounterTest is Test {
 
         // mock the Journal
         Counter.Journal memory journal = Counter.Journal({
-            commitment: Steel.Commitment(Encoding.encodeVersionedID(blockNumber, 0), blockHash, bytes32(0x0)),
+            commitment: Steel.Commitment(Encoding.encodeVersionedID(blockNumber, 0), blockHash, ChainSpec.configID()),
             tokenContract: address(token)
         });
         // create a mock proof
@@ -77,7 +77,7 @@ contract CounterTest is Test {
 
         // mock the Journal
         Counter.Journal memory journal = Counter.Journal({
-            commitment: Steel.Commitment(Encoding.encodeVersionedID(beaconTimestamp, 1), beaconRoot, bytes32(0x0)),
+            commitment: Steel.Commitment(Encoding.encodeVersionedID(beaconTimestamp, 1), beaconRoot, ChainSpec.configID()),
             tokenContract: address(token)
         });
         // create a mock proof

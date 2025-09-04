@@ -239,7 +239,7 @@ mod host {
         ///
         /// [EvmEnv]: crate::EvmEnv
         pub async fn query(self) -> Result<Vec<Log<S>>> {
-            log::info!("Executing preflight querying event '{}'", S::SIGNATURE);
+            log::debug!("Executing preflight querying event '{}'", S::SIGNATURE);
 
             let logs = self
                 .env

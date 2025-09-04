@@ -54,7 +54,7 @@ impl BeaconCommit {
             .verify(header.seal(), beacon_root)
             .context("proof derived from API does not verify")?;
 
-        log::info!(
+        log::debug!(
             "Committing to beacon block: {{ {}, root: {} }}",
             commit.block_id(),
             beacon_root,

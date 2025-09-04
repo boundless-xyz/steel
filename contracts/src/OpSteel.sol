@@ -31,13 +31,22 @@ abstract contract OpCommitmentValidator {
 
     /// @notice Validates a Steel commitment.
     /// @param commitment The commitment to validate.
+    /// @param configID The expected configID for the commitment. The configID commits to the chain
+    ///        specification used to instantiate the EVM within Steel.
     /// @return True if the commitment is valid, false otherwise.
-    function validateCommitment(Steel.Commitment memory commitment) internal view returns (bool) {
+    function validateCommitmentWithConfig(Steel.Commitment memory commitment, bytes32 configID)
+        internal
+        view
+        returns (bool)
+    {
         (uint240 blockID, uint16 version) = Encoding.decodeVersionedID(commitment.id);
         if (version == 0x100) {
+            if (configID != commitment.configID) {
+                revert Steel.InvalidConfigID(configID, commitment.configID);
+            }
             return validateDisputeGameCommitment(blockID, commitment.digest);
         } else {
-            return Steel.validateCommitment(commitment);
+            return Steel.validateCommitmentWithConfig(commitment, configID);
         }
     }
 
