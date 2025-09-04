@@ -59,7 +59,7 @@ pub use beacon::BeaconInput;
 pub use block::BlockInput;
 pub use contract::{CallBuilder, Contract};
 pub use event::Event;
-pub use history::HistoryInput;
+pub use history::{Eip2935HistoryInput, HistoryInput};
 pub use mpt::MerkleTrie;
 pub use state::{StateAccount, StateDb};
 pub use verifier::SteelVerifier;
@@ -74,6 +74,8 @@ pub enum EvmInput<F: EvmFactory> {
     Beacon(BeaconInput<F>),
     /// Input recursively committing to multiple Beacon Chain block root.
     History(HistoryInput<F>),
+    /// Input recursively committing to multiple execution block hashes.
+    EipHistory(Eip2935HistoryInput<F>),
 }
 
 impl<F: EvmFactory> EvmInput<F> {
@@ -86,6 +88,7 @@ impl<F: EvmFactory> EvmInput<F> {
             EvmInput::Block(input) => input.into_env(chain_spec),
             EvmInput::Beacon(input) => input.into_env(chain_spec),
             EvmInput::History(input) => input.into_env(chain_spec),
+            EvmInput::EipHistory(input) => input.into_env(chain_spec),
         }
     }
 }

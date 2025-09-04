@@ -103,14 +103,14 @@ impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
 #[cfg(feature = "host")]
 mod host {
     use super::*;
-    use crate::{history::beacon_roots, host::HostEvmEnv};
+    use crate::{history::Error, host::HostEvmEnv};
     use anyhow::Context;
     use revm::Database;
 
     impl<'a, D, F: EvmFactory, C> SteelVerifier<&'a mut HostEvmEnv<D, F, C>>
     where
         D: crate::EvmDatabase + Send + 'static,
-        beacon_roots::Error: From<<D as Database>::Error>,
+        Error: From<<D as Database>::Error>,
         anyhow::Error: From<<D as Database>::Error>,
         <D as Database>::Error: Send + 'static,
     {

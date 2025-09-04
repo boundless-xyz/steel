@@ -17,7 +17,7 @@ use crate::{
     beacon::BeaconCommit,
     config::ChainSpec,
     ethereum::EthEvmFactory,
-    history::HistoryCommit,
+    history::{Eip2935HistoryCommit, HistoryCommit},
     host::{
         db::{ProofDb, ProviderConfig, ProviderDb},
         BlockNumberOrTag, EthHostEvmEnv, HostCommit, HostEvmEnv,
@@ -123,6 +123,77 @@ impl<P, F: EvmFactory, B> EvmEnvBuilder<P, F, (), B> {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct Eip2935History {
+    commitment_block: BlockId,
+}
+
+impl<P, F, S> EvmEnvBuilder<P, F, S, ()> {
+    /// Sets the block hash for the commitment block, which can be different from the execution
+    /// block.
+    ///
+    /// This allows for historical state execution while maintaining security through a more recent
+    /// commitment. The commitment block must be more recent than the execution block.
+    ///
+    /// Note that this feature requires the Prague EVM version or later, as it relies on
+    /// [EIP-2935](https://eips.ethereum.org/EIPS/eip-2935).
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// # use risc0_steel::ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv};
+    /// # use alloy_primitives::B256;
+    /// # use url::Url;
+    /// # use std::str::FromStr;
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let commitment_hash = B256::from_str("0x1234...")?;
+    /// let builder = EthEvmEnv::builder()
+    ///     .rpc(Url::parse("https://ethereum-rpc.publicnode.com")?)
+    ///     .block_number(1_000_000) // execute against historical state
+    ///     .commitment_block_hash(commitment_hash) // commit to recent block
+    ///     .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
+    /// let env = builder.build().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn commitment_block_hash(self, hash: BlockHash) -> EvmEnvBuilder<P, F, S, Eip2935History> {
+        self.commitment_block(BlockId::Hash(hash))
+    }
+
+    /// Sets the block number or block tag ("latest", "earliest", "pending")  for the commitment.
+    ///
+    /// See [EvmEnvBuilder::commitment_block_hash] for detailed documentation.
+    pub fn commitment_block_number_or_tag(
+        self,
+        block: BlockNumberOrTag,
+    ) -> EvmEnvBuilder<P, F, S, Eip2935History> {
+        self.commitment_block(BlockId::Number(block))
+    }
+
+    /// Sets the block number for the commitment.
+    ///
+    /// See [EvmEnvBuilder::commitment_block_hash] for detailed documentation.
+    pub fn commitment_block_number(
+        self,
+        number: BlockNumber,
+    ) -> EvmEnvBuilder<P, F, S, Eip2935History> {
+        self.commitment_block_number_or_tag(BlockNumberOrTag::Number(number))
+    }
+
+    fn commitment_block(self, block: BlockId) -> EvmEnvBuilder<P, F, S, Eip2935History> {
+        EvmEnvBuilder {
+            provider: self.provider,
+            provider_config: self.provider_config,
+            block: self.block,
+            chain_spec: self.chain_spec,
+            beacon_config: Eip2935History {
+                commitment_block: block,
+            },
+            phantom: Default::default(),
+        }
+    }
+}
+
 /// Config for commitments to the beacon chain state.
 #[derive(Clone, Debug)]
 pub struct Beacon {
@@ -197,7 +268,7 @@ impl<P, F, S, B> EvmEnvBuilder<P, F, S, B> {
             .provider
             .get_block(block)
             .await
-            .context("eth_getBlock1 failed")?
+            .context("eth_getBlock failed")?
             .with_context(|| format!("block {block} not found"))?;
 
         let rpc_header = rpc_block.header().clone();
@@ -241,6 +312,45 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, ()> {
         };
 
         Ok(EvmEnv::new(db, self.chain_spec, header, commit))
+    }
+}
+
+impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, Eip2935History> {
+    /// Builds and returns an [EvmEnv] with the configured settings that commits to a block hash.
+    pub async fn build<N>(
+        self,
+    ) -> Result<HostEvmEnv<ProviderDb<N, P>, F, Eip2935HistoryCommit<F::Header>>>
+    where
+        N: Network,
+        P: Provider<N>,
+        F::Header: TryFrom<<N as Network>::HeaderResponse>,
+        <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    {
+        let evm_header = self.get_header(None).await?;
+        let commitment_header = self
+            .get_header(Some(self.beacon_config.commitment_block))
+            .await?;
+
+        log::debug!(
+            "Environment initialized with block {} ({})",
+            evm_header.number(),
+            evm_header.seal()
+        );
+
+        let history_commit =
+            Eip2935HistoryCommit::from_headers(&evm_header, &commitment_header, &self.provider)
+                .await?;
+        let commit = HostCommit {
+            inner: history_commit,
+            config_id: self.chain_spec.digest(),
+        };
+        let db = ProofDb::new(ProviderDb::new(
+            self.provider,
+            self.provider_config,
+            evm_header.seal(),
+        ));
+
+        Ok(EvmEnv::new(db, self.chain_spec, evm_header, commit))
     }
 }
 
@@ -395,6 +505,7 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
         self.beacon_config.beacon_config.commitment_version = CommitmentVersion::Consensus;
         self
     }
+
     /// Builds and returns an [EvmEnv] with the configured settings, using a dedicated commitment
     /// block that is different from the execution block.
     pub async fn build(self) -> Result<EthHostEvmEnv<ProviderDb<Ethereum, P>, HistoryCommit>>
@@ -405,10 +516,6 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
         let commitment_header = self
             .get_header(Some(self.beacon_config.commitment_block))
             .await?;
-        ensure!(
-            evm_header.number() < commitment_header.number(),
-            "EVM execution block not before commitment block"
-        );
 
         log::debug!(
             "Environment initialized with block {} ({})",
@@ -448,6 +555,7 @@ mod tests {
         test_utils::{get_cl_url, get_el_url},
         BlockHeaderCommit, Commitment, CommitmentVersion,
     };
+    use alloy_consensus::BlockHeader;
     use test_log::test;
 
     #[test(tokio::test)]
@@ -508,7 +616,7 @@ mod tests {
         let latest = provider.get_block_number().await.unwrap();
         let builder = EthEvmEnv::builder()
             .provider(&provider)
-            .block_number_or_tag(BlockNumberOrTag::Number(latest - 8191))
+            .block_number_or_tag(BlockNumberOrTag::Number(latest - 10_000))
             .beacon_api(get_cl_url())
             .commitment_block_number(latest - 1)
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
@@ -524,6 +632,40 @@ mod tests {
                 CommitmentVersion::Beacon as u16,
                 header.timestamp,
                 header.parent_beacon_block_root.unwrap(),
+                ETH_MAINNET_CHAIN_SPEC.digest(),
+            )
+        );
+    }
+
+    #[test(tokio::test)]
+    #[cfg_attr(
+        any(not(feature = "rpc-tests"), no_auth),
+        ignore = "RPC tests are disabled"
+    )]
+    async fn build_2935_history_env() {
+        let provider = ProviderBuilder::new().connect_http(get_el_url());
+
+        let latest_header = provider
+            .get_block_by_number(alloy::eips::eip1898::BlockNumberOrTag::Latest)
+            .await
+            .unwrap()
+            .unwrap()
+            .header;
+
+        let builder = EthEvmEnv::builder()
+            .provider(&provider)
+            .block_number_or_tag(BlockNumberOrTag::Number(latest_header.number() - 10_000))
+            .commitment_block_hash(latest_header.hash())
+            .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
+        let env = builder.clone().build().await.unwrap();
+        let commit = env.commit.inner.commit(&env.header, env.commit.config_id);
+
+        assert_eq!(
+            commit,
+            Commitment::new(
+                CommitmentVersion::Block as u16,
+                latest_header.number(),
+                latest_header.hash(),
                 ETH_MAINNET_CHAIN_SPEC.digest(),
             )
         );

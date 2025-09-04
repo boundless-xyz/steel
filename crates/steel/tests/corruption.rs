@@ -529,7 +529,7 @@ mod history {
     }
 
     #[test(tokio::test)]
-    #[should_panic(expected = "Beacon root does not match")]
+    #[should_panic(expected = "Beacon root mismatch")]
     async fn corrupt_history_evm_commit_proof() {
         let input = load_or_create("testdata/history_input.json", || {
             Box::pin(rpc_usdt_history_input())

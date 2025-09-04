@@ -39,6 +39,7 @@ use std::{
     str::FromStr,
 };
 
+use crate::history::Eip2935HistoryCommit;
 pub use builder::{Beacon, EvmEnvBuilder, History};
 
 mod builder;
@@ -323,6 +324,26 @@ impl<D, F: EvmFactory, C: Clone + BlockHeaderCommit<F::Header>> HostEvmEnv<D, F,
             .inner
             .clone()
             .commit(&self.header, self.commit.config_id)
+    }
+}
+
+impl<N, P, F> HostEvmEnv<ProviderDb<N, P>, F, Eip2935HistoryCommit<F::Header>>
+where
+    N: Network,
+    P: Provider<N>,
+    F: EvmFactory,
+    F::Header: TryFrom<<N as Network>::HeaderResponse>,
+    <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+{
+    /// Converts the environment into a [EvmInput] recursively committing to multiple execution
+    /// block hashes.
+    pub async fn into_input(self) -> Result<EvmInput<F>> {
+        let input = BlockInput::from_proof_db(self.db.unwrap(), self.header).await?;
+
+        Ok(EvmInput::EipHistory(ComposeInput::new(
+            input,
+            self.commit.inner,
+        )))
     }
 }
 
