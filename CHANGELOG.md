@@ -6,24 +6,25 @@ All notable changes to this project will be documented in this file.
 
 ### ⚡️ Features
 
-* Check the commitment config ID in `Steel.validateCommitment` [#17](https://github.com/boundless-xyz/steel/pull/17)
-    - This improves the safety guarantees of Steel by detecting if the EVM config does not match the expected value.
-    - As a result, programs may select from a list of well-known config IDs instead of being required to compile just one config into the guest.
+- Check the commitment config ID in `Steel.validateCommitment` [#17](https://github.com/boundless-xyz/steel/pull/17)
+  - This improves the safety guarantees of Steel by detecting if the EVM config does not match the expected value.
+  - As a result, programs may select from a list of well-known config IDs instead of being required to compile just one config into the guest.
 
 ### ⚙️ Miscellaneous
 
-* `tracing` log lines have been downgraded to `debug`.
-* `Commitment` now implements `serde::Serialize` and `serde::Deserialize`.
-* `BlockNumberOrTag` now implements `From<u64>`.
+- `tracing` log lines have been downgraded to `debug`.
+- `Commitment` now implements `serde::Serialize` and `serde::Deserialize`.
+- `BlockNumberOrTag` now implements `From<u64>`.
+- Updated dependencies: `alloy-evm` (to 0.20), `revm` (to 29.0).
 
 ### 🚨 Breaking Changes
 
-* With the feature to check the config ID, tests and incorrectly configured guest programs / contracts may need to be adjusted.
-    - If your guest does not use the EVM config matches the one provided for the verifier chain, then `Steel.validateCommitment` will revert.
-    - If the guest program is using a `ChainSpec` that does not match the queried chain, then the guest should be updated (e.g. if using `ETH_SEPOLIA_CHAIN_SPEC` while querying Ethereum Mainnet).
-    - If the verifier needs to use a custom EVM config, then the `Steel.validateCommitmentWithConfig` function can be used.
-    - In Forge tests, `vm.chainId(ChainSpec.STEEL_TEST_PRAGUE_CHAIN_ID)` can be used to setup the chain with can ID used by Steel for a testnet, using the Prague hardfork.
-* In `OpSteel`, the `OpSteel.validateCommitment` function has been removed in this version. Please use `OpSteel.validateCommitmentWithConfig`.
+- With the feature to check the config ID, tests and incorrectly configured guest programs / contracts may need to be adjusted.
+  - If your guest does not use the EVM config matches the one provided for the verifier chain, then `Steel.validateCommitment` will revert.
+  - If the guest program is using a `ChainSpec` that does not match the queried chain, then the guest should be updated (e.g. if using `ETH_SEPOLIA_CHAIN_SPEC` while querying Ethereum Mainnet).
+  - If the verifier needs to use a custom EVM config, then the `Steel.validateCommitmentWithConfig` function can be used.
+  - In Forge tests, `vm.chainId(ChainSpec.STEEL_TEST_PRAGUE_CHAIN_ID)` can be used to setup the chain with can ID used by Steel for a testnet, using the Prague hardfork.
+- In `OpSteel`, the `OpSteel.validateCommitment` function has been removed in this version. Please use `OpSteel.validateCommitmentWithConfig`.
 
 ## [2.3.0](https://github.com/boundless-xyz/steel/releases/tag/v2.3.0)
 
