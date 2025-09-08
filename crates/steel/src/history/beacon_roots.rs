@@ -14,7 +14,6 @@
 
 use super::state::Error;
 use alloy_primitives::{address, b256, uint, Address, B256, U256};
-use anyhow::ensure;
 use revm::Database;
 
 /// Address where the EIP-4788 beacon roots contract is deployed.
@@ -65,7 +64,7 @@ where
     P: alloy::providers::Provider<N>,
 {
     use super::state::SingleContractState;
-    use anyhow::{anyhow, Context};
+    use anyhow::{anyhow, ensure, Context};
 
     // compute the keys of the two storage slots that will be accessed
     let timestamp_idx = calldata % HISTORY_BUFFER_LENGTH;

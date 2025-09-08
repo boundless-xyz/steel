@@ -14,7 +14,6 @@
 
 use crate::history::Error;
 use alloy_primitives::{address, b256, Address, BlockNumber, B256, U256};
-use anyhow::ensure;
 use revm::Database;
 
 /// Address where the EIP-2935 execution hash contract is deployed.
@@ -41,7 +40,7 @@ where
     P: alloy::providers::Provider<N>,
 {
     use crate::history::state::SingleContractState;
-    use anyhow::{anyhow, Context};
+    use anyhow::{anyhow, ensure, Context};
 
     // compute the keys of the two storage slots that will be accessed
     let hash_idx = U256::from(block_number % HISTORY_SERVE_WINDOW);
