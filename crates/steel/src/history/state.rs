@@ -58,6 +58,12 @@ impl From<crate::host::db::provider::Error> for Error {
     }
 }
 
+/// A simplified, read-only EVM database that encapsulates the state of a single smart contract.
+///
+/// This struct is created from an EIP-1186 proof response (`eth_getProof`) and holds the minimal
+/// state required for `revm` to execute calls against the specified contract. It contains the
+/// Merkle Tries for the contract's account state and its storage, ensuring that any data
+/// accessed through its `Database` implementation is verifiable against its state root.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SingleContractState {
     address: Address,
@@ -66,6 +72,7 @@ pub struct SingleContractState {
 }
 
 impl SingleContractState {
+    /// Creates a new `SingleContractState` instance from an `eth_getProof` RPC response.
     #[allow(dead_code)]
     pub fn from_proof(address: Address, proof: EIP1186AccountProofResponse) -> Result<Self, Error> {
         Ok(Self {
@@ -77,7 +84,10 @@ impl SingleContractState {
         })
     }
 
-    /// Computes the state root.
+    /// Computes and returns the state root of the encapsulated world state.
+    ///
+    /// The root is the hash of the `state_trie`. This value can be compared against a block
+    /// header's `stateRoot` to verify the integrity of the state contained within this instance.
     #[inline]
     pub fn root(&self) -> B256 {
         self.state_trie.hash_slow()
