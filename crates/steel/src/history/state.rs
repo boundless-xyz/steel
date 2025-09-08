@@ -19,10 +19,12 @@ use revm::{bytecode::Bytecode, context::DBErrorMarker, state::AccountInfo, Datab
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 
+/// Possible errors that can occur within a `SingleContractState` contract execution.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
-    #[error("wrong address")]
+    /// The state for a different address was accessed.
+    #[error("accessed an invalid address for this state")]
     AddressMismatch,
     /// Error indicating that the contract is not deployed at the expected address.
     #[error("wrong or no contract deployed")]
