@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Functionality that is only needed for the host and not the guest.
-
 use crate::{
     beacon::BeaconCommit,
     block::BlockInput,
     config::ChainSpec,
     ethereum::{EthEvmEnv, EthEvmInput},
-    history::HistoryCommit,
+    history::{Eip2935HistoryCommit, HistoryCommit},
     BlockHeaderCommit, Commitment, ComposeInput, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput,
 };
 use alloy::{
@@ -39,7 +37,6 @@ use std::{
     str::FromStr,
 };
 
-use crate::history::Eip2935HistoryCommit;
 pub use builder::{Beacon, EvmEnvBuilder, History};
 
 mod builder;
