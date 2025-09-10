@@ -16,7 +16,7 @@
 
 pragma solidity ^0.8.9;
 
-import {Blockhash} from "openzeppelin-contracts/contracts/utils/Blockhash.sol";
+import {Blockhash} from "openzeppelin/contracts/utils/Blockhash.sol";
 
 /// @title Steel Library
 /// @notice This library provides a collection of utilities to work with Steel commitments in Solidity.
