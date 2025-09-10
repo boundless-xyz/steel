@@ -62,7 +62,7 @@ mod host {
             let proof = self.db.get_proof(ADDRESS, vec![hash_idx.into()]).await?;
             ensure!(
                 proof.code_hash == CODE_HASH,
-                "no or invalid execution hash contract deployed; EIP-2935 is required"
+                "no or invalid history storage contract deployed; EIP-2935 is required"
             );
             let mut state = SingleContractState::from_proof(ADDRESS, proof)
                 .context("invalid eth_getProof response")?;
@@ -70,10 +70,7 @@ mod host {
             // validate the returned state and compute the return value
             match HistoryStorageContract::new(&mut state)?.get_unchecked(block_number) {
                 Ok(returns) => Ok((returns, state)),
-                Err(err) => match err {
-                    Error::Reverted => Err(anyhow!("HistoryStorage({}) reverted", block_number)),
-                    err => Err(anyhow!(err)),
-                },
+                Err(err) => Err(anyhow!(err)),
             }
         }
     }
@@ -86,7 +83,7 @@ impl<'a> HistoryStorageContract<&'a mut SingleContractState> {
         let account = db.basic(ADDRESS)?.unwrap_or_default();
         // validate the account's code hash
         if account.code_hash != CODE_HASH {
-            return Err(Error::NoContract);
+            return Err(Error::InvalidContract);
         }
 
         Ok(Self { db })

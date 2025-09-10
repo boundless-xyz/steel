@@ -57,9 +57,8 @@ impl<'a, F: EvmFactory> HistoryStorageContract<&'a GuestEvmEnv<F>> {
 mod host {
     use super::*;
     use crate::{
-        contract::RawCall,
         host::{db::ProviderDb, HostEvmEnv},
-        CallBuilder, Contract,
+        Contract,
     };
     use alloy::{network::Network, providers::Provider};
     use alloy_sol_types::SolValue;
@@ -88,13 +87,6 @@ mod host {
     {
         pub fn preflight(env: &'a mut HostEvmEnv<ProviderDb<N, P>, F, C>) -> Self {
             Self(Contract::preflight(eip2935::HISTORY_STORAGE_ADDRESS, env))
-        }
-
-        pub fn call_builder(
-            &mut self,
-            block_number: U256,
-        ) -> CallBuilder<F::Tx, RawCall, &mut HostEvmEnv<ProviderDb<N, P>, F, C>> {
-            self.0.raw(block_number.abi_encode().into())
         }
 
         pub async fn call(&mut self, block_number: U256) -> anyhow::Result<B256> {

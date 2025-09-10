@@ -25,10 +25,10 @@ use std::convert::Infallible;
 pub enum Error {
     /// Error indicating that the contract is not deployed at the expected address.
     #[error("wrong or no contract deployed")]
-    NoContract,
+    InvalidContract,
     /// The state for a different address was accessed.
     #[error("accessed an invalid address for this state")]
-    AddressMismatch,
+    InvalidAddress,
     /// Error indicating an inconsistency in the contract's state.
     #[error("inconsistent state")]
     InvalidState,
@@ -36,8 +36,8 @@ pub enum Error {
     #[error("state contains invalid encoded data")]
     InvalidEncoding(#[from] alloy_rlp::Error),
     /// Error indicating that the contract execution was reverted.
-    #[error("execution reverted")]
-    Reverted,
+    #[error("execution reverted: {0}")]
+    Reverted(&'static str),
     /// Unspecified error.
     #[error(transparent)]
     Other(#[from] anyhow::Error),
@@ -102,7 +102,7 @@ impl Database for SingleContractState {
     fn basic(&mut self, address: Address) -> Result<Option<AccountInfo>, Self::Error> {
         // only allow accessing the beacon roots contract's address
         if address != self.address {
-            return Err(Error::AddressMismatch);
+            return Err(Error::InvalidAddress);
         }
 
         let account: StateAccount = self
@@ -130,7 +130,7 @@ impl Database for SingleContractState {
     fn storage(&mut self, address: Address, index: U256) -> Result<U256, Self::Error> {
         // only allow accessing the beacon roots contract's address
         if address != self.address {
-            return Err(Error::AddressMismatch);
+            return Err(Error::InvalidAddress);
         }
 
         Ok(self

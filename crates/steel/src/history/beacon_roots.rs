@@ -94,7 +94,7 @@ mod host {
             match BeaconRootsContract::new(&mut state)?.get(timestamp) {
                 Ok(returns) => Ok((returns, state)),
                 Err(err) => match err {
-                    Error::Reverted => Err(anyhow!("BeaconRoots({}) reverted", timestamp)),
+                    Error::Reverted(_) => Err(anyhow!("BeaconRoots({}) reverted", timestamp)),
                     err => Err(anyhow!(err)),
                 },
             }
@@ -109,7 +109,7 @@ impl<'a> BeaconRootsContract<&'a mut SingleContractState> {
         let account = db.basic(ADDRESS)?.unwrap_or_default();
         // validate the account's code hash
         if account.code_hash != CODE_HASH {
-            return Err(Error::NoContract);
+            return Err(Error::InvalidContract);
         }
 
         Ok(Self { db })
@@ -120,12 +120,12 @@ impl<'a> BeaconRootsContract<&'a mut SingleContractState> {
     /// This behaves exactly like the EVM bytecode defined in EIP-4788.
     pub fn get(&mut self, timestamp: U256) -> Result<B256, Error> {
         if timestamp.is_zero() {
-            return Err(Error::Reverted);
+            return Err(Error::Reverted("timestamp is zero"));
         }
 
         let timestamp_idx = timestamp % HISTORY_BUFFER_LENGTH;
         if self.db.storage(ADDRESS, timestamp_idx)? != timestamp {
-            return Err(Error::Reverted);
+            return Err(Error::Reverted("timestamp too old"));
         }
 
         let root_idx = timestamp_idx + HISTORY_BUFFER_LENGTH;

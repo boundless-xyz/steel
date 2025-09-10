@@ -88,7 +88,7 @@ impl<'a> SteelVerifier<&'a GuestEvmEnv<EthEvmFactory>> {
             0 => {
                 // use history storage contract when EIP-2935 was activated
                 let block_hash = if self.env.spec >= SpecId::PRAGUE {
-                    HistoryStorageContract::new(&self.env).call(id)
+                    HistoryStorageContract::new(self.env).call(id)
                 } else {
                     let block_number =
                         validate_block_number(self.env.header().inner(), id).expect("invalid ID");
@@ -98,7 +98,7 @@ impl<'a> SteelVerifier<&'a GuestEvmEnv<EthEvmFactory>> {
             }
             1 => {
                 assert!(self.env.spec >= SpecId::CANCUN, "EIP-4788 required");
-                let beacon_root = BeaconRootsContract::new(&self.env).call(id);
+                let beacon_root = BeaconRootsContract::new(self.env).call(id);
                 assert_eq!(beacon_root, commitment.digest, "Invalid digest");
             }
             v => unimplemented!("Invalid commitment version {}", v),
@@ -146,7 +146,7 @@ mod host {
         /// Preflights the commitment verification on the host against an explicitly provided
         /// configuration ID.
         pub async fn verify_with_config_id(
-            mut self,
+            self,
             commitment: &Commitment,
             config_id: B256,
         ) -> anyhow::Result<()> {
@@ -157,9 +157,7 @@ mod host {
             match version {
                 0 => {
                     let block_hash = if self.env.spec >= SpecId::PRAGUE {
-                        HistoryStorageContract::preflight(&mut self.env)
-                            .call(id)
-                            .await?
+                        HistoryStorageContract::preflight(self.env).call(id).await?
                     } else {
                         let block_number = validate_block_number(self.env.header().inner(), id)
                             .context("invalid ID")?;
@@ -173,9 +171,7 @@ mod host {
                 }
                 1 => {
                     ensure!(self.env.spec >= SpecId::CANCUN, "EIP-4788 required");
-                    let beacon_root = BeaconRootsContract::preflight(&mut self.env)
-                        .call(id)
-                        .await?;
+                    let beacon_root = BeaconRootsContract::preflight(self.env).call(id).await?;
                     ensure!(beacon_root == commitment.digest, "invalid digest");
 
                     Ok(())
