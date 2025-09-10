@@ -211,11 +211,15 @@ mod tests {
     use revm::primitives::hardfork::SpecId;
     use test_log::test;
 
-    async fn verify_block_commitment(el: impl Provider + 'static, chain_spec: &ChainSpec<SpecId>) {
+    async fn verify_block_commitment(
+        el: impl Provider + 'static,
+        chain_spec: &ChainSpec<SpecId>,
+        n: u64,
+    ) {
         // create block commitment to the previous block
         let latest = el.get_block_number().await.unwrap();
         let block = el
-            .get_block_by_number((latest - 1).into())
+            .get_block_by_number((latest - n).into())
             .await
             .expect("eth_getBlockByNumber failed")
             .unwrap();
@@ -253,16 +257,18 @@ mod tests {
         // TODO: Make this an Anvil provider, once Anvil has EIP-2935 support
         let el = ProviderBuilder::new().connect_http(get_el_url());
 
-        verify_block_commitment(el, &ETH_MAINNET_CHAIN_SPEC).await;
+        verify_block_commitment(el.clone(), &ETH_MAINNET_CHAIN_SPEC, 1).await;
+        verify_block_commitment(el.clone(), &ETH_MAINNET_CHAIN_SPEC, 8191).await;
     }
 
     #[test(tokio::test)]
     async fn pre_eip2935_verify_block_commitment() {
         let chain_spec = ChainSpec::new_single(31337, SpecId::CANCUN);
         let el = ProviderBuilder::new().connect_anvil_with_config(|conf| conf.cancun());
-        el.anvil_mine(Some(1), None).await.unwrap();
+        el.anvil_mine(Some(256), None).await.unwrap();
 
-        verify_block_commitment(el, &chain_spec).await;
+        verify_block_commitment(el.clone(), &chain_spec, 1).await;
+        verify_block_commitment(el.clone(), &chain_spec, 256).await;
     }
 
     #[test(tokio::test)]
