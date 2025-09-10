@@ -48,6 +48,7 @@ pub mod history;
 pub mod host;
 mod merkle;
 mod mpt;
+pub mod precompiles;
 pub mod serde;
 mod state;
 #[cfg(test)]

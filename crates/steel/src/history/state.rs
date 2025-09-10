@@ -19,16 +19,16 @@ use revm::{bytecode::Bytecode, context::DBErrorMarker, state::AccountInfo, Datab
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 
-/// Possible errors that can occur within a `SingleContractState` contract execution.
+/// Possible errors that can occur within a [SingleContractState] contract execution.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
-    /// The state for a different address was accessed.
-    #[error("accessed an invalid address for this state")]
-    AddressMismatch,
     /// Error indicating that the contract is not deployed at the expected address.
     #[error("wrong or no contract deployed")]
     NoContract,
+    /// The state for a different address was accessed.
+    #[error("accessed an invalid address for this state")]
+    AddressMismatch,
     /// Error indicating an inconsistency in the contract's state.
     #[error("inconsistent state")]
     InvalidState,
@@ -58,7 +58,7 @@ impl From<crate::host::db::provider::Error> for Error {
     }
 }
 
-/// A simplified, read-only EVM database that encapsulates the state of a single smart contract.
+/// Simplified read-only EVM database that encapsulates the state of a single smart contract.
 ///
 /// This struct is created from an EIP-1186 proof response (`eth_getProof`) and holds the minimal
 /// state required for `revm` to execute calls against the specified contract. It contains the

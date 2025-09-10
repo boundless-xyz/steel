@@ -13,11 +13,13 @@
 // limitations under the License.
 
 use crate::{
-    history::beacon_roots::BeaconRootsContract, state::WrapStateDb, Commitment, EvmBlockHeader,
-    EvmFactory, GuestEvmEnv,
+    ethereum::EthEvmFactory,
+    precompiles::{BeaconRootsContract, HistoryStorageContract},
+    Commitment, EvmBlockHeader, GuestEvmEnv,
 };
 use alloy_primitives::{B256, U256};
 use anyhow::{ensure, Context};
+use revm::primitives::hardfork::SpecId;
 
 /// Represents a verifier for validating Steel commitments within Steel.
 ///
@@ -62,9 +64,9 @@ pub struct SteelVerifier<E> {
     env: E,
 }
 
-impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
+impl<'a> SteelVerifier<&'a GuestEvmEnv<EthEvmFactory>> {
     /// Constructor for verifying Steel commitments in the guest.
-    pub fn new(env: &'a GuestEvmEnv<F>) -> Self {
+    pub fn new(env: &'a GuestEvmEnv<EthEvmFactory>) -> Self {
         Self { env }
     }
 
@@ -84,15 +86,19 @@ impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
         let (id, version) = commitment.decode_id();
         match version {
             0 => {
-                let block_number =
-                    validate_block_number(self.env.header().inner(), id).expect("Invalid ID");
-                let block_hash = self.env.db().block_hash(block_number);
+                // use history storage contract when EIP-2935 was activated
+                let block_hash = if self.env.spec >= SpecId::PRAGUE {
+                    HistoryStorageContract::new(&self.env).call(id)
+                } else {
+                    let block_number =
+                        validate_block_number(self.env.header().inner(), id).expect("invalid ID");
+                    self.env.db().block_hash(block_number)
+                };
                 assert_eq!(block_hash, commitment.digest, "Invalid digest");
             }
             1 => {
-                let db = WrapStateDb::new(self.env.db(), self.env.header());
-                let beacon_root = BeaconRootsContract::get_from_db(db, id)
-                    .expect("calling BeaconRootsContract failed");
+                assert!(self.env.spec >= SpecId::CANCUN, "EIP-4788 required");
+                let beacon_root = BeaconRootsContract::new(&self.env).call(id);
                 assert_eq!(beacon_root, commitment.digest, "Invalid digest");
             }
             v => unimplemented!("Invalid commitment version {}", v),
@@ -103,16 +109,16 @@ impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
 #[cfg(feature = "host")]
 mod host {
     use super::*;
-    use crate::{history::Error, host::HostEvmEnv};
-    use anyhow::Context;
-    use revm::Database;
+    use crate::{
+        ethereum::EthEvmFactory,
+        host::{db::ProviderDb, HostEvmEnv},
+    };
+    use alloy::{network::Ethereum, providers::Provider};
+    use revm::{primitives::hardfork::SpecId, Database};
 
-    impl<'a, D, F: EvmFactory, C> SteelVerifier<&'a mut HostEvmEnv<D, F, C>>
+    impl<'a, P, C> SteelVerifier<&'a mut HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, C>>
     where
-        D: crate::EvmDatabase + Send + 'static,
-        Error: From<<D as Database>::Error>,
-        anyhow::Error: From<<D as Database>::Error>,
-        <D as Database>::Error: Send + 'static,
+        P: Provider<Ethereum> + Send + Sync + 'static,
     {
         /// Constructor for preflighting Steel commitment verifications on the host.
         ///
@@ -121,7 +127,9 @@ mod host {
         /// [EvmEnv::into_input].
         ///
         /// [EvmEnv::into_input]: crate::EvmEnv::into_input
-        pub fn preflight(env: &'a mut HostEvmEnv<D, F, C>) -> Self {
+        pub fn preflight(
+            env: &'a mut HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, C>,
+        ) -> Self {
             Self { env }
         }
 
@@ -138,7 +146,7 @@ mod host {
         /// Preflights the commitment verification on the host against an explicitly provided
         /// configuration ID.
         pub async fn verify_with_config_id(
-            self,
+            mut self,
             commitment: &Commitment,
             config_id: B256,
         ) -> anyhow::Result<()> {
@@ -148,22 +156,26 @@ mod host {
             let (id, version) = commitment.decode_id();
             match version {
                 0 => {
-                    let block_number = validate_block_number(self.env.header().inner(), id)
-                        .context("invalid ID")?;
-                    let block_hash = self
-                        .env
-                        .spawn_with_db(move |db| db.block_hash(block_number))
-                        .await?;
+                    let block_hash = if self.env.spec >= SpecId::PRAGUE {
+                        HistoryStorageContract::preflight(&mut self.env)
+                            .call(id)
+                            .await?
+                    } else {
+                        let block_number = validate_block_number(self.env.header().inner(), id)
+                            .context("invalid ID")?;
+                        self.env
+                            .spawn_with_db(move |db| db.block_hash(block_number))
+                            .await?
+                    };
                     ensure!(block_hash == commitment.digest, "invalid digest");
 
                     Ok(())
                 }
                 1 => {
-                    let beacon_root = self
-                        .env
-                        .spawn_with_db(move |db| BeaconRootsContract::get_from_db(db, id))
-                        .await
-                        .with_context(|| format!("calling BeaconRootsContract({id}) failed"))?;
+                    ensure!(self.env.spec >= SpecId::CANCUN, "EIP-4788 required");
+                    let beacon_root = BeaconRootsContract::preflight(&mut self.env)
+                        .call(id)
+                        .await?;
                     ensure!(beacon_root == commitment.digest, "invalid digest");
 
                     Ok(())
@@ -189,6 +201,7 @@ fn validate_block_number(header: &impl EvmBlockHeader, block_number: U256) -> an
 mod tests {
     use super::*;
     use crate::{
+        config::ChainSpec,
         ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
         test_utils::get_el_url,
         CommitmentVersion,
@@ -196,19 +209,13 @@ mod tests {
     use alloy::{
         consensus::BlockHeader,
         network::{primitives::HeaderResponse, BlockResponse},
-        providers::{Provider, ProviderBuilder},
+        providers::{ext::AnvilApi, Provider, ProviderBuilder},
         rpc::types::BlockNumberOrTag as AlloyBlockNumberOrTag,
     };
+    use revm::primitives::hardfork::SpecId;
     use test_log::test;
 
-    #[test(tokio::test)]
-    #[cfg_attr(
-        any(not(feature = "rpc-tests"), no_auth),
-        ignore = "RPC tests are disabled"
-    )]
-    async fn verify_block_commitment() {
-        let el = ProviderBuilder::new().connect_http(get_el_url());
-
+    async fn verify_block_commitment(el: impl Provider + 'static, chain_spec: &ChainSpec<SpecId>) {
         // create block commitment to the previous block
         let latest = el.get_block_number().await.unwrap();
         let block = el
@@ -221,13 +228,13 @@ mod tests {
             CommitmentVersion::Block as u16,
             header.number(),
             header.hash(),
-            ETH_MAINNET_CHAIN_SPEC.digest(),
+            chain_spec.digest(),
         );
 
         // preflight the verifier
         let mut env = EthEvmEnv::builder()
             .provider(el)
-            .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
+            .chain_spec(chain_spec)
             .build()
             .await
             .unwrap();
@@ -237,12 +244,29 @@ mod tests {
             .unwrap();
 
         // mock guest execution, by executing the verifier on the GuestEvmEnv
-        let env = env
-            .into_input()
-            .await
-            .unwrap()
-            .into_env(&ETH_MAINNET_CHAIN_SPEC);
+        let env = env.into_input().await.unwrap().into_env(chain_spec);
         SteelVerifier::new(&env).verify(&commit);
+    }
+
+    #[test(tokio::test)]
+    #[cfg_attr(
+        any(not(feature = "rpc-tests"), no_auth),
+        ignore = "RPC tests are disabled"
+    )]
+    async fn eip2935_verify_block_commitment() {
+        // TODO: Make this an Anvil provider, once Anvil has EIP-2935 support
+        let el = ProviderBuilder::new().connect_http(get_el_url());
+
+        verify_block_commitment(el, &ETH_MAINNET_CHAIN_SPEC).await;
+    }
+
+    #[test(tokio::test)]
+    async fn pre_eip2935_verify_block_commitment() {
+        let chain_spec = ChainSpec::new_single(31337, SpecId::CANCUN);
+        let el = ProviderBuilder::new().connect_anvil_with_config(|conf| conf.cancun());
+        el.anvil_mine(Some(1), None).await.unwrap();
+
+        verify_block_commitment(el, &chain_spec).await;
     }
 
     #[test(tokio::test)]

@@ -13,85 +13,18 @@
 // limitations under the License.
 
 use super::state::Error;
+use crate::history::SingleContractState;
 use alloy_primitives::{address, b256, uint, Address, B256, U256};
 use revm::Database;
 
 /// Address where the EIP-4788 beacon roots contract is deployed.
 pub const ADDRESS: Address = address!("0x000F3df6D732807Ef1319fB7B8bB8522d0Beac02");
-
 /// The length of the buffer that stores historical entries, i.e., the number of stored
 /// timestamps and roots.
-pub(crate) const HISTORY_BUFFER_LENGTH: U256 = uint!(8191_U256);
+pub const HISTORY_BUFFER_LENGTH: U256 = uint!(8191_U256);
+
 /// Hash of the deployed EVM bytecode.
 const CODE_HASH: B256 = b256!("f57acd40259872606d76197ef052f3d35588dadf919ee1f0e3cb9b62d3f4b02c");
-
-/// Returns the timestamp stored in the slot which corresponds to the given `calldata` (timestamp).
-#[cfg(feature = "host")]
-pub(super) async fn get_timestamp<N, P>(
-    calldata: U256,
-    provider: P,
-    block_id: alloy::eips::BlockId,
-) -> anyhow::Result<U256>
-where
-    N: alloy::network::Network,
-    P: alloy::providers::Provider<N>,
-{
-    // compute the key of the storage slot
-    let timestamp_idx = calldata % HISTORY_BUFFER_LENGTH;
-    // return its value
-    anyhow::Context::context(
-        provider
-            .get_storage_at(ADDRESS, timestamp_idx)
-            .block_id(block_id)
-            .await,
-        "eth_getStorageAt failed",
-    )
-}
-
-/// Prepares a [SingleContractState] by retrieving the beacon root from an RPC provider and
-/// constructing the necessary proofs.
-///
-/// It fetches the minimal set of Merkle proofs (for the contract's state and storage) required
-/// to verify and retrieve the beacon root associated with the given `calldata` (timestamp).
-#[cfg(feature = "host")]
-pub async fn preflight_get<N, P>(
-    calldata: U256,
-    provider: P,
-    block_id: alloy::eips::BlockId,
-) -> anyhow::Result<(B256, super::state::SingleContractState)>
-where
-    N: alloy::network::Network,
-    P: alloy::providers::Provider<N>,
-{
-    use super::state::SingleContractState;
-    use anyhow::{anyhow, ensure, Context};
-
-    // compute the keys of the two storage slots that will be accessed
-    let timestamp_idx = calldata % HISTORY_BUFFER_LENGTH;
-    let root_idx = timestamp_idx + HISTORY_BUFFER_LENGTH;
-
-    // derive the minimal state needed to query and validate
-    let proof = provider
-        .get_proof(ADDRESS, vec![timestamp_idx.into(), root_idx.into()])
-        .block_id(block_id)
-        .await
-        .context("eth_getProof failed")?;
-    ensure!(
-        proof.code_hash == CODE_HASH,
-        "no or invalid beacon roots contract deployed; EIP-4788 is required"
-    );
-    let mut state =
-        SingleContractState::from_proof(ADDRESS, proof).context("invalid eth_getProof response")?;
-
-    // validate the returned state and compute the return value
-    match BeaconRootsContract::get_from_db(&mut state, calldata) {
-        Ok(returns) => Ok((returns, state)),
-        Err(err) => match err {
-            Error::Reverted => Err(anyhow!("BeaconRootsContract({}) reverted", calldata)),
-            err => Err(err).context("RPC error"),
-        },
-    }
-}
 
 /// The `BeaconRootsContract` is responsible for storing and retrieving historical beacon roots.
 ///
@@ -104,13 +37,74 @@ pub struct BeaconRootsContract<D> {
     db: D,
 }
 
-impl<D> BeaconRootsContract<D>
-where
-    D: Database,
-    Error: From<<D as Database>::Error>,
-{
+#[cfg(feature = "host")]
+mod host {
+    use super::*;
+    use crate::{history::SingleContractState, host::db::ProviderDb};
+    use alloy::providers::{Network, Provider};
+    use anyhow::{anyhow, ensure, Context};
+
+    impl<N, P> BeaconRootsContract<ProviderDb<N, P>>
+    where
+        N: Network,
+        P: Provider<N>,
+    {
+        /// Creates a new instance of the `ExecutionHashContract` from the given db.
+        pub fn preflight(db: ProviderDb<N, P>) -> Self {
+            Self { db }
+        }
+
+        /// Returns the timestamp stored in the slot which corresponds to the given `timestamp`.
+        pub async fn get_timestamp(&self, timestamp: U256) -> anyhow::Result<U256> {
+            // compute the key of the storage slot
+            let timestamp_idx = timestamp % HISTORY_BUFFER_LENGTH;
+            // return its value
+            self.db
+                .provider()
+                .get_storage_at(ADDRESS, timestamp_idx)
+                .hash(self.db.block())
+                .await
+                .context("eth_getStorageAt failed")
+        }
+
+        /// Prepares a [SingleContractState] by retrieving the beacon root from an RPC provider and
+        /// constructing the necessary proofs.
+        ///
+        /// It fetches the minimal set of Merkle proofs (for the contract's state and storage)
+        /// required to verify and retrieve the beacon root associated with the given
+        /// `timestamp`.
+        pub async fn get(&self, timestamp: U256) -> anyhow::Result<(B256, SingleContractState)> {
+            // compute the keys of the two storage slots that will be accessed
+            let timestamp_idx = timestamp % HISTORY_BUFFER_LENGTH;
+            let root_idx = timestamp_idx + HISTORY_BUFFER_LENGTH;
+
+            // derive the minimal state needed to query and validate
+            let proof = self
+                .db
+                .get_proof(ADDRESS, vec![timestamp_idx.into(), root_idx.into()])
+                .await?;
+            ensure!(
+                proof.code_hash == CODE_HASH,
+                "no or invalid beacon roots contract deployed; EIP-4788 is required"
+            );
+            let mut state = SingleContractState::from_proof(ADDRESS, proof)
+                .context("invalid eth_getProof response")?;
+
+            // validate the returned state and compute the return value
+            match BeaconRootsContract::new(&mut state)?.get(timestamp) {
+                Ok(returns) => Ok((returns, state)),
+                Err(err) => match err {
+                    Error::Reverted => Err(anyhow!("BeaconRoots({}) reverted", timestamp)),
+                    err => Err(anyhow!(err)),
+                },
+            }
+        }
+    }
+}
+
+impl<'a> BeaconRootsContract<&'a mut SingleContractState> {
     /// Creates a new instance of the `BeaconRootsContract` from the given db.
-    pub fn new(mut db: D) -> Result<Self, Error> {
+    pub fn new(db: &'a mut SingleContractState) -> Result<Self, Error> {
         // retrieve the account data from the state trie using the contract's address hash
         let account = db.basic(ADDRESS)?.unwrap_or_default();
         // validate the account's code hash
@@ -124,15 +118,13 @@ where
     /// Retrieves the root associated with the provided `calldata` (timestamp).
     ///
     /// This behaves exactly like the EVM bytecode defined in EIP-4788.
-    pub fn get(&mut self, calldata: U256) -> Result<B256, Error> {
-        if calldata.is_zero() {
+    pub fn get(&mut self, timestamp: U256) -> Result<B256, Error> {
+        if timestamp.is_zero() {
             return Err(Error::Reverted);
         }
 
-        let timestamp_idx = calldata % HISTORY_BUFFER_LENGTH;
-        let timestamp = self.db.storage(ADDRESS, timestamp_idx)?;
-
-        if timestamp != calldata {
+        let timestamp_idx = timestamp % HISTORY_BUFFER_LENGTH;
+        if self.db.storage(ADDRESS, timestamp_idx)? != timestamp {
             return Err(Error::Reverted);
         }
 
@@ -141,18 +133,12 @@ where
 
         Ok(root.into())
     }
-
-    /// Retrieves the root associated with the provided `calldata` (timestamp) from `db`.
-    #[inline]
-    pub fn get_from_db(db: D, calldata: U256) -> Result<B256, Error> {
-        Self::new(db)?.get(calldata)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::get_el_url;
+    use crate::{host::db::ProviderDb, test_utils::get_el_url};
     use alloy::{
         network::BlockResponse,
         providers::{Provider, ProviderBuilder},
@@ -165,7 +151,7 @@ mod tests {
         any(not(feature = "rpc-tests"), no_auth),
         ignore = "RPC tests are disabled"
     )]
-    async fn beacon_roots_contract() {
+    async fn contract() {
         let el = ProviderBuilder::new().connect_http(get_el_url());
 
         // get the latest header
@@ -175,10 +161,12 @@ mod tests {
             .expect("eth_getBlockByNumber failed")
             .unwrap();
         let header = latest.header();
+        let db = ProviderDb::new(el, Default::default(), header.hash);
 
         // query the contract for the latest timestamp, this should return parent_beacon_block_root
         let calldata = U256::from(header.timestamp);
-        let (preflight, mut state) = preflight_get(calldata, el, header.hash.into())
+        let (preflight, mut state) = BeaconRootsContract::preflight(db)
+            .get(calldata)
             .await
             .expect("preflighting BeaconRootsContract failed");
         assert_eq!(state.root(), header.state_root);
@@ -187,7 +175,7 @@ mod tests {
         // executing the contract from the exact state should return the same value
         assert_eq!(
             preflight,
-            dbg!(BeaconRootsContract::get_from_db(&mut state, calldata)).unwrap()
+            dbg!(BeaconRootsContract::new(&mut state).unwrap().get(calldata)).unwrap()
         );
     }
 }

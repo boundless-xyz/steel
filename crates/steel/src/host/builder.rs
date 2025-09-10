@@ -16,7 +16,7 @@ use super::BlockId;
 use crate::{
     beacon::BeaconCommit,
     config::ChainSpec,
-    ethereum::EthEvmFactory,
+    ethereum::{EthBlockHeader, EthEvmFactory},
     history::{Eip2935HistoryCommit, HistoryCommit},
     host::{
         db::{ProofDb, ProviderConfig, ProviderDb},
@@ -315,16 +315,17 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, ()> {
     }
 }
 
-impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, Eip2935History> {
+impl<P>
+    EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::Spec>, Eip2935History>
+{
     /// Builds and returns an [EvmEnv] with the configured settings that commits to a block hash.
-    pub async fn build<N>(
+    pub async fn build(
         self,
-    ) -> Result<HostEvmEnv<ProviderDb<N, P>, F, Eip2935HistoryCommit<F::Header>>>
+    ) -> Result<
+        HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, Eip2935HistoryCommit<EthBlockHeader>>,
+    >
     where
-        N: Network,
-        P: Provider<N>,
-        F::Header: TryFrom<<N as Network>::HeaderResponse>,
-        <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+        P: Provider<Ethereum>,
     {
         let evm_header = self.get_header(None).await?;
         let commitment_header = self

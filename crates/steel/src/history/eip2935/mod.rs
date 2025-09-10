@@ -12,35 +12,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Types related to commitments to a historical state relying on EIP-2935.
+
+use alloy_primitives::{Sealed, B256, U256};
+use history_storage::HistoryStorageContract;
+use serde::{Deserialize, Serialize};
+
 use crate::{
     history::state::SingleContractState, BlockHeaderCommit, Commitment, CommitmentVersion,
     ComposeInput, EvmBlockHeader, EvmFactory,
 };
-use alloy_primitives::{Sealed, B256};
-use execution_hash::ExecutionHashContract;
-use serde::{Deserialize, Serialize};
 
-mod execution_hash;
+mod history_storage;
 
 /// Input recursively committing to multiple execution block hashes.
 pub type HistoryInput<F> = ComposeInput<F, HistoryCommit<<F as EvmFactory>::Header>>;
 
+/// Commitment that an execution block is an ancestor of a specific other execution block.
+///
+/// This struct encapsulates the necessary data to prove that a given execution block is part of the
+/// canonical chain.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HistoryCommit<H> {
     /// Iterative commits for verifying the execution block as an ancestor of some other block.
     state_commits: Vec<StateCommit<H>>,
 }
 
+/// Represents a commitment of a history storage contract state to the corresponding block hash.
 #[derive(Clone, Serialize, Deserialize)]
 struct StateCommit<H> {
+    /// State for verifying the previous execution block hash.
     state: SingleContractState,
+    /// Header belonging to the state.
     header: H,
 }
 
 impl<H: EvmBlockHeader> BlockHeaderCommit<H> for HistoryCommit<H> {
+    /// Generates a commitment that proves the given block header is part of the chain history.
+    ///
+    /// Panics if the provided [HistoryCommit] data is invalid or inconsistent.
     fn commit(mut self, header: &Sealed<H>, config_id: B256) -> Commitment {
         let mut header = header.as_sealed_ref();
 
+        // starting from header, "walk forward" along state_commits to reach a later execution hash
         for state_commit in &mut self.state_commits {
             let state_header = state_commit.header.seal_ref_slow();
 
@@ -48,8 +62,8 @@ impl<H: EvmBlockHeader> BlockHeaderCommit<H> for HistoryCommit<H> {
             assert!(
                 header.number() < state_header.number()
                     && state_header.number() - header.number()
-                        <= execution_hash::HISTORY_SERVE_WINDOW,
-                "Block outside of history range"
+                        <= history_storage::HISTORY_SERVE_WINDOW.to(),
+                "Block outside of EIP-2935 history range"
             );
 
             // verify that the state is valid with respect to the commitment header
@@ -59,9 +73,10 @@ impl<H: EvmBlockHeader> BlockHeaderCommit<H> for HistoryCommit<H> {
                 "State root mismatch"
             );
 
-            let execution_hash =
-                ExecutionHashContract::get_from_db(&mut state_commit.state, header.number())
-                    .unwrap();
+            let block_number = U256::from(header.number());
+            let execution_hash = HistoryStorageContract::new(&mut state_commit.state)
+                .and_then(|mut c| c.get_unchecked(block_number))
+                .expect("History storage contract failed");
             assert_eq!(execution_hash, header.seal(), "Execution hash mismatch");
 
             header = state_header;
@@ -79,31 +94,30 @@ impl<H: EvmBlockHeader> BlockHeaderCommit<H> for HistoryCommit<H> {
 #[cfg(feature = "host")]
 mod host {
     use super::*;
+    use crate::{ethereum::EthBlockHeader, host::db::ProviderDb, EvmBlockHeader};
     use alloy::{
-        network::{BlockResponse, Network},
+        network::{BlockResponse, Ethereum},
         providers::Provider,
     };
+    use alloy_primitives::{BlockNumber, Sealable};
     use anyhow::{anyhow, ensure, Context};
-    use std::{fmt::Display, iter};
+    use std::iter;
 
-    impl<H: EvmBlockHeader + Clone> HistoryCommit<H> {
+    impl HistoryCommit<EthBlockHeader> {
         /// Creates a `HistoryCommit` from an EVM execution block header and a later commitment
         /// header.
         ///
         /// This method constructs a chain of proofs to link the `execution_header` to the
-        /// `commitment_header` via the EIP-2935 execution hash contract.
+        /// `commitment_header` via the EIP-2935 history storage contract.
         /// It effectively proves that the `execution_header` is an ancestor of a state verifiable
         /// by the `commitment_header`.
-        pub(crate) async fn from_headers<N, P>(
-            execution_header: &Sealed<H>,
-            commitment_header: &Sealed<H>,
+        pub(crate) async fn from_headers<P>(
+            execution_header: &Sealed<EthBlockHeader>,
+            commitment_header: &Sealed<EthBlockHeader>,
             rpc_provider: P,
         ) -> anyhow::Result<Self>
         where
-            N: Network,
-            P: Provider<N>,
-            H: TryFrom<<N as Network>::HeaderResponse>,
-            <H as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+            P: Provider<Ethereum>,
         {
             ensure!(
                 execution_header.number() < commitment_header.number(),
@@ -112,10 +126,11 @@ mod host {
 
             let mut current_state_header = execution_header.clone();
 
-            let mut state_commits: Vec<StateCommit<H>> = Vec::new();
-            for number in (execution_header.number() + execution_hash::HISTORY_SERVE_WINDOW
+            let mut state_commits: Vec<StateCommit<EthBlockHeader>> = Vec::new();
+            for number in (execution_header.number()
+                + history_storage::HISTORY_SERVE_WINDOW.to::<BlockNumber>()
                 ..commitment_header.number())
-                .step_by(execution_hash::HISTORY_SERVE_WINDOW as usize)
+                .step_by(history_storage::HISTORY_SERVE_WINDOW.to())
                 .chain(iter::once(commitment_header.number()))
             {
                 let rpc_block = rpc_provider
@@ -125,18 +140,17 @@ mod host {
                     .with_context(|| format!("block {number} not found"))?;
 
                 let rpc_header = rpc_block.header().clone();
-                let header: H = rpc_header
+                let header: EthBlockHeader = rpc_header
                     .try_into()
                     .map_err(|err| anyhow!("header invalid: {}", err))?;
                 let header = header.seal_slow();
+                let db = ProviderDb::new(&rpc_provider, Default::default(), header.seal());
 
-                let (hash, state_witness) = execution_hash::preflight_get(
-                    current_state_header.number(),
-                    &rpc_provider,
-                    header.seal().into(),
-                )
-                .await
-                .context("failed to preflight execution hash contract")?;
+                let block_number = U256::from(current_state_header.number());
+                let (hash, state_witness) = HistoryStorageContract::preflight(db)
+                    .get_unchecked(block_number)
+                    .await
+                    .context("failed to preflight history storage contract")?;
                 ensure!(
                     current_state_header.seal() == hash,
                     "final block does not match the commitment block"
@@ -165,7 +179,7 @@ mod tests {
     use alloy::providers::{Provider, ProviderBuilder};
     use alloy_eips::BlockNumberOrTag;
     use alloy_primitives::Sealable;
-    use execution_hash::HISTORY_SERVE_WINDOW;
+    use history_storage::HISTORY_SERVE_WINDOW;
     use test_log::test;
 
     #[test(tokio::test)]
@@ -200,7 +214,7 @@ mod tests {
         let el = ProviderBuilder::default().connect_http(get_el_url());
 
         check_dist(&el, 1).await.unwrap();
-        check_dist(&el, HISTORY_SERVE_WINDOW).await.unwrap();
+        check_dist(&el, HISTORY_SERVE_WINDOW.to()).await.unwrap();
         check_dist(&el, 20_000).await.unwrap();
     }
 }
