@@ -163,6 +163,7 @@ impl<'a, F: EvmFactory> Contract<&'a GuestEvmEnv<F>> {
         CallBuilder::new(F::new_tx(self.address, call.abi_encode().into()), self.env)
     }
 
+    /// Initializes a builder for doing a raw contract call in the guest.
     pub fn raw(&self, data: Bytes) -> CallBuilder<F::Tx, RawCall, &GuestEvmEnv<F>> {
         CallBuilder::new(F::new_tx(self.address, data), self.env)
     }
@@ -282,6 +283,7 @@ mod host {
             CallBuilder::new(F::new_tx(self.address, call.abi_encode().into()), self.env)
         }
 
+        /// Initializes a builder for doing a raw contract call on the host.
         pub fn raw(
             &mut self,
             data: Bytes,

@@ -58,7 +58,7 @@ mod verifier;
 pub use account::Account;
 pub use beacon::BeaconInput;
 pub use block::BlockInput;
-pub use contract::{CallBuilder, Contract};
+pub use contract::{CallBuilder, Contract, RawCall};
 pub use event::Event;
 pub use history::{Eip2935HistoryInput, HistoryInput};
 pub use mpt::MerkleTrie;
