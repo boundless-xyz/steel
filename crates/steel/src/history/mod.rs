@@ -18,6 +18,7 @@ use alloy_primitives::{Sealed, B256, U256};
 use beacon::{BeaconCommit, GeneralizedBeaconCommit, STATE_ROOT_LEAF_INDEX};
 use beacon_roots::BeaconRootsContract;
 use serde::{Deserialize, Serialize};
+use state::SingleContractState;
 
 use crate::{
     beacon, beacon::BeaconBlockId, BlockHeaderCommit, Commitment, CommitmentVersion, ComposeInput,
@@ -28,7 +29,7 @@ mod eip2935;
 mod state;
 
 pub use eip2935::{HistoryCommit as Eip2935HistoryCommit, HistoryInput as Eip2935HistoryInput};
-pub use state::{Error, SingleContractState};
+pub use state::Error;
 
 /// Input recursively committing to multiple Beacon Chain block roots.
 pub type HistoryInput<F> = ComposeInput<F, HistoryCommit>;
