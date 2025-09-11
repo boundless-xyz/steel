@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Strongly-typed wrappers for interacting with Ethereum precompiled contracts.
+//! Wrappers for interacting with Ethereum precompiled contracts.
 
 use crate::{Contract, EvmFactory, GuestEvmEnv};
 use alloy_eips::{eip2935, eip4788};
