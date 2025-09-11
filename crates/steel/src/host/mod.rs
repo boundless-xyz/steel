@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Functionality that is only needed for the host and not the guest.
+
 use crate::{
     beacon::BeaconCommit,
     block::BlockInput,
