@@ -30,7 +30,7 @@ use risc0_steel::{
         inspector::NoOpInspector,
         primitives::hardfork::SpecId,
     },
-    serde::RlpHeader,
+    serde::{Eip2718Wrapper, RlpHeader},
     BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, StateDb,
 };
 use serde::{Deserialize, Serialize};
@@ -41,7 +41,6 @@ mod host;
 
 #[cfg(feature = "host")]
 pub use host::*;
-use risc0_steel::serde::Eip2718Wrapper;
 
 /// The OP Mainnet [ChainSpec].
 pub static OP_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {

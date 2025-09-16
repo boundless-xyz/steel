@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::optimism::{OpEvmFactory, OpBlockHeader};
+use crate::optimism::{OpBlockHeader, OpEvmFactory};
 use alloy_primitives::{keccak256, Sealed, B256};
 use alloy_sol_types::SolValue;
 use risc0_steel::{BlockHeaderCommit, Commitment, ComposeInput};
