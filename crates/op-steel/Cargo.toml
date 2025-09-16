@@ -14,14 +14,18 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 [dependencies]
 alloy = { workspace = true, optional = true, features = ["std", "essentials"] }
+alloy-consensus = { workspace = true }
 alloy-eips = { workspace = true }
 alloy-evm = { workspace = true }
 alloy-op-evm = { workspace = true }
 alloy-primitives = { workspace = true, features = ["rlp", "serde"] }
+alloy-rlp = { workspace = true }
 alloy-sol-types = { workspace = true }
 anyhow = { workspace = true }
+delegate = { workspace = true }
 log = { workspace = true }
 op-alloy-network = { workspace = true }
+op-alloy-rpc-types = { workspace = true }
 op-revm = { workspace = true, features = ["serde"] }
 risc0-steel = { workspace = true }
 serde = { workspace = true }

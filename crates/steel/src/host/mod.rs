@@ -307,6 +307,8 @@ where
     F: EvmFactory,
     F::Header: TryFrom<<N as Network>::HeaderResponse>,
     <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
 {
     /// Converts the environment into a [EvmInput] committing to an execution block hash.
     pub async fn into_input(self) -> Result<EvmInput<F>> {

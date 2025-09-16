@@ -15,12 +15,14 @@
 //! Type aliases and specifications for Ethereum.
 use crate::{
     config::{ChainSpec, ForkCondition},
-    serde::RlpHeader,
+    serde::{Eip2718Wrapper, RlpHeader},
     EvmBlockHeader, EvmEnv, EvmFactory, EvmInput,
 };
-use alloy_eips::{eip4844, eip7691};
+use alloy_consensus::{Eip658Value, TxReceipt};
+use alloy_eips::{eip4844, eip7691, Encodable2718, Typed2718};
 use alloy_evm::{Database, EthEvmFactory as AlloyEthEvmFactory, EvmFactory as AlloyEvmFactory};
-use alloy_primitives::{Address, BlockNumber, Bytes, TxKind, B256, U256};
+use alloy_primitives::{Address, BlockNumber, Bloom, Bytes, TxKind, B256, U256};
+use delegate::delegate;
 use revm::{
     context::{BlockEnv, CfgEnv, TxEnv},
     context_interface::block::BlobExcessGasAndPrice,
@@ -80,6 +82,7 @@ impl EvmFactory for EthEvmFactory {
     type HaltReason = <AlloyEthEvmFactory as AlloyEvmFactory>::HaltReason;
     type Spec = <AlloyEthEvmFactory as AlloyEvmFactory>::Spec;
     type Header = EthBlockHeader;
+    type Receipt = EthReceipt;
 
     fn new_tx(address: Address, data: Bytes) -> Self::Tx {
         TxEnv {
@@ -148,7 +151,7 @@ impl EvmBlockHeader for EthBlockHeader {
         &self.inner().receipts_root
     }
     #[inline]
-    fn logs_bloom(&self) -> &alloy_primitives::Bloom {
+    fn logs_bloom(&self) -> &Bloom {
         &self.inner().logs_bloom
     }
 
@@ -182,6 +185,53 @@ impl EvmBlockHeader for EthBlockHeader {
             prevrandao: (spec >= SpecId::MERGE).then_some(header.mix_hash),
             blob_excess_gas_and_price,
         }
+    }
+}
+
+/// [EvmFactory::Receipt] for Ethereum.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct EthReceipt(Eip2718Wrapper<alloy_consensus::ReceiptEnvelope>);
+
+impl Typed2718 for EthReceipt {
+    delegate! {
+        to self.0 { fn ty(&self) -> u8; }
+    }
+}
+
+impl Encodable2718 for EthReceipt {
+    delegate! {
+        to self.0 {
+            fn encode_2718_len(&self) -> usize;
+            fn encode_2718(&self, out: &mut dyn alloy_rlp::BufMut);
+        }
+    }
+}
+
+impl TxReceipt for EthReceipt {
+    type Log = <alloy_consensus::ReceiptEnvelope as TxReceipt>::Log;
+
+    delegate! {
+        to self.0 {
+            fn status_or_post_state(&self) -> Eip658Value;
+            fn status(&self) -> bool;
+            fn bloom(&self) -> Bloom;
+            fn cumulative_gas_used(&self) -> u64;
+            fn logs(&self) -> &[Self::Log];
+        }
+    }
+}
+
+#[cfg(feature = "host")]
+impl From<alloy_rpc_types::TransactionReceipt> for EthReceipt {
+    #[inline]
+    fn from(rpc_receipt: alloy_rpc_types::TransactionReceipt) -> Self {
+        // Unfortunately ReceiptResponse does not implement ReceiptEnvelope, so we have to
+        // manually convert it.
+        // TODO(https://github.com/alloy-rs/alloy/issues/854): use ReceiptEnvelope directly
+        Self(Eip2718Wrapper::new(
+            rpc_receipt.into_inner().into_primitives_receipt(),
+        ))
     }
 }
 

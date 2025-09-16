@@ -14,7 +14,7 @@
 
 use crate::{
     game::host::{DisputeGameIndex, OptimismPortal2},
-    optimism::{OpBlockHeader, OpChainSpec, OpEvmFactory, OpEvmInput},
+    optimism::{OpChainSpec, OpEvmFactory, OpBlockHeader, OpEvmInput},
     DisputeGameCommit,
 };
 use alloy::{
