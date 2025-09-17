@@ -276,6 +276,9 @@ pub trait EvmSpecId: Ord {
     /// Whether EIP-2935 has been activated.
     fn has_eip2935(&self) -> bool;
     /// Converts the specification ID into an `u32`. This is used to compute [ChainSpec::digest()].
+    ///
+    /// This must return a unique integer for each distinct specification. Different chains can have
+    /// clashing specifications as long as their chain IDs are different.
     fn to_u32(&self) -> u32;
 }
 
