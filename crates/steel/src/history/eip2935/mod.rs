@@ -94,16 +94,16 @@ impl<H: EvmBlockHeader> BlockHeaderCommit<H> for HistoryCommit<H> {
 #[cfg(feature = "host")]
 mod host {
     use super::*;
-    use crate::{ethereum::EthBlockHeader, host::db::ProviderDb, EvmBlockHeader};
+    use crate::host::db::ProviderDb;
     use alloy::{
-        network::{BlockResponse, Ethereum},
+        network::{BlockResponse, Network},
         providers::Provider,
     };
-    use alloy_primitives::{BlockNumber, Sealable};
+    use alloy_primitives::BlockNumber;
     use anyhow::{anyhow, ensure, Context};
-    use std::iter;
+    use std::{fmt::Display, iter};
 
-    impl HistoryCommit<EthBlockHeader> {
+    impl<H: EvmBlockHeader> HistoryCommit<H> {
         /// Creates a `HistoryCommit` from an EVM execution block header and a later commitment
         /// header.
         ///
@@ -111,13 +111,16 @@ mod host {
         /// `commitment_header` via the EIP-2935 history storage contract.
         /// It effectively proves that the `execution_header` is an ancestor of a state verifiable
         /// by the `commitment_header`.
-        pub(crate) async fn from_headers<P>(
-            execution_header: &Sealed<EthBlockHeader>,
-            commitment_header: &Sealed<EthBlockHeader>,
+        pub(crate) async fn from_headers<P, N>(
+            execution_header: &Sealed<H>,
+            commitment_header: &Sealed<H>,
             rpc_provider: P,
         ) -> anyhow::Result<Self>
         where
-            P: Provider<Ethereum>,
+            N: Network,
+            P: Provider<N>,
+            H: Clone + TryFrom<<N as Network>::HeaderResponse>,
+            <H as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
         {
             ensure!(
                 execution_header.number() < commitment_header.number(),
@@ -126,7 +129,7 @@ mod host {
 
             let mut current_state_header = execution_header.clone();
 
-            let mut state_commits: Vec<StateCommit<EthBlockHeader>> = Vec::new();
+            let mut state_commits: Vec<StateCommit<H>> = Vec::new();
             for number in (execution_header.number()
                 + history_storage::HISTORY_SERVE_WINDOW.to::<BlockNumber>()
                 ..commitment_header.number())
@@ -140,7 +143,7 @@ mod host {
                     .with_context(|| format!("block {number} not found"))?;
 
                 let rpc_header = rpc_block.header().clone();
-                let header: EthBlockHeader = rpc_header
+                let header: H = rpc_header
                     .try_into()
                     .map_err(|err| anyhow!("header invalid: {}", err))?;
                 let header = header.seal_slow();

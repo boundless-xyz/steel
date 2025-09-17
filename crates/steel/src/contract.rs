@@ -357,7 +357,7 @@ mod host {
             let mut db = self.env.db.take().unwrap();
 
             let chain_id = self.env.chain_id;
-            let spec = self.env.spec;
+            let spec = self.env.spec_id;
             let header = self.env.header.inner().clone();
             let (result, db) = tokio::task::spawn_blocking(move || {
                 let exec_result = {
@@ -478,7 +478,7 @@ where
             // wrap the database and header for guest state access
             WrapStateDb::new(self.env.db(), &self.env.header),
             self.env.chain_id,
-            self.env.spec,
+            self.env.spec_id,
             self.env.header.inner(),
         );
         // execute the transaction

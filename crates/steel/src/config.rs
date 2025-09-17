@@ -13,6 +13,7 @@
 // limitations under the License.
 
 //! Handling different blockchain specifications.
+use crate::EvmSpecId;
 use alloy_primitives::{BlockNumber, BlockTimestamp, ChainId, B256};
 use anyhow::bail;
 use serde::{Deserialize, Serialize};
@@ -48,7 +49,7 @@ pub struct ChainSpec<S: Ord> {
     pub forks: BTreeMap<S, ForkCondition>,
 }
 
-impl<S: Ord + Serialize> ChainSpec<S> {
+impl<S: EvmSpecId> ChainSpec<S> {
     /// Creates a new configuration consisting of only one specification ID.
     ///
     /// For example, this can be used to create a [ChainSpec] for an anvil instance:
@@ -94,14 +95,13 @@ trait StructHash {
     fn digest<D: Digest>(&self) -> Output<D>;
 }
 
-impl<S: Serialize> StructHash for (&S, &ForkCondition) {
+impl<S: EvmSpecId> StructHash for (&S, &ForkCondition) {
     /// Computes the cryptographic digest of a fork.
     /// The hash is H(SpecID || ForkCondition::name || ForkCondition::value )
     fn digest<D: Digest>(&self) -> Output<D> {
         let mut hasher = D::new();
-        // for enums this is essentially equivalent to (self.0 as u32).to_le_bytes()
-        let s_bytes = bincode::serialize(&self.0).unwrap();
-        hasher.update(&s_bytes);
+        let s = self.0.to_u32();
+        hasher.update(s.to_le_bytes());
         match self.1 {
             ForkCondition::Block(n) => {
                 hasher.update(b"Block");
@@ -116,7 +116,7 @@ impl<S: Serialize> StructHash for (&S, &ForkCondition) {
     }
 }
 
-impl<S: Ord + Serialize> StructHash for ChainSpec<S> {
+impl<S: EvmSpecId> StructHash for ChainSpec<S> {
     /// Computes the cryptographic digest of a chain spec.
     ///
     /// This is equivalent to the `tagged_struct` structural hashing routines used for RISC Zero

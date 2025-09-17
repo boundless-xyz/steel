@@ -16,7 +16,7 @@ use super::BlockId;
 use crate::{
     beacon::BeaconCommit,
     config::ChainSpec,
-    ethereum::{EthBlockHeader, EthEvmFactory},
+    ethereum::EthEvmFactory,
     history::{Eip2935HistoryCommit, HistoryCommit},
     host::{
         db::{ProofDb, ProviderConfig, ProviderDb},
@@ -110,8 +110,8 @@ impl<P, F: EvmFactory, B> EvmEnvBuilder<P, F, (), B> {
     /// Sets the [ChainSpec] that will be used by the [EvmEnv].
     pub fn chain_spec(
         self,
-        chain_spec: &ChainSpec<F::Spec>,
-    ) -> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, B> {
+        chain_spec: &ChainSpec<F::SpecId>,
+    ) -> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, B> {
         EvmEnvBuilder {
             provider: self.provider,
             provider_config: self.provider_config,
@@ -285,7 +285,7 @@ impl<P, F, S, B> EvmEnvBuilder<P, F, S, B> {
     }
 }
 
-impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, ()> {
+impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()> {
     /// Builds and returns an [EvmEnv] with the configured settings that commits to a block hash.
     pub async fn build<N>(self) -> Result<HostEvmEnv<ProviderDb<N, P>, F, ()>>
     where
@@ -315,17 +315,16 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, ()> {
     }
 }
 
-impl<P>
-    EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::Spec>, Eip2935History>
-{
+impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History> {
     /// Builds and returns an [EvmEnv] with the configured settings that commits to a block hash.
-    pub async fn build(
+    pub async fn build<N>(
         self,
-    ) -> Result<
-        HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, Eip2935HistoryCommit<EthBlockHeader>>,
-    >
+    ) -> Result<HostEvmEnv<ProviderDb<N, P>, F, Eip2935HistoryCommit<F::Header>>>
     where
-        P: Provider<Ethereum>,
+        N: Network,
+        P: Provider<N>,
+        F::Header: TryFrom<<N as Network>::HeaderResponse>,
+        <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
     {
         let evm_header = self.get_header(None).await?;
         let commitment_header = self
@@ -501,7 +500,7 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
 impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::Spec>, History> {
     /// Configures the environment builder to generate consensus commitments.
     ///
-    /// See [EvmEnvBuilder<P, EthBlockHeader, Beacon>::consensus_commitment] for more info.
+    /// See [EvmEnvBuilder<P, EthEvmFactory, S, Beacon>::consensus_commitment] for more info.
     pub fn consensus_commitment(mut self) -> Self {
         self.beacon_config.beacon_config.commitment_version = CommitmentVersion::Consensus;
         self

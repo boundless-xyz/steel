@@ -13,13 +13,11 @@
 // limitations under the License.
 
 use crate::{
-    ethereum::EthEvmFactory,
     precompiles::{BeaconRootsContract, HistoryStorageContract},
-    Commitment, EvmBlockHeader, GuestEvmEnv,
+    Commitment, EvmBlockHeader, EvmFactory, EvmSpecId, GuestEvmEnv,
 };
 use alloy_primitives::{B256, U256};
 use anyhow::{ensure, Context};
-use revm::primitives::hardfork::SpecId;
 
 /// Represents a verifier for validating Steel commitments within Steel.
 ///
@@ -64,9 +62,9 @@ pub struct SteelVerifier<E> {
     env: E,
 }
 
-impl<'a> SteelVerifier<&'a GuestEvmEnv<EthEvmFactory>> {
+impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
     /// Constructor for verifying Steel commitments in the guest.
-    pub fn new(env: &'a GuestEvmEnv<EthEvmFactory>) -> Self {
+    pub fn new(env: &'a GuestEvmEnv<F>) -> Self {
         Self { env }
     }
 
@@ -87,7 +85,7 @@ impl<'a> SteelVerifier<&'a GuestEvmEnv<EthEvmFactory>> {
         match version {
             0 => {
                 // use history storage contract when EIP-2935 was activated
-                let block_hash = if self.env.spec >= SpecId::PRAGUE {
+                let block_hash = if self.env.spec_id.has_eip2935() {
                     HistoryStorageContract::new(self.env).call(id)
                 } else {
                     let block_number =
@@ -97,7 +95,7 @@ impl<'a> SteelVerifier<&'a GuestEvmEnv<EthEvmFactory>> {
                 assert_eq!(block_hash, commitment.digest, "Invalid digest");
             }
             1 => {
-                assert!(self.env.spec >= SpecId::CANCUN, "EIP-4788 required");
+                assert!(self.env.spec_id.has_eip4788(), "EIP-4788 required");
                 let beacon_root = BeaconRootsContract::new(self.env).call(id);
                 assert_eq!(beacon_root, commitment.digest, "Invalid digest");
             }
@@ -109,16 +107,15 @@ impl<'a> SteelVerifier<&'a GuestEvmEnv<EthEvmFactory>> {
 #[cfg(feature = "host")]
 mod host {
     use super::*;
-    use crate::{
-        ethereum::EthEvmFactory,
-        host::{db::ProviderDb, HostEvmEnv},
-    };
-    use alloy::{network::Ethereum, providers::Provider};
-    use revm::{primitives::hardfork::SpecId, Database};
+    use crate::host::{db::ProviderDb, HostEvmEnv};
+    use alloy::providers::{Network, Provider};
+    use revm::Database;
 
-    impl<'a, P, C> SteelVerifier<&'a mut HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, C>>
+    impl<'a, F, N, P, C> SteelVerifier<&'a mut HostEvmEnv<ProviderDb<N, P>, F, C>>
     where
-        P: Provider<Ethereum> + Send + Sync + 'static,
+        F: EvmFactory,
+        N: Network,
+        P: Provider<N> + Send + Sync + 'static,
     {
         /// Constructor for preflighting Steel commitment verifications on the host.
         ///
@@ -127,9 +124,7 @@ mod host {
         /// [EvmEnv::into_input].
         ///
         /// [EvmEnv::into_input]: crate::EvmEnv::into_input
-        pub fn preflight(
-            env: &'a mut HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, C>,
-        ) -> Self {
+        pub fn preflight(env: &'a mut HostEvmEnv<ProviderDb<N, P>, F, C>) -> Self {
             Self { env }
         }
 
@@ -156,7 +151,7 @@ mod host {
             let (id, version) = commitment.decode_id();
             match version {
                 0 => {
-                    let block_hash = if self.env.spec >= SpecId::PRAGUE {
+                    let block_hash = if self.env.spec_id.has_eip2935() {
                         HistoryStorageContract::preflight(self.env).call(id).await?
                     } else {
                         let block_number = validate_block_number(self.env.header().inner(), id)
@@ -170,7 +165,7 @@ mod host {
                     Ok(())
                 }
                 1 => {
-                    ensure!(self.env.spec >= SpecId::CANCUN, "EIP-4788 required");
+                    ensure!(self.env.spec_id.has_eip4788(), "EIP-4788 required");
                     let beacon_root = BeaconRootsContract::preflight(self.env).call(id).await?;
                     ensure!(beacon_root == commitment.digest, "invalid digest");
 
