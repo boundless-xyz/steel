@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use crate::game::DisputeGameInput;
-use alloy::consensus::BlockHeader;
 use alloy_eips::{eip4844, eip7691};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
 use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
@@ -54,7 +53,7 @@ pub static OP_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Chain
             (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
             (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
         ]
-        .map(|(id, c)| (id.into(), c)),
+        .map(|(id, cond)| (id.into(), cond)),
     ),
 });
 
@@ -72,7 +71,7 @@ pub static OP_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Chain
             (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1732633200)),
             (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1744905600)),
         ]
-        .map(|(id, c)| (id.into(), c)),
+        .map(|(id, cond)| (id.into(), cond)),
     ),
 });
 
@@ -265,8 +264,8 @@ impl OpEvmInput {
     #[inline]
     pub fn into_env(self, chain_spec: &OpChainSpec) -> EvmEnv<StateDb, OpEvmFactory, Commitment> {
         match self {
-            OpEvmInput::Block(input) => input.into_env(chain_spec.into()),
-            OpEvmInput::DisputeGame(input) => input.into_env(chain_spec.into()),
+            OpEvmInput::Block(input) => input.into_env(chain_spec),
+            OpEvmInput::DisputeGame(input) => input.into_env(chain_spec),
         }
     }
 }
