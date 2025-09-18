@@ -269,3 +269,17 @@ impl OpEvmInput {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_primitives::b256;
+
+    #[test]
+    fn mainnet_spec_digest() {
+        assert_eq!(
+            OP_MAINNET_CHAIN_SPEC.digest(),
+            b256!("0x3756bc5a81c05862bc364ef40e6c6667c3400136a38af589be15d1a6cceed686")
+        );
+    }
+}
