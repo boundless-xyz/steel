@@ -195,7 +195,7 @@ async fn main() -> Result<()> {
         .get_receipt()
         .await
         .with_context(|| format!("transaction did not confirm: {tx_hash}"))?;
-    ensure!(receipt.status(), "transaction failed: {}", tx_hash);
+    ensure!(receipt.status(), "transaction failed: {tx_hash}");
 
     Ok(())
 }
