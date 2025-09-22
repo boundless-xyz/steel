@@ -110,7 +110,7 @@ impl<F: EvmFactory> BlockInput<F> {
             chain_spec.digest(),
         );
 
-        EvmEnv::new(db, chain_spec, header, commit)
+        EvmEnv::from_chain_spec(db, chain_spec, header, commit)
     }
 }
 

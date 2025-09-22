@@ -19,14 +19,18 @@ use history_storage::HistoryStorageContract;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    history::state::SingleContractState, BlockHeaderCommit, Commitment, CommitmentVersion,
-    ComposeInput, EvmBlockHeader, EvmFactory,
+    config::ChainSpec, history::state::SingleContractState, BlockHeaderCommit, BlockInput,
+    Commitment, CommitmentVersion, EvmBlockHeader, EvmFactory, EvmSpecId, GuestEvmEnv,
 };
 
 mod history_storage;
 
-/// Input recursively committing to multiple execution block hashes.
-pub type HistoryInput<F> = ComposeInput<F, HistoryCommit<<F as EvmFactory>::Header>>;
+/// Input recursively committing to multiple execution block hashes relying on EIP-2935.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HistoryInput<F: EvmFactory> {
+    input: BlockInput<F>,
+    commit: HistoryCommit<<F as EvmFactory>::Header>,
+}
 
 /// Commitment that an execution block is an ancestor of a specific other execution block.
 ///
@@ -45,6 +49,30 @@ struct StateCommit<H> {
     state: SingleContractState,
     /// Header belonging to the state.
     header: H,
+}
+
+impl<F: EvmFactory> HistoryInput<F> {
+    /// Creates a new input from a [BlockInput] and a [HistoryCommit].
+    pub const fn new(
+        input: BlockInput<F>,
+        commit: HistoryCommit<<F as EvmFactory>::Header>,
+    ) -> Self {
+        Self { input, commit }
+    }
+
+    /// Converts the input into a [EvmEnv] for verifiable state access in the guest.
+    pub fn into_env(self, chain_spec: &ChainSpec<F::SpecId>) -> GuestEvmEnv<F> {
+        let mut env = self.input.into_env(chain_spec);
+
+        // It is sufficient to check that the EVM block supports EIP-2935, as this guarantees that
+        // the history storage contract is supported and that its hash is included.
+        // Without this check, there is a theoretical risk of a malicious contract being deployed
+        // with the same code at the same address on chains without EIP-2935 support.
+        assert!(env.spec_id.has_eip2935(), "EIP-2935 required");
+        env.commit = self.commit.commit(&env.header, env.commit.configID);
+
+        env
+    }
 }
 
 impl<H: EvmBlockHeader> BlockHeaderCommit<H> for HistoryCommit<H> {

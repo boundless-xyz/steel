@@ -22,7 +22,7 @@ use crate::{
         db::{ProofDb, ProviderConfig, ProviderDb},
         BlockNumberOrTag, EthHostEvmEnv, HostCommit, HostEvmEnv,
     },
-    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory,
+    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId,
 };
 use alloy::{
     network::{primitives::HeaderResponse, BlockResponse, Ethereum, Network},
@@ -301,17 +301,16 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()> {
             header.seal()
         );
 
-        let db = ProofDb::new(ProviderDb::new(
+        create_host_env::<N, P, F, _>(
             self.provider,
             self.provider_config,
-            header.seal(),
-        ));
-        let commit = HostCommit {
-            inner: (),
-            config_id: self.chain_spec.digest(),
-        };
-
-        Ok(EvmEnv::new(db, self.chain_spec, header, commit))
+            self.chain_spec,
+            header,
+            HostCommit {
+                inner: (),
+                config_id: self.chain_spec.digest(),
+            },
+        )
     }
 }
 
@@ -344,13 +343,16 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History
             inner: history_commit,
             config_id: self.chain_spec.digest(),
         };
-        let db = ProofDb::new(ProviderDb::new(
+        let env = create_host_env::<N, P, F, _>(
             self.provider,
             self.provider_config,
-            evm_header.seal(),
-        ));
+            self.chain_spec,
+            evm_header,
+            commit,
+        )?;
+        ensure!(env.spec_id().has_eip2935(), "EIP-2935 not supported");
 
-        Ok(EvmEnv::new(db, self.chain_spec, evm_header, commit))
+        Ok(env)
     }
 }
 
@@ -468,7 +470,7 @@ impl<P, S> EvmEnvBuilder<P, EthEvmFactory, S, Beacon> {
     }
 }
 
-impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::Spec>, Beacon> {
+impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::SpecId>, Beacon> {
     /// Builds and returns an [EvmEnv] with the configured settings that commits to a beacon root.
     pub async fn build(self) -> Result<EthHostEvmEnv<ProviderDb<Ethereum, P>, BeaconCommit>>
     where
@@ -487,17 +489,20 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
             inner: BeaconCommit::from_header(&header, version, &self.provider, beacon_url).await?,
             config_id: self.chain_spec.digest(),
         };
-        let db = ProofDb::new(ProviderDb::new(
+
+        create_host_env(
             self.provider,
             self.provider_config,
-            header.seal(),
-        ));
-
-        Ok(EvmEnv::new(db, self.chain_spec, header, commit))
+            self.chain_spec,
+            header,
+            commit,
+        )
     }
 }
 
-impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::Spec>, History> {
+impl<P>
+    EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::SpecId>, History>
+{
     /// Configures the environment builder to generate consensus commitments.
     ///
     /// See [EvmEnvBuilder<P, EthEvmFactory, S, Beacon>::consensus_commitment] for more info.
@@ -537,14 +542,31 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
             inner: history_commit,
             config_id: self.chain_spec.digest(),
         };
-        let db = ProofDb::new(ProviderDb::new(
+        let env = create_host_env::<Ethereum, P, EthEvmFactory, _>(
             self.provider,
             self.provider_config,
-            evm_header.seal(),
-        ));
+            self.chain_spec,
+            evm_header,
+            commit,
+        )?;
+        ensure!(env.spec_id().has_eip4788(), "EIP-4788 not supported");
 
-        Ok(EvmEnv::new(db, self.chain_spec, evm_header, commit))
+        Ok(env)
     }
+}
+
+fn create_host_env<N: Network, P: Provider<N>, F: EvmFactory, C>(
+    provider: P,
+    provider_config: ProviderConfig,
+    chain_spec: &ChainSpec<F::SpecId>,
+    header: Sealed<F::Header>,
+    commit: HostCommit<C>,
+) -> Result<HostEvmEnv<ProviderDb<N, P>, F, C>> {
+    let db = ProofDb::new(ProviderDb::new(provider, provider_config, header.seal()));
+    let chain_id = chain_spec.chain_id();
+    let spec_id = *chain_spec.active_fork(header.number(), header.timestamp())?;
+
+    Ok(EvmEnv::new(db, chain_id, spec_id, header, commit))
 }
 
 #[cfg(test)]

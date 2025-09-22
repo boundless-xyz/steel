@@ -218,8 +218,23 @@ pub struct EvmEnv<D, F: EvmFactory, C> {
 }
 
 impl<D, F: EvmFactory, C> EvmEnv<D, F, C> {
-    /// Creates a new environment.
-    pub(crate) fn new(
+    pub(crate) const fn new(
+        db: D,
+        chain_id: ChainId,
+        spec_id: F::SpecId,
+        header: Sealed<F::Header>,
+        commit: C,
+    ) -> Self {
+        Self {
+            db: Some(db),
+            chain_id,
+            spec_id,
+            header,
+            commit,
+        }
+    }
+
+    pub(crate) fn from_chain_spec(
         db: D,
         chain_spec: &ChainSpec<F::SpecId>,
         header: Sealed<F::Header>,
@@ -228,13 +243,13 @@ impl<D, F: EvmFactory, C> EvmEnv<D, F, C> {
         let spec_id = *chain_spec
             .active_fork(header.number(), header.timestamp())
             .unwrap();
-        Self {
-            db: Some(db),
-            chain_id: chain_spec.chain_id,
-            spec_id,
-            header,
-            commit,
-        }
+        Self::new(db, chain_spec.chain_id, spec_id, header, commit)
+    }
+
+    /// Returns the specification identifier of the environment.
+    #[inline]
+    pub fn spec_id(&self) -> &F::SpecId {
+        &self.spec_id
     }
 
     /// Returns the sealed header of the environment.

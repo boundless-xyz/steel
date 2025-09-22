@@ -20,7 +20,8 @@ use crate::{
     config::ChainSpec,
     ethereum::{EthEvmEnv, EthEvmInput},
     history::{Eip2935HistoryCommit, HistoryCommit},
-    BlockHeaderCommit, Commitment, ComposeInput, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput,
+    BlockHeaderCommit, Commitment, ComposeInput, Eip2935HistoryInput, EvmBlockHeader, EvmEnv,
+    EvmFactory, EvmInput,
 };
 use alloy::{
     eips::{
@@ -339,7 +340,7 @@ where
     pub async fn into_input(self) -> Result<EvmInput<F>> {
         let input = BlockInput::from_proof_db(self.db.unwrap(), self.header).await?;
 
-        Ok(EvmInput::EipHistory(ComposeInput::new(
+        Ok(EvmInput::EipHistory(Eip2935HistoryInput::new(
             input,
             self.commit.inner,
         )))
