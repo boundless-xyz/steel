@@ -94,7 +94,7 @@ mod host {
             match BeaconRootsContract::new(&mut state)?.get(timestamp) {
                 Ok(returns) => Ok((returns, state)),
                 Err(err) => match err {
-                    Error::Reverted(_) => Err(anyhow!("BeaconRoots({}) reverted", timestamp)),
+                    Error::Reverted(_) => Err(anyhow!("BeaconRoots({timestamp}) reverted")),
                     err => Err(anyhow!(err)),
                 },
             }

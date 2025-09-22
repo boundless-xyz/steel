@@ -61,6 +61,8 @@ impl<F: EvmFactory> HistoryInput<F> {
     }
 
     /// Converts the input into a [EvmEnv] for verifiable state access in the guest.
+    ///
+    /// [EvmEnv]: crate::EvmEnv
     pub fn into_env(self, chain_spec: &ChainSpec<F::SpecId>) -> GuestEvmEnv<F> {
         let mut env = self.input.into_env(chain_spec);
 
@@ -173,7 +175,7 @@ mod host {
                 let rpc_header = rpc_block.header().clone();
                 let header: H = rpc_header
                     .try_into()
-                    .map_err(|err| anyhow!("header invalid: {}", err))?;
+                    .map_err(|err| anyhow!("header invalid: {err}"))?;
                 let header = header.seal_slow();
                 let db = ProviderDb::new(&rpc_provider, Default::default(), header.seal());
 
