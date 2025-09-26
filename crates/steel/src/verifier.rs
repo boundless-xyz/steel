@@ -14,9 +14,9 @@
 
 use crate::{
     precompiles::{BeaconRootsContract, HistoryStorageContract},
-    Commitment, EvmBlockHeader, EvmFactory, EvmSpecId, GuestEvmEnv,
+    Commitment, CommitmentVersion, EvmBlockHeader, EvmFactory, EvmSpecId, GuestEvmEnv,
 };
-use alloy_primitives::{B256, U256};
+use alloy_primitives::{BlockNumber, B256, U256};
 use anyhow::{ensure, Context};
 
 /// Represents a verifier for validating Steel commitments within Steel.
@@ -81,25 +81,29 @@ impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
     /// and panics on failure.
     pub fn verify_with_config_id(&self, commitment: &Commitment, config_id: B256) {
         assert_eq!(commitment.configID, config_id, "Invalid config ID");
-        let (id, version) = commitment.decode_id();
-        match version {
-            0 => {
+        let (id, version_code) = commitment.decode_id();
+        match CommitmentVersion::n(version_code) {
+            Some(CommitmentVersion::Block) => {
                 // use history storage contract when EIP-2935 was activated
                 let block_hash = if self.env.spec_id.has_eip2935() {
+                    // history storage contract reverts when `id` id not in allowed history window
                     HistoryStorageContract::new(self.env).call(id)
                 } else {
-                    let block_number =
-                        validate_block_number(self.env.header().inner(), id).expect("invalid ID");
+                    let block_number = validate_history_window(self.env.header().inner(), id, 256)
+                        .expect("Invalid block number");
                     self.env.db().block_hash(block_number)
                 };
-                assert_eq!(block_hash, commitment.digest, "Invalid digest");
+                assert_eq!(block_hash, commitment.digest, "Invalid block hash");
             }
-            1 => {
+            Some(CommitmentVersion::Beacon) => {
                 assert!(self.env.spec_id.has_eip4788(), "EIP-4788 required");
+                // beacon roots contract reverts when `id` id not in allowed history window
                 let beacon_root = BeaconRootsContract::new(self.env).call(id);
-                assert_eq!(beacon_root, commitment.digest, "Invalid digest");
+                assert_eq!(beacon_root, commitment.digest, "Invalid beacon root");
             }
-            v => unimplemented!("Invalid commitment version {}", v),
+            _ => {
+                unimplemented!("Unsupported version: {:x}", version_code)
+            }
         }
     }
 }
@@ -109,6 +113,7 @@ mod host {
     use super::*;
     use crate::host::{db::ProviderDb, HostEvmEnv};
     use alloy::providers::{Network, Provider};
+    use alloy_eips::eip2935;
     use revm::Database;
 
     impl<'a, F, N, P, C> SteelVerifier<&'a mut HostEvmEnv<ProviderDb<N, P>, F, C>>
@@ -148,43 +153,52 @@ mod host {
             log::debug!("Executing preflight verifying {commitment:?}");
 
             ensure!(commitment.configID == config_id, "invalid config ID");
-            let (id, version) = commitment.decode_id();
-            match version {
-                0 => {
+            let (id, version_code) = commitment.decode_id();
+            match CommitmentVersion::n(version_code) {
+                Some(CommitmentVersion::Block) => {
+                    let header = self.env.header().inner();
                     let block_hash = if self.env.spec_id.has_eip2935() {
+                        validate_history_window(header, id, eip2935::HISTORY_SERVE_WINDOW as u64)
+                            .context("invalid block number")?;
                         HistoryStorageContract::preflight(self.env).call(id).await?
                     } else {
-                        let block_number = validate_block_number(self.env.header().inner(), id)
-                            .context("invalid ID")?;
+                        let block_number = validate_history_window(header, id, 256)
+                            .context("invalid block number")?;
                         self.env
                             .spawn_with_db(move |db| db.block_hash(block_number))
                             .await?
                     };
-                    ensure!(block_hash == commitment.digest, "invalid digest");
+                    ensure!(block_hash == commitment.digest, "invalid block hash");
 
                     Ok(())
                 }
-                1 => {
+                Some(CommitmentVersion::Beacon) => {
                     ensure!(self.env.spec_id.has_eip4788(), "EIP-4788 required");
                     let beacon_root = BeaconRootsContract::preflight(self.env).call(id).await?;
-                    ensure!(beacon_root == commitment.digest, "invalid digest");
+                    ensure!(beacon_root == commitment.digest, "invalid beacon root");
 
                     Ok(())
                 }
-                v => unimplemented!("Invalid commitment version {}", v),
+                version => unimplemented!(
+                    "Unsupported commitment version: {}",
+                    version.map_or(format!("Unknown({version_code:x})"), |v| format!("{v:?}"))
+                ),
             }
         }
     }
 }
 
-fn validate_block_number(header: &impl EvmBlockHeader, block_number: U256) -> anyhow::Result<u64> {
-    let block_number = block_number.try_into().context("invalid block number")?;
-    // if block_number > header.number(), this will also be caught in the following `ensure`
-    let diff = header.number().saturating_sub(block_number);
+fn validate_history_window(
+    header: &impl EvmBlockHeader,
+    block_number: U256,
+    windows: u64,
+) -> anyhow::Result<u64> {
+    let block_number: BlockNumber = block_number.saturating_to();
     ensure!(
-        diff > 0 && diff <= 256,
-        "valid range is the last 256 blocks (not including the current one)"
+        block_number < header.number() && header.number() - block_number <= windows,
+        "only valid for the {windows} most recent blocks, excluding the current one"
     );
+
     Ok(block_number)
 }
 
