@@ -17,7 +17,7 @@ use crate::{
     Commitment, CommitmentVersion, EvmBlockHeader, EvmFactory, EvmSpecId, GuestEvmEnv,
 };
 use alloy_primitives::{BlockNumber, B256, U256};
-use anyhow::{ensure, Context};
+use anyhow::ensure;
 
 /// Represents a verifier for validating Steel commitments within Steel.
 ///
@@ -114,6 +114,7 @@ mod host {
     use crate::host::{db::ProviderDb, HostEvmEnv};
     use alloy::providers::{Network, Provider};
     use alloy_eips::eip2935;
+    use anyhow::Context;
     use revm::Database;
 
     impl<'a, F, N, P, C> SteelVerifier<&'a mut HostEvmEnv<ProviderDb<N, P>, F, C>>
