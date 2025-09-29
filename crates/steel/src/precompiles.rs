@@ -96,7 +96,7 @@ mod host {
         /// Preflights a call to the beacon roots contract with the given `timestamp`.
         pub async fn call(&mut self, timestamp: U256) -> anyhow::Result<B256> {
             let resp = self.0.raw(timestamp.abi_encode().into()).call().await?;
-            Ok(B256::abi_decode_validate(&resp).context("failed to decode return data")?)
+            B256::abi_decode_validate(&resp).context("failed to decode return data")
         }
     }
 
@@ -114,7 +114,7 @@ mod host {
         /// Preflights a call to the history storage contract with the given `block_number`.
         pub async fn call(&mut self, block_number: U256) -> anyhow::Result<B256> {
             let resp = self.0.raw(block_number.abi_encode().into()).call().await?;
-            Ok(B256::abi_decode_validate(&resp).context("failed to decode return data")?)
+            B256::abi_decode_validate(&resp).context("failed to decode return data")
         }
     }
 }
