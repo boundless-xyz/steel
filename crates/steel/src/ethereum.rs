@@ -16,7 +16,7 @@
 use crate::{
     config::{ChainSpec, ForkCondition},
     serde::RlpHeader,
-    EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
+    CallError, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
 };
 use alloy_eips::{eip4844, eip7691};
 use alloy_evm::{Database, EthEvmFactory as AlloyEthEvmFactory, EvmFactory as AlloyEvmFactory};
@@ -112,6 +112,9 @@ impl EvmFactory for EthEvmFactory {
         AlloyEthEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
     }
 }
+
+/// [CallError] for Ethereum.
+pub type EthCallError = CallError<<EthEvmFactory as EvmFactory>::HaltReason>;
 
 /// [ChainSpec] for Ethereum.
 pub type EthChainSpec = ChainSpec<SpecId>;

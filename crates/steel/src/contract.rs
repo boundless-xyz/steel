@@ -15,8 +15,7 @@
 use crate::{state::WrapStateDb, EvmFactory, GuestEvmEnv};
 use alloy_evm::Evm;
 use alloy_primitives::{Address, Bytes};
-use alloy_sol_types::{sol_data, SolCall, SolType};
-use anyhow::anyhow;
+use alloy_sol_types::{sol_data, SolCall, SolError, SolType};
 use revm::context::result::{ExecutionResult, ResultAndState, SuccessReason};
 use std::{fmt::Debug, marker::PhantomData};
 
@@ -195,16 +194,7 @@ pub struct CallBuilder<T, S, E> {
 }
 
 impl<T, S: SolCall, E> CallBuilder<T, S, E> {
-    /// Compile-time assertion that the call has a return value.
-    const RETURNS: () = assert!(
-        std::mem::size_of::<S::Return>() > 0,
-        "Function call must have a return value"
-    );
-
-    fn new(tx: T, env: E) -> Self {
-        #[allow(clippy::let_unit_value)]
-        let _ = Self::RETURNS;
-
+    const fn new(tx: T, env: E) -> Self {
         Self {
             tx,
             env,
@@ -260,7 +250,7 @@ mod host {
         network::{Ethereum, Network, TransactionBuilder},
         providers::Provider,
     };
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::{Context, Result};
 
     impl<'a, F, D, C> Contract<&'a mut HostEvmEnv<D, F, C>>
     where
@@ -362,7 +352,7 @@ mod host {
             let (result, db) = tokio::task::spawn_blocking(move || {
                 let exec_result = {
                     let mut evm = F::create_evm(&mut db, chain_id, spec, &header);
-                    transact::<_, F, S>(self.tx, &mut evm)
+                    call::<_, F, S>(self.tx, &mut evm)
                 };
                 (exec_result, db)
             })
@@ -372,7 +362,7 @@ mod host {
             // restore the DB before handling errors, so that we never return an env without a DB
             self.env.db = Some(db);
 
-            result.map_err(|err| anyhow!("call '{}' failed: {}", S::SIGNATURE, err))
+            result.with_context(|| format!("call '{}' failed", S::SIGNATURE))
         }
     }
 
@@ -454,7 +444,7 @@ mod host {
                 .await
                 .context("failed to add generated access list")?;
 
-            self.call().await
+            Ok(self.call().await?)
         }
     }
 }
@@ -472,7 +462,7 @@ where
     ///
     /// For straightforward calls where failure should halt guest execution, prefer
     /// [CallBuilder::call].
-    pub fn try_call(self) -> Result<S::Return, String> {
+    pub fn try_call(self) -> Result<S::Return, CallError<F::HaltReason>> {
         // create a temporary EVM instance for this call
         let mut evm = F::create_evm(
             // wrap the database and header for guest state access
@@ -482,7 +472,7 @@ where
             self.env.header.inner(),
         );
         // execute the transaction
-        transact::<_, F, S>(self.tx, &mut evm)
+        call::<_, F, S>(self.tx, &mut evm)
     }
 
     /// Executes the call within the guest environment, panicking on failure.
@@ -499,9 +489,87 @@ where
     }
 }
 
-/// Executes a transaction using the provided EVM instance and decodes the result.
-/// Returns `Result<S::Return, String>` where `String` contains the error reason.
-fn transact<DB, F, S>(tx: F::Tx, evm: &mut F::Evm<DB>) -> Result<S::Return, String>
+#[derive(Debug, thiserror::Error)]
+pub enum CallError<R: Debug> {
+    #[error("EVM error")]
+    EvmError(#[source] anyhow::Error),
+    /// The contract execution halted.
+    #[error("halted: {0:?}")]
+    Halted(R),
+    /// The contract execution reverted.
+    #[error("reverted: {0}")]
+    Reverted(Bytes),
+    /// The contract returned no data.
+    #[error("did not return; the called address might not be a contract")]
+    NoReturn,
+    /// An error occurred during ABI encoding or decoding.
+    #[error(transparent)]
+    AbiError(#[from] alloy_sol_types::Error),
+}
+
+impl<R: Debug> CallError<R> {
+    /// Return the revert data in case the call reverted.
+    #[inline]
+    pub fn as_revert_data(&self) -> Option<Bytes> {
+        if let Self::Reverted(data) = self {
+            return Some(data.clone());
+        }
+
+        None
+    }
+
+    /// Decode the revert data into a custom [`SolError`] type.
+    ///
+    /// None is returned if the revert data is empty or if decoding was not successful.
+    ///
+    /// # Examples
+    /// ```
+    /// # use alloy::{providers::ProviderBuilder, sol};
+    /// # use risc0_steel::{
+    /// #    ethereum::{EthCallError, EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
+    /// #    Contract,
+    /// # };
+    /// # use ThrowsError::{errorCall, SomeCustomError};
+    ///
+    /// sol! {
+    /// #    #[derive(Debug, PartialEq, Eq)]
+    /// #     #[sol(rpc, bytecode = "6080604052348015600e575f80fd5b5060c680601a5f395ff3fe6080604052348015600e575f80fd5b50600436106026575f3560e01c806347719c7d14602a575b5f80fd5b603960353660046064565b603b565b005b604051633f7a728360e21b815267ffffffffffffffff8216600482015260240160405180910390fd5b5f602082840312156073575f80fd5b813567ffffffffffffffff811681146089575f80fd5b939250505056fea26469706673582212207bd856b4604d92b66e40b52360ea98fe704469721e75efb40747e5e84cfabbaa64736f6c634300081a0033")]
+    ///     contract ThrowsError {
+    ///         error SomeCustomError(uint64 a);
+    ///
+    ///         function error(uint64 a) external pure {
+    ///             revert SomeCustomError(a);
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() {
+    /// # let provider = ProviderBuilder::new().connect_anvil_with_wallet_and_config(|c| c.prague()).unwrap();
+    /// # let throws_err = ThrowsError::deploy(provider.clone()).await.unwrap();
+    /// # let address = *throws_err.address();
+    /// # let mut env = EthEvmEnv::builder()
+    /// #     .provider(provider)
+    /// #     .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
+    /// #     .build()
+    /// #     .await
+    /// #     .unwrap();
+    /// let mut contract = Contract::preflight(address, &mut env);
+    /// let err = contract.call_builder(&errorCall { a: 42 }).call().await.unwrap_err();
+    ///
+    /// let call_err = err.downcast_ref::<EthCallError>().unwrap();
+    /// let custom_err = call_err.as_decoded_error::<SomeCustomError>().unwrap();
+    /// assert_eq!(custom_err, SomeCustomError { a: 42 });
+    ///# }
+    /// ```
+    pub fn as_decoded_error<E: SolError>(&self) -> Option<E> {
+        self.as_revert_data()
+            .and_then(|data| E::abi_decode(&data).ok())
+    }
+}
+
+/// Executes a transaction corresponding to the provided [SolCall] using the provided EVM instance.
+fn call<DB, F, S>(tx: F::Tx, evm: &mut F::Evm<DB>) -> Result<S::Return, CallError<F::HaltReason>>
 where
     DB: alloy_evm::Database,
     F: EvmFactory,
@@ -509,26 +577,18 @@ where
 {
     let ResultAndState { result, .. } = evm
         .transact_raw(tx)
-        .map_err(|err| format!("EVM error: {:#}", anyhow!(err)))?;
-    let output_bytes = match result {
+        .map_err(|err| CallError::EvmError(err.into()))?;
+    let output = match result {
         ExecutionResult::Success { reason, output, .. } => {
-            // ensure the transaction returned, not stopped or other success reason
-            if reason == SuccessReason::Return {
-                Ok(output)
+            if S::ReturnTuple::ENCODED_SIZE != Some(0) && reason != SuccessReason::Return {
+                return Err(CallError::NoReturn);
             } else {
-                Err(format!("succeeded but did not return (reason: {reason:?})"))
+                output
             }
         }
-        ExecutionResult::Revert { output, .. } => Err(format!("reverted with output: {output}")),
-        ExecutionResult::Halt { reason, .. } => Err(format!("halted: {reason:?}")),
-    }?;
+        ExecutionResult::Revert { output, .. } => return Err(CallError::Reverted(output)),
+        ExecutionResult::Halt { reason, .. } => return Err(CallError::Halted(reason)),
+    };
 
-    // decode the successful return output
-    S::abi_decode_returns(&output_bytes.into_data()).map_err(|err| {
-        format!(
-            "Failed to decode return data, expected type '{}': {}",
-            <S::ReturnTuple<'_> as SolType>::SOL_NAME,
-            err
-        )
-    })
+    S::abi_decode_returns(&output.into_data()).map_err(CallError::AbiError)
 }
