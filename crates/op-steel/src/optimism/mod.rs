@@ -78,6 +78,30 @@ pub static OP_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Chain
     ),
 });
 
+/// The Base Mainnet [ChainSpec].
+pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
+    chain_id: 8453,
+    forks: BTreeMap::from(
+        [
+            (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
+        ]
+        .map(|(id, cond)| (id.into(), cond)),
+    ),
+});
+
+/// The Base Sepolia [ChainSpec].
+pub static BASE_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
+    chain_id: 84532,
+    forks: OP_SEPOLIA_CHAIN_SPEC.forks.clone(),
+});
+
 /// [EvmFactory] for Optimism.
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 #[non_exhaustive]
