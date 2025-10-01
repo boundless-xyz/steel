@@ -277,8 +277,7 @@ pub mod host {
                         find_latest_game(l2_provider, game_type, factory, Some(index)).await?;
                     ensure!(
                         game.index == index,
-                        "invalid dispute game at index: {}",
-                        index
+                        "invalid dispute game at index: {index}"
                     );
 
                     Ok(game)
@@ -290,8 +289,7 @@ pub mod host {
                         find_latest_game(l2_provider, game_type, factory, Some(index)).await?;
                     ensure!(
                         game.index == index,
-                        "invalid dispute game at index: {}",
-                        index
+                        "invalid dispute game at index: {index}"
                     );
 
                     Ok(game)

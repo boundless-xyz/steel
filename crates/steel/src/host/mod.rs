@@ -19,8 +19,9 @@ use crate::{
     block::BlockInput,
     config::ChainSpec,
     ethereum::{EthEvmEnv, EthEvmInput},
-    history::HistoryCommit,
-    BlockHeaderCommit, Commitment, ComposeInput, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput,
+    history::{Eip2935HistoryCommit, HistoryCommit},
+    BlockHeaderCommit, Commitment, ComposeInput, Eip2935HistoryInput, EvmBlockHeader, EvmEnv,
+    EvmFactory, EvmInput,
 };
 use alloy::{
     eips::{
@@ -206,9 +207,9 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
     /// Sets the chain ID and specification ID from the given chain spec.
     ///
     /// This will panic when there is no valid specification ID for the current block.
-    pub fn with_chain_spec(mut self, chain_spec: &ChainSpec<F::Spec>) -> Self {
+    pub fn with_chain_spec(mut self, chain_spec: &ChainSpec<F::SpecId>) -> Self {
         self.chain_id = chain_spec.chain_id;
-        self.spec = *chain_spec
+        self.spec_id = *chain_spec
             .active_fork(self.header.number(), self.header.timestamp())
             .unwrap();
         self.commit.config_id = chain_spec.digest();
@@ -273,13 +274,13 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
         let Self {
             mut db,
             chain_id,
-            spec,
+            spec_id: spec,
             header,
             commit,
         } = self;
 
         ensure!(chain_id == other.chain_id, "configuration mismatch");
-        ensure!(spec == other.spec, "configuration mismatch");
+        ensure!(spec == other.spec_id, "configuration mismatch");
         ensure!(
             header.seal() == other.header.seal(),
             "execution header mismatch"
@@ -293,7 +294,7 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
         Ok(Self {
             db: Some(db.merge(db_other)),
             chain_id,
-            spec,
+            spec_id: spec,
             header,
             commit,
         })
@@ -323,6 +324,26 @@ impl<D, F: EvmFactory, C: Clone + BlockHeaderCommit<F::Header>> HostEvmEnv<D, F,
             .inner
             .clone()
             .commit(&self.header, self.commit.config_id)
+    }
+}
+
+impl<N, P, F> HostEvmEnv<ProviderDb<N, P>, F, Eip2935HistoryCommit<F::Header>>
+where
+    N: Network,
+    P: Provider<N>,
+    F: EvmFactory,
+    F::Header: TryFrom<<N as Network>::HeaderResponse>,
+    <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+{
+    /// Converts the environment into a [EvmInput] recursively committing to multiple execution
+    /// block hashes.
+    pub async fn into_input(self) -> Result<EvmInput<F>> {
+        let input = BlockInput::from_proof_db(self.db.unwrap(), self.header).await?;
+
+        Ok(EvmInput::EipHistory(Eip2935HistoryInput::new(
+            input,
+            self.commit.inner,
+        )))
     }
 }
 
