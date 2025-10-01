@@ -444,7 +444,7 @@ mod host {
                 .await
                 .context("failed to add generated access list")?;
 
-            self.call().await?
+            self.call().await
         }
     }
 }
