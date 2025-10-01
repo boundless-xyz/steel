@@ -22,7 +22,9 @@
 pub use alloy;
 pub use revm;
 
-use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
+use ::serde::{Deserialize, Serialize};
+use alloy_consensus::TxReceipt;
+use alloy_eips::Encodable2718;
 use alloy_evm::{Database, Evm, EvmError, IntoTxEnv};
 use alloy_primitives::{
     uint, Address, BlockNumber, Bloom, Bytes, ChainId, Log, Sealable, Sealed, B256, U256,
@@ -172,10 +174,12 @@ pub trait EvmFactory {
     type Header: EvmBlockHeader<SpecId = Self::SpecId>
         + Clone
         + Serialize
-        + DeserializeOwned
+        + for<'de> Deserialize<'de>
         + Send
         + Sync
         + 'static;
+    /// The transaction receipt type containing verifiable log data.
+    type Receipt: Encodable2718 + TxReceipt<Log = Log> + Serialize + for<'de> Deserialize<'de>;
 
     /// Creates a new transaction environment instance for a basic call.
     ///

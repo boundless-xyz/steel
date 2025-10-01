@@ -20,13 +20,11 @@ use alloy::{
     providers::Provider,
     rpc::types::EIP1186AccountProofResponse,
 };
-use alloy_consensus::ReceiptEnvelope;
-use alloy_eips::eip2718::Encodable2718;
 use alloy_primitives::{
     map::{hash_map, AddressHashMap, B256HashMap, B256HashSet, Entry, HashMap, HashSet},
     Address, BlockNumber, Bytes, Log, StorageKey, StorageValue, B256, U256,
 };
-use alloy_rpc_types::{Filter, TransactionReceipt};
+use alloy_rpc_types::Filter;
 use anyhow::{ensure, Context, Result};
 use revm::{
     primitives::KECCAK_EMPTY,
@@ -304,7 +302,10 @@ impl<N: Network, P: Provider<N>> ProofDb<ProviderDb<N, P>> {
         Ok((state_trie, storage_tries))
     }
 
-    pub async fn receipt_proof(&self) -> Result<Option<Vec<ReceiptEnvelope>>> {
+    /// Returns the proof (receipts in a block) of all event queries recorded by the [RevmDatabase].
+    pub(crate) async fn receipt_proof(
+        &self,
+    ) -> Result<Option<Vec<<N as Network>::ReceiptResponse>>> {
         if self.log_filters.is_empty() {
             return Ok(None);
         }
@@ -334,11 +335,7 @@ impl<N: Network, P: Provider<N>> ProofDb<ProviderDb<N, P>> {
             .context("eth_getBlockReceipts failed")?
             .with_context(|| format!("block {block_hash} not found"))?;
 
-        // convert the receipts so that they can be RLP-encoded
-        let receipts = convert_rpc_receipts::<N>(rpc_receipts, header.receipts_root())
-            .context("invalid receipts; inconsistent API response or incompatible response type")?;
-
-        Ok(Some(receipts))
+        Ok(Some(rpc_receipts))
     }
 
     async fn get_proof(
@@ -520,33 +517,4 @@ fn default_if_zero(hash: B256, default: B256) -> B256 {
     } else {
         hash
     }
-}
-
-/// Converts an API ReceiptResponse into a vector of ReceiptEnvelope.
-fn convert_rpc_receipts<N: Network>(
-    rpc_receipts: impl IntoIterator<Item = <N as Network>::ReceiptResponse>,
-    receipts_root: B256,
-) -> Result<Vec<ReceiptEnvelope>> {
-    let receipts = rpc_receipts
-        .into_iter()
-        .map(|rpc_receipt| {
-            // Unfortunately ReceiptResponse does not implement ReceiptEnvelope, so we have to
-            // manually convert it. We convert to a TransactionReceipt which is the default and
-            // works for Ethereum-compatible networks.
-            // Use serde here for the conversion as it is much safer than mem::transmute.
-            // TODO(https://github.com/alloy-rs/alloy/issues/854): use ReceiptEnvelope directly
-            let json = serde_json::to_value(rpc_receipt).context("failed to serialize")?;
-            let tx_receipt: TransactionReceipt = serde_json::from_value(json)
-                .context("failed to parse as Ethereum transaction receipt")?;
-
-            Ok(tx_receipt.inner.into_primitives_receipt())
-        })
-        .collect::<Result<Vec<_>>>()?;
-
-    // in case the conversion did not work correctly, we check the receipts root in the header
-    let root =
-        alloy_trie::root::ordered_trie_root_with_encoder(&receipts, |r, out| r.encode_2718(out));
-    ensure!(root == receipts_root, "receipts root mismatch");
-
-    Ok(receipts)
 }

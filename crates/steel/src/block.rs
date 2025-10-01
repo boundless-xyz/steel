@@ -13,11 +13,11 @@
 // limitations under the License.
 
 use crate::{
-    config::ChainSpec, serde::Eip2718Wrapper, state::StateDb, BlockHeaderCommit, Commitment,
-    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory, GuestEvmEnv, MerkleTrie,
+    config::ChainSpec, state::StateDb, BlockHeaderCommit, Commitment, CommitmentVersion,
+    EvmBlockHeader, EvmEnv, EvmFactory, GuestEvmEnv, MerkleTrie,
 };
 use ::serde::{Deserialize, Serialize};
-use alloy_consensus::ReceiptEnvelope;
+use alloy_consensus::TxReceipt;
 use alloy_primitives::{map::HashMap, Bytes, Sealable, Sealed, B256};
 use std::marker::PhantomData;
 
@@ -29,7 +29,7 @@ pub struct BlockInput<F: EvmFactory> {
     storage_tries: Vec<MerkleTrie>,
     contracts: Vec<Bytes>,
     ancestors: Vec<F::Header>,
-    receipts: Option<Vec<Eip2718Wrapper<ReceiptEnvelope>>>,
+    receipts: Option<Vec<F::Receipt>>,
     #[serde(skip)]
     phantom: PhantomData<F>,
 }
@@ -86,13 +86,7 @@ impl<F: EvmFactory> BlockInput<F> {
 
             receipts
                 .into_iter()
-                .flat_map(|wrapper| match wrapper.into_inner() {
-                    ReceiptEnvelope::Legacy(t) => t.receipt.logs,
-                    ReceiptEnvelope::Eip2930(t) => t.receipt.logs,
-                    ReceiptEnvelope::Eip1559(t) => t.receipt.logs,
-                    ReceiptEnvelope::Eip4844(t) => t.receipt.logs,
-                    ReceiptEnvelope::Eip7702(t) => t.receipt.logs,
-                })
+                .flat_map(TxReceipt::into_logs)
                 .collect()
         });
 
@@ -119,7 +113,6 @@ pub mod host {
     use super::BlockInput;
     use crate::{
         host::db::{ProofDb, ProviderDb},
-        serde::Eip2718Wrapper,
         EvmBlockHeader, EvmFactory,
     };
     use alloy::{network::Network, providers::Provider};
@@ -140,6 +133,8 @@ pub mod host {
             P: Provider<N>,
             F::Header: TryFrom<<N as Network>::HeaderResponse>,
             <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+            F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+            <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
         {
             assert_eq!(db.inner().block(), header.seal(), "DB block mismatch");
 
@@ -153,18 +148,19 @@ pub mod host {
             let contracts: Vec<_> = db.contracts().values().cloned().collect();
 
             // retrieve ancestor block headers
-            let mut ancestors = Vec::new();
-            for rlp_header in db.ancestor_proof(header.number()).await? {
-                let header: F::Header = rlp_header
-                    .try_into()
-                    .map_err(|err| anyhow!("header invalid: {err}"))?;
-                ancestors.push(header);
-            }
+            let ancestor_proof = db.ancestor_proof(header.number()).await?;
+            let ancestors = ancestor_proof
+                .into_iter()
+                .map(F::Header::try_from)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|err| anyhow!("invalid header: {err}"))?;
 
-            let receipts = db.receipt_proof().await?;
-            // wrap the receipts so that they can be serialized
-            let receipts =
-                receipts.map(|receipts| receipts.into_iter().map(Eip2718Wrapper::new).collect());
+            // retrieve receipt envelops
+            let receipt_proof = db.receipt_proof().await?;
+            let receipts = receipt_proof
+                .map(|receipts| receipts.into_iter().map(F::Receipt::try_from).collect())
+                .transpose()
+                .map_err(|err| anyhow!("invalid receipt: {err}"))?;
 
             debug!("state size: {}", state_trie.size());
             debug!("storage tries: {}", storage_tries.len());
