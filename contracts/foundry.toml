@@ -3,6 +3,7 @@ src = "src"
 out = "out"
 test = "test"
 libs = ["../lib"]
+evm_version = "prague"
 
 [fmt]
 line_length = 120

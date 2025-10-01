@@ -529,7 +529,7 @@ mod history {
     }
 
     #[test(tokio::test)]
-    #[should_panic(expected = "Beacon root does not match")]
+    #[should_panic(expected = "Beacon root mismatch")]
     async fn corrupt_history_evm_commit_proof() {
         let input = load_or_create("testdata/history_input.json", || {
             Box::pin(rpc_usdt_history_input())
@@ -568,5 +568,104 @@ mod history {
 
         // converting this into an environment should panic
         mock_usdt_guest(from_value(input_value).unwrap());
+    }
+
+    mod eip2935 {
+        use super::*;
+        use test_log::test;
+
+        /// Creates `EthEvmInput::EipHistory` using live RPC nodes preflighting
+        /// `IERC20(USDT).balanceOf(0x0)`.
+        async fn rpc_usdt_history_input() -> anyhow::Result<EthEvmInput> {
+            let mut env = EthEvmEnv::builder()
+                .rpc(RPC_URL.parse()?)
+                .block_number_or_tag(BlockNumberOrTag::Safe)
+                .commitment_block_number_or_tag(BlockNumberOrTag::Parent)
+                .chain_spec(&ETH_SEPOLIA_CHAIN_SPEC)
+                .build()
+                .await?;
+            Contract::preflight(USDT_ADDRESS, &mut env)
+                .call_builder(&USDT_CALL)
+                .call()
+                .await?;
+
+            env.into_input().await
+        }
+
+        #[test(tokio::test)]
+        #[should_panic(expected = "State root mismatch")]
+        async fn corrupt_history_state_trie() {
+            let input = load_or_create("testdata/eip2935_history_input.json", || {
+                Box::pin(rpc_usdt_history_input())
+            })
+            .await
+            .unwrap();
+
+            // get the JSON representation of the block header for the state
+            let mut input_value = to_value(&input).unwrap();
+            let state_commit = &mut input_value["EipHistory"]["commit"]["state_commits"][0];
+            let state_trie_value = &mut state_commit["state"]["state_trie"];
+
+            // corrupt the trie by getting the first child node and deleting it
+            let children = state_trie_value["Branch"].as_array_mut().unwrap();
+            let child_value = children.iter_mut().find(|c| !c.is_null()).unwrap();
+            *child_value = Value::Null;
+
+            // executing this on the guest should panic
+            mock_usdt_guest(from_value(input_value).unwrap());
+        }
+
+        #[test(tokio::test)]
+        #[should_panic(expected = "History storage contract failed: InvalidState")]
+        async fn corrupt_history_storage_trie() {
+            let input = load_or_create("testdata/eip2935_history_input.json", || {
+                Box::pin(rpc_usdt_history_input())
+            })
+            .await
+            .unwrap();
+
+            // get the JSON representation of the block header for the state
+            let mut input_value = to_value(&input).unwrap();
+            let state_commit = &mut input_value["EipHistory"]["commit"]["state_commits"][0];
+            let storage_trie_value = &mut state_commit["state"]["storage_trie"];
+
+            // corrupt the trie by getting the first child node and deleting it
+            let children = storage_trie_value["Branch"].as_array_mut().unwrap();
+            let child_value = children.iter_mut().find(|c| !c.is_null()).unwrap();
+            *child_value = Value::Null;
+
+            // executing this on the guest should panic
+            mock_usdt_guest(from_value(input_value).unwrap());
+        }
+
+        #[test(tokio::test)]
+        #[should_panic(expected = "Invalid commitment")]
+        async fn corrupt_history_evm_commit_header() {
+            let input = load_or_create("testdata/eip2935_history_input.json", || {
+                Box::pin(rpc_usdt_history_input())
+            })
+            .await
+            .unwrap();
+            let exp_commit = input
+                .clone()
+                .into_env(&ETH_SEPOLIA_CHAIN_SPEC)
+                .into_commitment();
+
+            // get the JSON representation of the block header for the state
+            let mut input_value = to_value(&input).unwrap();
+            let state_commit = &mut input_value["EipHistory"]["commit"]["state_commits"][0];
+            let header_value = &mut state_commit["header"];
+
+            // corrupt the header by modifying its timestamp
+            let mut header: <EthEvmFactory as EvmFactory>::Header =
+                from_value(header_value.clone()).unwrap();
+            header.inner_mut().timestamp = 0xdeadbeaf;
+            *header_value = to_value(header).unwrap();
+
+            // executing this should lead to an Invalid commitment
+            let commit = mock_usdt_guest(from_value(input_value).unwrap());
+            assert_eq!(commit.id, exp_commit.id, "Changed commitment");
+            assert_eq!(commit.digest, exp_commit.digest, "Invalid commitment");
+        }
     }
 }

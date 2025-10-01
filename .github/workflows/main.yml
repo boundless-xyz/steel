@@ -166,7 +166,6 @@ jobs:
           path: target/cargo-timings/
           retention-days: 5
       - run: forge test -vvv
-        working-directory: contracts
 
   rpc-tests:
     # Skip if the PR is not from a fork.

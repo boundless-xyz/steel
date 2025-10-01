@@ -12,22 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Types related to commitments to a historical state.
+//! Types related to commitments to a historical state relying on EIP-4788.
+
+use alloy_primitives::{Sealed, B256, U256};
+use beacon::{BeaconCommit, GeneralizedBeaconCommit, STATE_ROOT_LEAF_INDEX};
+use beacon_roots::BeaconRootsContract;
+use serde::{Deserialize, Serialize};
+use state::{Error, SingleContractState};
+
 use crate::{
     beacon, beacon::BeaconBlockId, BlockHeaderCommit, Commitment, CommitmentVersion, ComposeInput,
 };
-use alloy_primitives::{Sealed, B256, U256};
-use beacon::{BeaconCommit, GeneralizedBeaconCommit, STATE_ROOT_LEAF_INDEX};
-use beacon_roots::{BeaconRootsContract, BeaconRootsState};
-use serde::{Deserialize, Serialize};
 
-pub(crate) mod beacon_roots;
+mod beacon_roots;
+mod eip2935;
+mod state;
 
-/// Input committing a previous block hash to the corresponding Beacon Chain block root.
+pub use eip2935::{HistoryCommit as Eip2935HistoryCommit, HistoryInput as Eip2935HistoryInput};
+
+/// Input recursively committing to multiple Beacon Chain block roots.
 pub type HistoryInput<F> = ComposeInput<F, HistoryCommit>;
 
-/// A commitment that an execution block is included as an ancestor of a specific beacon block on
-/// the Ethereum blockchain.
+/// Commitment that an execution block is an ancestor of a specific Beacon Chain block.
 ///
 /// This struct encapsulates the necessary data to prove that a given execution block is part of the
 /// canonical chain according to the Beacon Chain.
@@ -42,16 +48,17 @@ pub struct HistoryCommit {
 /// Represents a commitment of a beacon roots contract state to a Beacon Chain block root.
 #[derive(Clone, Serialize, Deserialize)]
 struct StateCommit {
-    /// State for verifying `evm_commit`.
-    state: BeaconRootsState,
+    /// State for verifying the previous Beacon Chain block root.
+    state: SingleContractState,
     /// Commitment for `state` to a Beacon Chain block root.
     state_commit: GeneralizedBeaconCommit<STATE_ROOT_LEAF_INDEX>,
 }
 
 impl<H> BlockHeaderCommit<H> for HistoryCommit {
     /// Generates a commitment that proves the given block header is included in the Beacon Chain's
-    /// history. Panics if the provided [HistoryCommit] data is invalid or inconsistent.
-    #[inline]
+    /// history.
+    ///
+    /// Panics if the provided [HistoryCommit] data is invalid or inconsistent.
     fn commit(self, header: &Sealed<H>, config_id: B256) -> Commitment {
         // first, compute the beacon commit of the EVM execution
         let evm_commitment = self.evm_commit.commit(header, config_id);
@@ -70,10 +77,10 @@ impl<H> BlockHeaderCommit<H> for HistoryCommit {
                 BeaconBlockId::Eip4788(ts) => U256::from(ts),
                 BeaconBlockId::Slot(_) => panic!("Invalid state commitment: wrong version"),
             };
-            let commitment_root =
-                BeaconRootsContract::get_from_db(&mut state_commit.state, timestamp)
-                    .expect("Beacon roots contract failed");
-            assert_eq!(commitment_root, beacon_root, "Beacon root does not match");
+            let commitment_root = BeaconRootsContract::new(&mut state_commit.state)
+                .and_then(|mut c| c.get(timestamp))
+                .expect("Beacon roots contract failed");
+            assert_eq!(commitment_root, beacon_root, "Beacon root mismatch");
 
             // compute the beacon commitment of the current state
             (beacon_block_id, beacon_root) = state_commit.state_commit.into_commit(state_root);
@@ -97,7 +104,7 @@ mod host {
             BeaconBlockId,
         },
         ethereum::EthBlockHeader,
-        history::beacon_roots::BeaconRootsState,
+        host::db::ProviderDb,
         EvmBlockHeader,
     };
     use alloy::{network::Ethereum, providers::Provider};
@@ -164,31 +171,29 @@ mod host {
             loop {
                 log::debug!("Processing state for block: {current_state_block_hash}");
 
+                let db =
+                    ProviderDb::new(&rpc_provider, Default::default(), current_state_block_hash);
+                let beacon_roots = BeaconRootsContract::preflight(db);
+
                 // 2a. Query the beacon roots contract *within the current state* for the timestamp
                 // in the slot that the execution commit will eventually occupy,
-                let timestamp = beacon_roots::get_timestamp(
-                    execution_commit.0,
-                    &rpc_provider,
-                    current_state_block_hash.into(),
-                )
-                .await
-                .context("failed to get timestamp from beacon roots contract")?;
+                let timestamp = beacon_roots
+                    .get_timestamp(execution_commit.0)
+                    .await
+                    .context("failed to get timestamp from beacon roots contract")?;
                 // 2b. Preflight the beacon roots contract call for timestamp. This gives us the
                 // BeaconRootsState and the parent_beacon_root of that particular call.
-                let (parent_beacon_root, state_proof) = BeaconRootsState::preflight_get(
-                    timestamp,
-                    &rpc_provider,
-                    current_state_block_hash.into(),
-                )
-                .await
-                .context("failed to preflight beacon roots contract")?;
+                let (parent_beacon_root, state_witness) = beacon_roots
+                    .get(timestamp)
+                    .await
+                    .context("failed to preflight beacon roots contract")?;
 
                 // 2c. Store the fetched BeaconRootsState and its beacon commitment
                 // These are inserted at the beginning as we are building the chain in reverse.
                 state_commits.insert(
                     0,
                     StateCommit {
-                        state: state_proof,
+                        state: state_witness,
                         state_commit: current_state_commit,
                     },
                 );
@@ -247,72 +252,62 @@ mod tests {
     use crate::{
         ethereum::EthBlockHeader,
         test_utils::{get_cl_url, get_el_url},
+        EvmBlockHeader,
     };
     use alloy::providers::{Provider, ProviderBuilder};
+    use alloy_consensus::BlockHeader;
+    use alloy_eips::BlockNumberOrTag;
     use alloy_primitives::Sealable;
+    use test_log::test;
 
-    #[tokio::test]
+    #[test(tokio::test)]
     #[cfg_attr(
         any(not(feature = "rpc-tests"), no_auth),
         ignore = "RPC tests are disabled"
     )]
-    async fn from_beacon_commit_and_header() {
-        let el = ProviderBuilder::default().connect_http(get_el_url());
+    async fn create_and_check() {
+        async fn check_dist(el: impl Provider, n: u64) -> anyhow::Result<()> {
+            let latest_block = el
+                .get_block_by_number(BlockNumberOrTag::Latest)
+                .await?
+                .unwrap();
+            let latest_header: EthBlockHeader = latest_block.header.try_into()?;
 
-        // get the latest 4 headers
-        let headers = get_headers(4).await.unwrap();
+            let commitment_block = el
+                .get_block_by_number((latest_header.number() - 1).into())
+                .await?
+                .unwrap();
+            let commitment_header: EthBlockHeader = commitment_block.header.try_into()?;
+            let commitment_header = commitment_header.seal_slow();
 
-        // create a history commitment executing on header[0] and committing to header[2]
-        let mut commit = HistoryCommit::from_headers(
-            &headers[0],
-            &headers[2],
-            CommitmentVersion::Beacon,
-            &el,
-            get_cl_url(),
-        )
-        .await
-        .unwrap();
+            let execution_block = el
+                .get_block_by_number((commitment_header.number() - n).into())
+                .await?
+                .unwrap();
+            let execution_header: EthBlockHeader = execution_block.header.try_into()?;
+            let execution_header = execution_header.seal_slow();
 
-        let [StateCommit {
-            state,
-            state_commit,
-        }] = &mut commit.state_commits[..]
-        else {
-            panic!("invalid state_commits")
-        };
-
-        // the state commit should verify against the beacon block root of headers[2]<
-        state_commit
-            .verify(state.root(), headers[3].parent_beacon_block_root.unwrap())
-            .unwrap();
-        // the beacon roots contract should return the beacon block root of headers[0]
-        assert_eq!(
-            BeaconRootsContract::get_from_db(
-                state,
-                U256::from(commit.evm_commit.block_id().as_id())
+            let commit = HistoryCommit::from_headers(
+                &execution_header,
+                &commitment_header,
+                CommitmentVersion::Beacon,
+                &el,
+                get_cl_url(),
             )
-            .unwrap(),
-            headers[1].parent_beacon_block_root.unwrap(),
-        );
-        // the resulting commitment should correspond to the beacon block root of headers[2]
-        assert_eq!(
-            commit.commit(&headers[0], B256::ZERO).digest,
-            headers[3].parent_beacon_block_root.unwrap()
-        );
-    }
+            .await?;
 
-    // get the latest n headers, with header[0] being the oldest and header[n-1] being the newest.
-    async fn get_headers(n: usize) -> anyhow::Result<Vec<Sealed<EthBlockHeader>>> {
-        let el = ProviderBuilder::new().connect_http(get_el_url());
-        let latest = el.get_block_number().await?;
+            let commitment = commit.commit(&execution_header, B256::default());
+            assert_eq!(
+                commitment.digest,
+                latest_header.parent_beacon_block_root().unwrap()
+            );
 
-        let mut headers = Vec::with_capacity(n);
-        for number in latest + 1 - (n as u64)..=latest {
-            let block = el.get_block_by_number(number.into()).await?.unwrap();
-            let header: EthBlockHeader = block.header.try_into()?;
-            headers.push(header.seal_slow());
+            Ok(())
         }
 
-        Ok(headers)
+        let el = ProviderBuilder::default().connect_http(get_el_url());
+
+        check_dist(&el, 1).await.unwrap();
+        check_dist(&el, 20_000).await.unwrap();
     }
 }

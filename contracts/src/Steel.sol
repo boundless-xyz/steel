@@ -16,6 +16,8 @@
 
 pragma solidity ^0.8.9;
 
+import {Blockhash} from "openzeppelin/contracts/utils/Blockhash.sol";
+
 /// @title Steel Library
 /// @notice This library provides a collection of utilities to work with Steel commitments in Solidity.
 library Steel {
@@ -85,8 +87,8 @@ library Steel {
     /// @param blockHash The block hash to validate.
     /// @return True if the block's block hash matches the block hash, false otherwise.
     function validateBlockCommitment(uint256 blockNumber, bytes32 blockHash) internal view returns (bool) {
-        // NOTE: blockhash opcode returns all zeroes if the block number is too far in the past.
-        bytes32 blockHashResult = blockhash(blockNumber);
+        // NOTE: blockHash returns all zeroes if the block number is too far in the past.
+        bytes32 blockHashResult = Blockhash.blockHash(blockNumber);
         if (blockHashResult == bytes32(0)) {
             revert CommitmentTooOld();
         }

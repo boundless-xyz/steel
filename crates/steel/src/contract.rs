@@ -14,8 +14,8 @@
 
 use crate::{state::WrapStateDb, EvmFactory, GuestEvmEnv};
 use alloy_evm::Evm;
-use alloy_primitives::Address;
-use alloy_sol_types::{SolCall, SolType};
+use alloy_primitives::{Address, Bytes};
+use alloy_sol_types::{sol_data, SolCall, SolType};
 use anyhow::anyhow;
 use revm::context::result::{ExecutionResult, ResultAndState, SuccessReason};
 use std::{fmt::Debug, marker::PhantomData};
@@ -162,6 +162,11 @@ impl<'a, F: EvmFactory> Contract<&'a GuestEvmEnv<F>> {
     pub fn call_builder<S: SolCall>(&self, call: &S) -> CallBuilder<F::Tx, S, &GuestEvmEnv<F>> {
         CallBuilder::new(F::new_tx(self.address, call.abi_encode().into()), self.env)
     }
+
+    /// Initializes a builder for doing a raw contract call in the guest.
+    pub fn raw(&self, data: Bytes) -> CallBuilder<F::Tx, RawCall, &GuestEvmEnv<F>> {
+        CallBuilder::new(F::new_tx(self.address, data), self.env)
+    }
 }
 
 /// Represents a prepared EVM contract call, ready for configuration and execution.
@@ -208,6 +213,41 @@ impl<T, S: SolCall, E> CallBuilder<T, S, E> {
     }
 }
 
+/// A dummy [SolCall] for raw function calling.
+pub struct RawCall(Bytes);
+
+impl SolCall for RawCall {
+    type Parameters<'a> = (sol_data::Bytes,);
+    type Token<'a> = <Self::Parameters<'a> as SolType>::Token<'a>;
+    type Return = Bytes;
+
+    type ReturnTuple<'a> = (sol_data::Bytes,);
+    type ReturnToken<'a> = <Self::ReturnTuple<'a> as SolType>::Token<'a>;
+
+    const SIGNATURE: &'static str = "raw";
+    const SELECTOR: [u8; 4] = [0, 0, 0, 0];
+
+    fn new(_: <Self::Parameters<'_> as SolType>::RustType) -> Self {
+        panic!("Must not be called")
+    }
+
+    fn tokenize(&self) -> Self::Token<'_> {
+        (<sol_data::Bytes as SolType>::tokenize(&self.0),)
+    }
+    fn tokenize_returns(ret: &Self::Return) -> Self::ReturnToken<'_> {
+        (<sol_data::Bytes as SolType>::tokenize(ret),)
+    }
+
+    #[inline]
+    fn abi_decode_returns(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+        Ok(data.to_vec().into())
+    }
+    #[inline]
+    fn abi_decode_returns_validate(data: &[u8]) -> alloy_sol_types::Result<Self::Return> {
+        Ok(data.to_vec().into())
+    }
+}
+
 #[cfg(feature = "host")]
 mod host {
     use super::*;
@@ -241,6 +281,14 @@ mod host {
             call: &S,
         ) -> CallBuilder<F::Tx, S, &mut HostEvmEnv<D, F, C>> {
             CallBuilder::new(F::new_tx(self.address, call.abi_encode().into()), self.env)
+        }
+
+        /// Initializes a builder for doing a raw contract call on the host.
+        pub fn raw(
+            &mut self,
+            data: Bytes,
+        ) -> CallBuilder<F::Tx, RawCall, &mut HostEvmEnv<D, F, C>> {
+            CallBuilder::new(F::new_tx(self.address, data), self.env)
         }
     }
 
@@ -309,7 +357,7 @@ mod host {
             let mut db = self.env.db.take().unwrap();
 
             let chain_id = self.env.chain_id;
-            let spec = self.env.spec;
+            let spec = self.env.spec_id;
             let header = self.env.header.inner().clone();
             let (result, db) = tokio::task::spawn_blocking(move || {
                 let exec_result = {
@@ -430,7 +478,7 @@ where
             // wrap the database and header for guest state access
             WrapStateDb::new(self.env.db(), &self.env.header),
             self.env.chain_id,
-            self.env.spec,
+            self.env.spec_id,
             self.env.header.inner(),
         );
         // execute the transaction

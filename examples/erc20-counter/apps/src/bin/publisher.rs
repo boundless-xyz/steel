@@ -71,7 +71,7 @@ struct Args {
     ///
     /// Steel uses a beacon block commitment instead of the execution block.
     /// This allows proofs to be validated using the EIP-4788 beacon roots contract.
-    #[cfg(any(feature = "beacon", feature = "history"))]
+    #[cfg(feature = "beacon")]
     #[arg(long, env = "BEACON_API_URL")]
     beacon_api_url: Url,
 
@@ -120,7 +120,7 @@ async fn main() -> Result<()> {
     let builder = EthEvmEnv::builder()
         .provider(provider.clone())
         .block_number_or_tag(args.execution_block);
-    #[cfg(any(feature = "beacon", feature = "history"))]
+    #[cfg(feature = "beacon")]
     let builder = builder.beacon_api(args.beacon_api_url);
     #[cfg(feature = "history")]
     let builder = builder.commitment_block_number_or_tag(args.commitment_block);
@@ -195,7 +195,7 @@ async fn main() -> Result<()> {
         .get_receipt()
         .await
         .with_context(|| format!("transaction did not confirm: {tx_hash}"))?;
-    ensure!(receipt.status(), "transaction failed: {}", tx_hash);
+    ensure!(receipt.status(), "transaction failed: {tx_hash}");
 
     Ok(())
 }

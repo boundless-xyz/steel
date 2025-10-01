@@ -14,11 +14,11 @@
 
 use alloy::providers::ProviderBuilder;
 use anyhow::Context;
-use risc0_op_steel::config::ChainSpec;
+use risc0_op_steel::{config::ChainSpec, EvmSpecId};
 use risc0_zkvm::{sha::Digest, Receipt};
 use url::Url;
 
-pub async fn verify_on_chain<S: Ord + serde::Serialize>(
+pub async fn verify_on_chain<S: EvmSpecId>(
     receipt: Receipt,
     chain_spec: &ChainSpec<S>,
     image_id: Digest,
