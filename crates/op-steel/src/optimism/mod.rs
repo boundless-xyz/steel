@@ -28,7 +28,7 @@ use risc0_steel::{
         primitives::hardfork::SpecId,
     },
     serde::RlpHeader,
-    BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, StateDb,
+    BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::Into, error::Error, sync::LazyLock};
@@ -42,46 +42,55 @@ pub use host::*;
 /// The OP Mainnet [ChainSpec].
 pub static OP_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 10,
-    forks: BTreeMap::from([
-        (OpSpecId::BEDROCK, ForkCondition::Block(105235063)),
-        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-        (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
-        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
-        (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
-        (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
-        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
-        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
-    ]),
+    forks: BTreeMap::from(
+        [
+            (OpSpecId::BEDROCK, ForkCondition::Block(105235063)),
+            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
+        ]
+        .map(|(id, cond)| (id.into(), cond)),
+    ),
 });
 
 /// The OP Sepolia [ChainSpec].
 pub static OP_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 11155420,
-    forks: BTreeMap::from([
-        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
-        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-        (OpSpecId::CANYON, ForkCondition::Timestamp(1699981200)),
-        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1708534800)),
-        (OpSpecId::FJORD, ForkCondition::Timestamp(1716998400)),
-        (OpSpecId::GRANITE, ForkCondition::Timestamp(1723478400)),
-        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1732633200)),
-        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1744905600)),
-    ]),
+    forks: BTreeMap::from(
+        [
+            (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1699981200)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1708534800)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1716998400)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1723478400)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1732633200)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1744905600)),
+        ]
+        .map(|(id, cond)| (id.into(), cond)),
+    ),
 });
 
 /// The Base Mainnet [ChainSpec].
 pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 8453,
-    forks: BTreeMap::from([
-        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
-        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-        (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
-        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
-        (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
-        (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
-        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
-        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
-    ]),
+    forks: BTreeMap::from(
+        [
+            (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
+        ]
+        .map(|(id, cond)| (id.into(), cond)),
+    ),
 });
 
 /// The Base Sepolia [ChainSpec].
@@ -102,6 +111,7 @@ impl EvmFactory for OpEvmFactory {
         <AlloyOpEvmFactory as AlloyEvmFactory>::Error<DBError>;
     type HaltReason = <AlloyOpEvmFactory as AlloyEvmFactory>::HaltReason;
     type Spec = <AlloyOpEvmFactory as AlloyEvmFactory>::Spec;
+    type SpecId = OpEvmSpecId;
     type Header = OpBlockHeader;
 
     fn new_tx(address: Address, data: Bytes) -> Self::Tx {
@@ -121,10 +131,10 @@ impl EvmFactory for OpEvmFactory {
     fn create_evm<DB: Database>(
         db: DB,
         chain_id: ChainId,
-        spec: Self::Spec,
+        spec_id: Self::SpecId,
         header: &Self::Header,
     ) -> Self::Evm<DB> {
-        let mut cfg_env = CfgEnv::new_with_spec(spec).with_chain_id(chain_id);
+        let mut cfg_env = CfgEnv::new_with_spec(spec_id.into()).with_chain_id(chain_id);
         cfg_env.disable_nonce_check = true;
         cfg_env.disable_balance_check = true;
         cfg_env.disable_block_gas_limit = true;
@@ -133,27 +143,50 @@ impl EvmFactory for OpEvmFactory {
         // The basefee should be ignored for eth_call
         cfg_env.disable_base_fee = true;
 
-        let block_env = header.to_block_env(spec);
+        let block_env = header.to_block_env(spec_id);
 
         AlloyOpEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
     }
 }
 
 /// [ChainSpec] for Optimism.
-pub type OpChainSpec = ChainSpec<OpSpecId>;
+pub type OpChainSpec = ChainSpec<OpEvmSpecId>;
+
+/// [EvmFactory::SpecId] for Optimism.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct OpEvmSpecId(OpSpecId);
+
+impl From<OpSpecId> for OpEvmSpecId {
+    fn from(spec: OpSpecId) -> Self {
+        Self(spec)
+    }
+}
+
+impl From<OpEvmSpecId> for OpSpecId {
+    fn from(spec: OpEvmSpecId) -> Self {
+        spec.0
+    }
+}
+impl EvmSpecId for OpEvmSpecId {
+    #[inline]
+    fn has_eip4788(&self) -> bool {
+        self.0 >= OpSpecId::ECOTONE
+    }
+    #[inline]
+    fn has_eip2935(&self) -> bool {
+        self.0 >= OpSpecId::ISTHMUS
+    }
+    #[inline]
+    fn to_u32(&self) -> u32 {
+        self.0 as u32
+    }
+}
 
 type OpHeader = <Optimism as Network>::Header;
 
-/// [EvmBlockHeader] for Optimism.
+/// [EvmFactory::Header] for Optimism.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OpBlockHeader(pub RlpHeader<OpHeader>);
-
-impl AsRef<OpHeader> for OpBlockHeader {
-    #[inline]
-    fn as_ref(&self) -> &OpHeader {
-        self.0.inner()
-    }
-}
 
 impl Sealable for OpBlockHeader {
     #[inline]
@@ -163,7 +196,7 @@ impl Sealable for OpBlockHeader {
 }
 
 impl EvmBlockHeader for OpBlockHeader {
-    type Spec = OpSpecId;
+    type SpecId = OpEvmSpecId;
 
     #[inline]
     fn parent_hash(&self) -> &B256 {
@@ -191,13 +224,14 @@ impl EvmBlockHeader for OpBlockHeader {
     }
 
     #[inline]
-    fn to_block_env(&self, spec: OpSpecId) -> BlockEnv {
+    fn to_block_env(&self, spec_id: Self::SpecId) -> BlockEnv {
         let header = self.0.inner();
 
+        let eth_spec_id = spec_id.0.into_eth_spec();
         let blob_excess_gas_and_price =
             header
                 .excess_blob_gas
-                .map(|excess_blob_gas| match spec.into_eth_spec() {
+                .map(|excess_blob_gas| match eth_spec_id {
                     SpecId::CANCUN => BlobExcessGasAndPrice::new(
                         excess_blob_gas,
                         eip4844::BLOB_GASPRICE_UPDATE_FRACTION as u64,
@@ -212,7 +246,7 @@ impl EvmBlockHeader for OpBlockHeader {
                     ),
                     _ => unimplemented!(
                         "unsupported spec with `excess_blob_gas`: {}",
-                        <&'static str>::from(spec)
+                        <&'static str>::from(spec_id.0)
                     ),
                 });
 
@@ -223,7 +257,7 @@ impl EvmBlockHeader for OpBlockHeader {
             gas_limit: header.gas_limit,
             basefee: header.base_fee_per_gas.unwrap_or_default(),
             difficulty: header.difficulty,
-            prevrandao: (spec >= OpSpecId::BEDROCK).then_some(header.mix_hash),
+            prevrandao: (spec_id.0 >= OpSpecId::BEDROCK).then_some(header.mix_hash),
             blob_excess_gas_and_price,
         }
     }
@@ -257,5 +291,19 @@ impl OpEvmInput {
             OpEvmInput::Block(input) => input.into_env(chain_spec),
             OpEvmInput::DisputeGame(input) => input.into_env(chain_spec),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_primitives::b256;
+
+    #[test]
+    fn mainnet_spec_digest() {
+        assert_eq!(
+            OP_MAINNET_CHAIN_SPEC.digest(),
+            b256!("0x3756bc5a81c05862bc364ef40e6c6667c3400136a38af589be15d1a6cceed686")
+        );
     }
 }

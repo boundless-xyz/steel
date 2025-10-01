@@ -26,12 +26,12 @@ export COMMITMENT_BLOCK=$BLOCK_NUMBER
 
 # Enable the beacon feature is an Beacon API is provided
 if [[ -n "${BEACON_API_URL}" ]]; then
-  PUBLISHER_FEATURES="beacon"
+  PUBLISHER_FEATURES+="${PUBLISHER_FEATURES:+","}beacon"
 fi
 # Enable the history feature and override the commitment block
 if [[ ${HISTORY_BLOCKS} -gt 0 ]]; then
   printf -v COMMITMENT_BLOCK '%#x' "$((BLOCK_NUMBER + HISTORY_BLOCKS))"
-  PUBLISHER_FEATURES="history"
+  PUBLISHER_FEATURES+="${PUBLISHER_FEATURES:+","}history"
 fi
 
 echo "Waiting for block ${COMMITMENT_BLOCK} to have one confirmation..."
