@@ -16,7 +16,7 @@
 use crate::{
     config::{ChainSpec, ForkCondition},
     serde::{Eip2718Wrapper, RlpHeader},
-    EvmBlockHeader, EvmEnv, EvmFactory, EvmInput,
+    EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
 };
 use alloy_consensus::{Eip658Value, TxReceipt};
 use alloy_eips::{eip4844, eip7691, Encodable2718, Typed2718};
@@ -81,6 +81,7 @@ impl EvmFactory for EthEvmFactory {
         <AlloyEthEvmFactory as AlloyEvmFactory>::Error<DBError>;
     type HaltReason = <AlloyEthEvmFactory as AlloyEvmFactory>::HaltReason;
     type Spec = <AlloyEthEvmFactory as AlloyEvmFactory>::Spec;
+    type SpecId = SpecId;
     type Header = EthBlockHeader;
     type Receipt = EthReceipt;
 
@@ -97,10 +98,10 @@ impl EvmFactory for EthEvmFactory {
     fn create_evm<DB: Database>(
         db: DB,
         chain_id: u64,
-        spec: Self::Spec,
+        spec_id: SpecId,
         header: &Self::Header,
     ) -> Self::Evm<DB> {
-        let mut cfg_env = CfgEnv::new_with_spec(spec).with_chain_id(chain_id);
+        let mut cfg_env = CfgEnv::new_with_spec(spec_id).with_chain_id(chain_id);
         cfg_env.disable_nonce_check = true;
         cfg_env.disable_balance_check = true;
         cfg_env.disable_block_gas_limit = true;
@@ -109,7 +110,7 @@ impl EvmFactory for EthEvmFactory {
         // The basefee should be ignored for eth_call
         cfg_env.disable_base_fee = true;
 
-        let block_env = header.to_block_env(spec);
+        let block_env = header.to_block_env(spec_id);
 
         AlloyEthEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
     }
@@ -117,6 +118,21 @@ impl EvmFactory for EthEvmFactory {
 
 /// [ChainSpec] for Ethereum.
 pub type EthChainSpec = ChainSpec<SpecId>;
+
+impl EvmSpecId for SpecId {
+    #[inline]
+    fn has_eip4788(&self) -> bool {
+        self >= &SpecId::CANCUN
+    }
+    #[inline]
+    fn has_eip2935(&self) -> bool {
+        self >= &SpecId::PRAGUE
+    }
+    #[inline]
+    fn to_u32(&self) -> u32 {
+        *self as u32
+    }
+}
 
 /// [EvmEnv] for Ethereum.
 pub type EthEvmEnv<D, C> = EvmEnv<D, EthEvmFactory, C>;
@@ -128,7 +144,7 @@ pub type EthEvmInput = EvmInput<EthEvmFactory>;
 pub type EthBlockHeader = RlpHeader<alloy_consensus::Header>;
 
 impl EvmBlockHeader for EthBlockHeader {
-    type Spec = SpecId;
+    type SpecId = SpecId;
 
     #[inline]
     fn parent_hash(&self) -> &B256 {
@@ -156,7 +172,7 @@ impl EvmBlockHeader for EthBlockHeader {
     }
 
     #[inline]
-    fn to_block_env(&self, spec: SpecId) -> BlockEnv {
+    fn to_block_env(&self, spec: Self::SpecId) -> BlockEnv {
         let header = self.inner();
 
         let blob_excess_gas_and_price = header.excess_blob_gas.map(|excess_blob_gas| match spec {

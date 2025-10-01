@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### ⚡️ Features
+
+- Introduce `Eip2935HistoryCommit` to enable historical state proofs using the EIP-2935 history storage contract. This provides a more direct and efficient alternative to the existing beacon-based `HistoryCommit`.
+- Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
+- The `Contract` API now includes a `raw` method to allow for direct calls with raw calldata. This provides greater flexibility when interacting with non-standard interfaces, such as precompiles.
+
+### ⚙️ Miscellaneous
+
+- The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
+- Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`.
+
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)
 
 ### ⚡️ Features

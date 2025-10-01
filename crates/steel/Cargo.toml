@@ -41,6 +41,7 @@ url = { workspace = true, optional = true }
 
 [dev-dependencies]
 alloy = { workspace = true, features = ["node-bindings"] }
+bincode = { workspace = true }
 risc0-steel = { path = ".", features = ["host"] }
 serde_json = { workspace = true }
 test-log = { workspace = true }
