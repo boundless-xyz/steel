@@ -164,6 +164,7 @@ pub mod host {
                 .transpose()
                 .map_err(|err| anyhow!("invalid receipt: {err}"))?;
 
+            debug!("Preparing input for block {}:", header.number());
             debug!("state size: {}", state_trie.size());
             debug!("storage tries: {}", storage_tries.len());
             debug!(

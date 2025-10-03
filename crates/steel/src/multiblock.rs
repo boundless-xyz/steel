@@ -21,7 +21,46 @@ use alloy_primitives::BlockNumber;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-/// An ordered map of block numbers to [EvmEnv] that form a subsequence in a single chain.
+/// A sequence of [EvmEnv] that form a subsequence in a single chain.
+///
+/// ### Examples
+///
+/// ```rust
+/// # use risc0_steel::{
+/// #    ethereum::{EthEvmInput, EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
+/// #    host::{BlockNumberOrTag, HostMultiblockEvmEnv}
+/// # };
+/// # use alloy::providers::{ext::AnvilApi, ProviderBuilder};
+/// # #[tokio::main(flavor = "current_thread")]
+/// # async fn main() -> anyhow::Result<()> {
+/// // === Host Setup ===
+/// # let p = ProviderBuilder::new().connect_anvil();
+/// # p.anvil_mine(Some(3), None).await?;
+/// let builder = EthEvmEnv::builder().provider(p).chain_spec(&ETH_MAINNET_CHAIN_SPEC);
+/// // create multiblock environment from regular builder
+/// let mut envs = HostMultiblockEvmEnv::from_builder(builder);
+///
+/// // get for block in the chain
+/// let host_env = envs.get_or_build(1).await?;
+/// // use like regular EthEvmEnv
+/// // ... get for more blocks
+/// let host_env = envs.get_or_build(2).await?;
+///
+/// // generate input for the guest
+/// let evm_input = envs.into_input().await?;
+///
+/// // === Guest Setup & Execution ===
+/// let envs = evm_input.into_env(&ETH_MAINNET_CHAIN_SPEC);
+///
+/// // execute the same queries on the same blocks in the guest
+/// let guest_env = envs.get(1).unwrap();
+/// let guest_env = envs.get(2).unwrap();
+///
+/// // get commitment for all the environments
+/// let commit = envs.into_commitment();
+/// # Ok(())
+/// # }
+/// ```
 pub struct MultiblockEvmEnv<D, F: EvmFactory, C>(BTreeMap<BlockNumber, EvmEnv<D, F, C>>);
 
 /// The serializable input to derive and validate an [MultiblockEvmInput] from.
@@ -43,7 +82,7 @@ impl<F: EvmFactory> MultiblockEvmInput<F> {
             let env = env_input.into_env(chain_spec);
             if let Some(collision) = envs.insert(env.header().number(), env) {
                 panic!(
-                    "more than one env for block {}",
+                    "More than one env for block {}",
                     collision.header().number()
                 );
             };
@@ -180,13 +219,9 @@ pub(crate) mod host {
         }
     }
 
-    impl<F: EvmFactory> MultiblockEvmEnv<(), F, ()> {
-        /// Creates a builder for building a multiblock environment.
-        pub fn builder() -> EvmEnvBuilder<(), F, (), ()> {
-            EvmEnvBuilder::new()
-        }
-    }
-
+    /// A sequence of [EvmEnv] that form a subsequence in a single chain.
+    ///
+    /// See [MultiblockEvmEnv] for usage examples.
     pub struct HostMultiblockEvmEnv<'a, N, P, F: EvmFactory, B> {
         builder: EvmEnvBuilder<P, F, &'a ChainSpec<F::SpecId>, B>,
         env: MultiblockEvmEnv<ProofDb<ProviderDb<N, P>>, F, HostCommit<()>>,
@@ -294,7 +329,7 @@ pub(crate) mod host {
 mod tests {
     use super::*;
     use crate::{
-        ethereum::{EthMultiblockEvmEnv, ETH_MAINNET_CHAIN_SPEC},
+        ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
         host::HostMultiblockEvmEnv,
         test_utils::get_el_url,
         Account,
@@ -332,7 +367,7 @@ mod tests {
             .unwrap()
             .hash();
 
-        let builder = EthMultiblockEvmEnv::builder()
+        let builder = EthEvmEnv::builder()
             .provider(provider)
             .chain_spec(&chain_spec);
         let mut host_env = HostMultiblockEvmEnv::from_builder(builder);
@@ -374,7 +409,7 @@ mod tests {
             .unwrap()
             .hash();
 
-        let builder = EthMultiblockEvmEnv::builder()
+        let builder = EthEvmEnv::builder()
             .provider(provider)
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
             .commitment_block_hash(block_hash);

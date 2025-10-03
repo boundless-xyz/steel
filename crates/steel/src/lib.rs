@@ -56,7 +56,7 @@ pub mod serde;
 mod state;
 #[cfg(test)]
 mod test_utils;
-mod verifier;
+pub mod verifier;
 
 pub use account::Account;
 pub use beacon::BeaconInput;
