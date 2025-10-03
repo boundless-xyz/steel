@@ -103,6 +103,11 @@ impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
         self.0.get(&num)
     }
 
+    /// Returns the number of environments.
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     /// Gets an iterator over the environments in order by their block number.
     pub fn iter(&self) -> impl Iterator<Item = &GuestEvmEnv<F>> {
         self.0.values()
@@ -323,6 +328,11 @@ pub(crate) mod host {
                 Entry::Occupied(entry) => Ok(entry.into_mut()),
                 Entry::Vacant(entry) => Ok(entry.insert(self.builder.to_block(num).build().await?)),
             }
+        }
+
+        /// Returns the number of environments.
+        pub fn len(&self) -> usize {
+            self.env.0.len()
         }
 
         /// Gets a mutable iterator over the environments in order by their block number.

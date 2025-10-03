@@ -28,6 +28,8 @@ fn main() {
 
     // Converts the input into a `EvmEnv` for execution.
     let envs = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
+    // Check that there are exactly two EVM states.
+    assert_eq!(envs.len(), 2);
 
     // Execute the view calls on each EVM state.
     let rates = envs
