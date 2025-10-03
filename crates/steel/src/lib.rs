@@ -56,7 +56,7 @@ pub mod serde;
 mod state;
 #[cfg(test)]
 mod test_utils;
-pub mod verifier;
+mod verifier;
 
 pub use account::Account;
 pub use beacon::BeaconInput;
@@ -67,7 +67,7 @@ pub use history::{Eip2935HistoryInput, HistoryInput};
 pub use mpt::MerkleTrie;
 pub use multiblock::{MultiblockEvmEnv, MultiblockEvmInput};
 pub use state::{StateAccount, StateDb};
-pub use verifier::SteelVerifier;
+pub use verifier::{SteelVerifier, EIP2935_HISTORY_LIMIT, HISTORY_LIMIT};
 
 /// The serializable input to derive and validate an [EvmEnv] from.
 #[non_exhaustive]
