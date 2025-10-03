@@ -10,11 +10,13 @@ All notable changes to this project will be documented in this file.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
 - The `Contract` API now includes a `raw` method to allow for direct calls with raw calldata. This provides greater flexibility when interacting with non-standard interfaces, such as precompiles.
 - Add `Event` support for chains other than Ethereum.
+- Added `MultiblockEvmEnv` and `MultiblockEvmInput to enable verifiable computation across multiple blocks within a single proof. The guest environment now securely validates the integrity of the block sequence by verifying commitments between each consecutive block.
 
 ### ⚙️ Miscellaneous
 
 - The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
-- Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`.
+- Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`. It now includes optimizations for directly verifying adjacent blocks via the parent hash field.
+- The `EvmEnv::merge` function is now more flexible, allowing environments with different commitments to be merged.
 
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)
 
