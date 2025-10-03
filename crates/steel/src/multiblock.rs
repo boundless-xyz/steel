@@ -107,6 +107,19 @@ pub(crate) mod host {
         };
         use alloy::network::Ethereum;
 
+        /// A private trait to handle the creation of different `EvmInput` variants from a generic
+        /// `HostEvmEnv`.
+        ///
+        /// ### Design Rationale
+        /// This pattern is an internal implementation detail used to manage the complexity arising
+        /// from supporting multiple commitment types (`Block`, `Beacon`, `Eip2935History`, etc.).
+        ///
+        /// The primary goal is to avoid providing multiple implementations of the `into_input`
+        /// method for all the commitment types. Such an approach would lead to significant code
+        /// duplication and become difficult to maintain as new commitment types are added.
+        /// While this pattern requires `#[allow(private_bounds)]` on a public method that use it,
+        /// the benefit of improved code structure and maintainability is a worthwhile trade-off
+        /// for this internal abstraction.
         pub(super) trait InputBuilder<D, F: EvmFactory> {
             async fn build_input(&self, env: HostEvmEnv<D, F, ()>) -> anyhow::Result<EvmInput<F>>;
         }
