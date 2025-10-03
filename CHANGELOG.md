@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
 - The `Contract` API now includes a `raw` method to allow for direct calls with raw calldata. This provides greater flexibility when interacting with non-standard interfaces, such as precompiles.
 - Add `Event` support for chains other than Ethereum.
+- Improve EVM error handling to support calls without return data.
 
 ### ⚙️ Miscellaneous
 
