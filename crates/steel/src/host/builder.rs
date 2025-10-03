@@ -48,14 +48,7 @@ impl<F: EvmFactory> EvmEnv<(), F, ()> {
     /// # }
     /// ```
     pub fn builder() -> EvmEnvBuilder<(), F, (), ()> {
-        EvmEnvBuilder {
-            provider: (),
-            provider_config: ProviderConfig::default(),
-            block: BlockId::default(),
-            chain_spec: (),
-            beacon_config: (),
-            phantom: PhantomData,
-        }
+        EvmEnvBuilder::new()
     }
 }
 
@@ -69,14 +62,41 @@ impl<F: EvmFactory> EvmEnv<(), F, ()> {
 /// # Usage
 /// The builder can be created using [EvmEnv::builder()]. Various configurations can be chained to
 /// customize the environment before calling the `build` function to create the final [EvmEnv].
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct EvmEnvBuilder<P, F, S, B> {
     provider: P,
     provider_config: ProviderConfig,
     block: BlockId,
     chain_spec: S,
-    beacon_config: B,
+    commitment_config: B,
     phantom: PhantomData<F>,
+}
+
+// the derive macro would also require F to implement Clone which is not necessary.
+impl<P: Clone, F, S: Clone, B: Clone> Clone for EvmEnvBuilder<P, F, S, B> {
+    fn clone(&self) -> Self {
+        Self {
+            provider: self.provider.clone(),
+            provider_config: self.provider_config.clone(),
+            block: self.block,
+            chain_spec: self.chain_spec.clone(),
+            commitment_config: self.commitment_config.clone(),
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<F: EvmFactory> EvmEnvBuilder<(), F, (), ()> {
+    pub(crate) fn new() -> Self {
+        EvmEnvBuilder {
+            provider: (),
+            provider_config: ProviderConfig::default(),
+            block: BlockId::default(),
+            chain_spec: (),
+            commitment_config: (),
+            phantom: PhantomData,
+        }
+    }
 }
 
 impl<S> EvmEnvBuilder<(), EthEvmFactory, S, ()> {
@@ -100,7 +120,7 @@ impl<F: EvmFactory, S> EvmEnvBuilder<(), F, S, ()> {
             provider_config: self.provider_config,
             block: self.block,
             chain_spec: self.chain_spec,
-            beacon_config: self.beacon_config,
+            commitment_config: self.commitment_config,
             phantom: self.phantom,
         }
     }
@@ -117,7 +137,7 @@ impl<P, F: EvmFactory, B> EvmEnvBuilder<P, F, (), B> {
             provider_config: self.provider_config,
             block: self.block,
             chain_spec,
-            beacon_config: self.beacon_config,
+            commitment_config: self.commitment_config,
             phantom: self.phantom,
         }
     }
@@ -186,7 +206,7 @@ impl<P, F, S> EvmEnvBuilder<P, F, S, ()> {
             provider_config: self.provider_config,
             block: self.block,
             chain_spec: self.chain_spec,
-            beacon_config: Eip2935History {
+            commitment_config: Eip2935History {
                 commitment_block: block,
             },
             phantom: Default::default(),
@@ -212,7 +232,7 @@ impl<P, S> EvmEnvBuilder<P, EthEvmFactory, S, ()> {
             provider_config: self.provider_config,
             block: self.block,
             chain_spec: self.chain_spec,
-            beacon_config: Beacon {
+            commitment_config: Beacon {
                 url,
                 commitment_version: CommitmentVersion::Beacon,
             },
@@ -248,6 +268,22 @@ impl<P, F, S, B> EvmEnvBuilder<P, F, S, B> {
         assert_ne!(chunk_size, 0, "chunk size must be non-zero");
         self.provider_config.eip1186_proof_chunk_size = chunk_size;
         self
+    }
+
+    /// Returns a copy of the builder with elided commitment config and set EVM execution block.
+    pub(crate) fn to_block(&self, block: impl Into<BlockId>) -> EvmEnvBuilder<P, F, S, ()>
+    where
+        P: Clone,
+        S: Clone,
+    {
+        EvmEnvBuilder {
+            provider: self.provider.clone(),
+            provider_config: self.provider_config.clone(),
+            block: block.into(),
+            chain_spec: self.chain_spec.clone(),
+            commitment_config: (),
+            phantom: PhantomData,
+        }
     }
 
     /// Returns the [EvmBlockHeader] of the specified block.
@@ -327,7 +363,7 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History
     {
         let evm_header = self.get_header(None).await?;
         let commitment_header = self
-            .get_header(Some(self.beacon_config.commitment_block))
+            .get_header(Some(self.commitment_config.commitment_block))
             .await?;
 
         log::debug!(
@@ -396,7 +432,7 @@ impl<P, S> EvmEnvBuilder<P, EthEvmFactory, S, Beacon> {
     /// # }
     /// ```
     pub fn consensus_commitment(mut self) -> Self {
-        self.beacon_config.commitment_version = CommitmentVersion::Consensus;
+        self.commitment_config.commitment_version = CommitmentVersion::Consensus;
         self
     }
 
@@ -461,8 +497,8 @@ impl<P, S> EvmEnvBuilder<P, EthEvmFactory, S, Beacon> {
             provider_config: self.provider_config,
             block: self.block,
             chain_spec: self.chain_spec,
-            beacon_config: History {
-                beacon_config: self.beacon_config,
+            commitment_config: History {
+                beacon_config: self.commitment_config,
                 commitment_block: block,
             },
             phantom: Default::default(),
@@ -483,8 +519,8 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
             header.seal()
         );
 
-        let beacon_url = self.beacon_config.url;
-        let version = self.beacon_config.commitment_version;
+        let beacon_url = self.commitment_config.url;
+        let version = self.commitment_config.commitment_version;
         let commit = HostCommit {
             inner: BeaconCommit::from_header(&header, version, &self.provider, beacon_url).await?,
             config_id: self.chain_spec.digest(),
@@ -507,7 +543,7 @@ impl<P>
     ///
     /// See [EvmEnvBuilder<P, EthEvmFactory, S, Beacon>::consensus_commitment] for more info.
     pub fn consensus_commitment(mut self) -> Self {
-        self.beacon_config.beacon_config.commitment_version = CommitmentVersion::Consensus;
+        self.commitment_config.beacon_config.commitment_version = CommitmentVersion::Consensus;
         self
     }
 
@@ -519,7 +555,7 @@ impl<P>
     {
         let evm_header = self.get_header(None).await?;
         let commitment_header = self
-            .get_header(Some(self.beacon_config.commitment_block))
+            .get_header(Some(self.commitment_config.commitment_block))
             .await?;
 
         log::debug!(
@@ -528,8 +564,8 @@ impl<P>
             evm_header.seal()
         );
 
-        let beacon_url = self.beacon_config.beacon_config.url;
-        let commitment_version = self.beacon_config.beacon_config.commitment_version;
+        let beacon_url = self.commitment_config.beacon_config.url;
+        let commitment_version = self.commitment_config.beacon_config.commitment_version;
         let history_commit = HistoryCommit::from_headers(
             &evm_header,
             &commitment_header,

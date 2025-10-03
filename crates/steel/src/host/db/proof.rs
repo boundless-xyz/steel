@@ -202,13 +202,6 @@ impl<N: Network, P: Provider<N>> ProofDb<ProviderDb<N, P>> {
     /// Returns the merkle proofs (sparse [MerkleTrie]) for the state and all storage queries
     /// recorded by the [RevmDatabase].
     pub(crate) async fn state_proof(&mut self) -> Result<(MerkleTrie, Vec<MerkleTrie>)> {
-        ensure!(
-            !self.accounts.is_empty()
-                || !self.block_hash_numbers.is_empty()
-                || !self.log_filters.is_empty(),
-            "no accounts accessed: use Contract::preflight"
-        );
-
         // if no accounts were accessed, use the state root of the corresponding block as is
         if self.accounts.is_empty() {
             let hash = self.inner.block();

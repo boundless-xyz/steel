@@ -32,7 +32,7 @@ use alloy::{
     providers::Provider,
     rpc::types::BlockNumberOrTag as AlloyBlockNumberOrTag,
 };
-use alloy_primitives::{BlockHash, B256};
+use alloy_primitives::{BlockHash, BlockNumber, B256};
 use anyhow::{ensure, Result};
 use db::{ProofDb, ProviderDb};
 use std::{
@@ -40,14 +40,15 @@ use std::{
     str::FromStr,
 };
 
-pub use builder::{Beacon, EvmEnvBuilder, History};
-
 mod builder;
 pub mod db;
 
+pub use crate::multiblock::host::HostMultiblockEvmEnv;
+pub use builder::{Beacon, Eip2935History, EvmEnvBuilder, History};
+
 /// A Block Identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-enum BlockId {
+pub(crate) enum BlockId {
     /// A block hash
     Hash(BlockHash),
     /// A block number or tag (e.g. latest)
@@ -92,6 +93,18 @@ impl Display for BlockId {
             Self::Hash(hash) => Display::fmt(&hash, f),
             Self::Number(num) => Display::fmt(&num, f),
         }
+    }
+}
+
+impl From<BlockHash> for BlockId {
+    fn from(hash: BlockHash) -> Self {
+        Self::Hash(hash)
+    }
+}
+
+impl From<BlockNumber> for BlockId {
+    fn from(number: BlockNumber) -> Self {
+        Self::Number(number.into())
     }
 }
 
@@ -270,7 +283,7 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn merge(self, mut other: Self) -> Result<Self> {
+    pub fn merge<C2>(self, mut other: HostEvmEnv<D, F, C2>) -> Result<Self> {
         let Self {
             mut db,
             chain_id,
@@ -285,7 +298,11 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
             header.seal() == other.header.seal(),
             "execution header mismatch"
         );
-        // the commitments do not need to match as long as the cfg_env is consistent
+        // the commitments do not need to match as long as the config_id is consistent
+        ensure!(
+            commit.config_id == other.commit.config_id,
+            "configuration mismatch"
+        );
 
         // safe unwrap: EvmEnv is never returned without a DB
         let db = db.take().unwrap();
@@ -311,7 +328,7 @@ where
     F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
     <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
 {
-    /// Converts the environment into a [EvmInput] committing to an execution block hash.
+    /// Converts the environment into a [EvmInput] committing to the execution block hash.
     pub async fn into_input(self) -> Result<EvmInput<F>> {
         let input = BlockInput::from_proof_db(self.db.unwrap(), self.header).await?;
 

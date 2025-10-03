@@ -16,7 +16,7 @@
 use crate::{
     config::{ChainSpec, ForkCondition},
     serde::{Eip2718Wrapper, RlpHeader},
-    EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
+    EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId, MultiblockEvmEnv, MultiblockEvmInput,
 };
 use alloy_consensus::{Eip658Value, TxReceipt};
 use alloy_eips::{eip4844, eip7691, Encodable2718, Typed2718};
@@ -139,6 +139,12 @@ pub type EthEvmEnv<D, C> = EvmEnv<D, EthEvmFactory, C>;
 
 /// [EvmInput] for Ethereum.
 pub type EthEvmInput = EvmInput<EthEvmFactory>;
+
+/// [MultiblockEvmEnv] for Ethereum.
+pub type EthMultiblockEvmEnv<D, C> = MultiblockEvmEnv<D, EthEvmFactory, C>;
+
+/// [MultiblockEvmInput] for Ethereum.
+pub type EthMultiblockEvmInput = MultiblockEvmInput<EthEvmFactory>;
 
 /// [EvmBlockHeader] for Ethereum.
 pub type EthBlockHeader = RlpHeader<alloy_consensus::Header>;

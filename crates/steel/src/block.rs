@@ -50,6 +50,8 @@ impl<H: EvmBlockHeader> BlockHeaderCommit<H> for () {
 
 impl<F: EvmFactory> BlockInput<F> {
     /// Converts the input into a [EvmEnv] for verifiable state access in the guest.
+    ///
+    /// This method verifies that the state matches the state root in the header and panics if not.
     pub fn into_env(self, chain_spec: &ChainSpec<F::SpecId>) -> GuestEvmEnv<F> {
         // verify that the state root matches the state trie
         let state_root = self.state_trie.hash_slow();

@@ -50,6 +50,7 @@ pub mod history;
 pub mod host;
 mod merkle;
 mod mpt;
+mod multiblock;
 pub mod precompiles;
 pub mod serde;
 mod state;
@@ -64,6 +65,7 @@ pub use contract::{CallBuilder, Contract, RawCall};
 pub use event::Event;
 pub use history::{Eip2935HistoryInput, HistoryInput};
 pub use mpt::MerkleTrie;
+pub use multiblock::{MultiblockEvmEnv, MultiblockEvmInput};
 pub use state::{StateAccount, StateDb};
 pub use verifier::SteelVerifier;
 
@@ -82,9 +84,7 @@ pub enum EvmInput<F: EvmFactory> {
 }
 
 impl<F: EvmFactory> EvmInput<F> {
-    /// Converts the input into a [EvmEnv] for execution.
-    ///
-    /// This method verifies that the state matches the state root in the header and panics if not.
+    /// Converts the input into a [EvmEnv] for verifiable state access in the guest.
     #[inline]
     pub fn into_env(self, chain_spec: &ChainSpec<F::SpecId>) -> GuestEvmEnv<F> {
         match self {

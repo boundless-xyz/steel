@@ -17,7 +17,12 @@ use crate::{
     Commitment, CommitmentVersion, EvmBlockHeader, EvmFactory, EvmSpecId, GuestEvmEnv,
 };
 use alloy_primitives::{BlockNumber, B256, U256};
-use anyhow::ensure;
+use anyhow::{bail, ensure};
+
+/// Number of block hashes the verifier can access via the BLOCKHASH opcode.
+pub const HISTORY_LIMIT: u64 = revm::primitives::BLOCK_HASH_HISTORY;
+/// Number of block hashes the verifier can access via the EIP2935 history storage contract.
+pub const EIP2935_HISTORY_LIMIT: u64 = alloy_eips::eip2935::HISTORY_SERVE_WINDOW as u64;
 
 /// Represents a verifier for validating Steel commitments within Steel.
 ///
@@ -84,12 +89,20 @@ impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
         let (id, version_code) = commitment.decode_id();
         match CommitmentVersion::n(version_code) {
             Some(CommitmentVersion::Block) => {
+                let header = self.env.header().inner();
+                let block_number = validate_block_number(id, header).expect("Invalid block number");
+                // use the header field for a direct parent
+                let block_hash = if block_number + 1 == header.number() {
+                    *header.parent_hash()
+                }
                 // use history storage contract when EIP-2935 was activated
-                let block_hash = if self.env.spec_id.has_eip2935() {
+                else if self.env.spec_id.has_eip2935() {
                     // history storage contract reverts when `id` id not in allowed history window
                     HistoryStorageContract::new(self.env).call(id)
-                } else {
-                    let block_number = validate_history_window(self.env.header().inner(), id, 256)
+                }
+                // otherwise emulate the BLOCKHASH opcode
+                else {
+                    validate_history_window(header, block_number, HISTORY_LIMIT)
                         .expect("Invalid block number");
                     self.env.db().block_hash(block_number)
                 };
@@ -113,7 +126,6 @@ mod host {
     use super::*;
     use crate::host::{db::ProviderDb, HostEvmEnv};
     use alloy::providers::{Network, Provider};
-    use alloy_eips::eip2935;
     use anyhow::Context;
     use revm::Database;
 
@@ -158,12 +170,16 @@ mod host {
             match CommitmentVersion::n(version_code) {
                 Some(CommitmentVersion::Block) => {
                     let header = self.env.header().inner();
-                    let block_hash = if self.env.spec_id.has_eip2935() {
-                        validate_history_window(header, id, eip2935::HISTORY_SERVE_WINDOW as u64)
+                    let block_number =
+                        validate_block_number(id, header).context("invalid block number")?;
+                    let block_hash = if block_number + 1 == header.number() {
+                        *header.parent_hash()
+                    } else if self.env.spec_id.has_eip2935() {
+                        validate_history_window(header, block_number, EIP2935_HISTORY_LIMIT)
                             .context("invalid block number")?;
                         HistoryStorageContract::preflight(self.env).call(id).await?
                     } else {
-                        let block_number = validate_history_window(header, id, 256)
+                        validate_history_window(header, block_number, HISTORY_LIMIT)
                             .context("invalid block number")?;
                         self.env
                             .spawn_with_db(move |db| db.block_hash(block_number))
@@ -189,18 +205,23 @@ mod host {
     }
 }
 
+fn validate_block_number(n: U256, header: &impl EvmBlockHeader) -> anyhow::Result<u64> {
+    match BlockNumber::try_from(n) {
+        Ok(n) if n < header.number() => Ok(n),
+        _ => bail!("not an ancestor"),
+    }
+}
+
 fn validate_history_window(
     header: &impl EvmBlockHeader,
-    block_number: U256,
-    windows: u64,
-) -> anyhow::Result<u64> {
-    let block_number: BlockNumber = block_number.saturating_to();
+    number: BlockNumber,
+    window: u64,
+) -> anyhow::Result<()> {
     ensure!(
-        block_number < header.number() && header.number() - block_number <= windows,
-        "only valid for the {windows} most recent blocks, excluding the current one"
+        number < header.number() && header.number() - number <= window,
+        "only valid for the {window} most recent blocks"
     );
-
-    Ok(block_number)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -268,17 +289,19 @@ mod tests {
         let el = ProviderBuilder::new().connect_http(get_el_url());
 
         verify_block_commitment(el.clone(), &ETH_MAINNET_CHAIN_SPEC, 1).await;
-        verify_block_commitment(el.clone(), &ETH_MAINNET_CHAIN_SPEC, 8191).await;
+        verify_block_commitment(el.clone(), &ETH_MAINNET_CHAIN_SPEC, 2).await;
+        verify_block_commitment(el.clone(), &ETH_MAINNET_CHAIN_SPEC, EIP2935_HISTORY_LIMIT).await;
     }
 
     #[test(tokio::test)]
     async fn pre_eip2935_verify_block_commitment() {
         let chain_spec = ChainSpec::new_single(31337, SpecId::CANCUN);
         let el = ProviderBuilder::new().connect_anvil_with_config(|conf| conf.cancun());
-        el.anvil_mine(Some(256), None).await.unwrap();
+        el.anvil_mine(Some(HISTORY_LIMIT), None).await.unwrap();
 
         verify_block_commitment(el.clone(), &chain_spec, 1).await;
-        verify_block_commitment(el.clone(), &chain_spec, 256).await;
+        verify_block_commitment(el.clone(), &chain_spec, 2).await;
+        verify_block_commitment(el.clone(), &chain_spec, HISTORY_LIMIT).await;
     }
 
     #[test(tokio::test)]
