@@ -34,19 +34,7 @@ Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 1518056457
 2025-10-03T16:42:52.697573Z DEBUG risc0_steel::verifier::host: Executing preflight verifying: Commitment { version: "Block", id: 23494919, digest: 0xc77d23de17ba1e8c553a40f85389e51af24e1cd859226f72fd7c45b24ad3a311, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
 2025-10-03T16:42:52.697612Z DEBUG risc0_steel::contract::host: Executing preflight calling 'raw'
 2025-10-03T16:42:54.061190Z DEBUG risc0_steel::block::host: Preparing input for block 23494919 (0xc77d23de17ba1e8c553a40f85389e51af24e1cd859226f72fd7c45b24ad3a311):
-2025-10-03T16:42:54.061271Z DEBUG risc0_steel::block::host: state size: 25
-2025-10-03T16:42:54.061277Z DEBUG risc0_steel::block::host: storage tries: 1
-2025-10-03T16:42:54.061284Z DEBUG risc0_steel::block::host: total storage size: 18
-2025-10-03T16:42:54.061288Z DEBUG risc0_steel::block::host: contracts: 2
-2025-10-03T16:42:54.061290Z DEBUG risc0_steel::block::host: ancestor blocks: 0
-2025-10-03T16:42:54.061294Z DEBUG risc0_steel::block::host: receipts: None
 2025-10-03T16:42:55.406215Z DEBUG risc0_steel::block::host: Preparing input for block 23498519 (0x5ae45981786f213026c2d8c378e7bf1779b090f1f6e4a324bf15208bd148d969):
-2025-10-03T16:42:55.406249Z DEBUG risc0_steel::block::host: state size: 32
-2025-10-03T16:42:55.406253Z DEBUG risc0_steel::block::host: storage tries: 2
-2025-10-03T16:42:55.406259Z DEBUG risc0_steel::block::host: total storage size: 23
-2025-10-03T16:42:55.406262Z DEBUG risc0_steel::block::host: contracts: 3
-2025-10-03T16:42:55.406264Z DEBUG risc0_steel::block::host: ancestor blocks: 0
-2025-10-03T16:42:55.406267Z DEBUG risc0_steel::block::host: receipts: None
 Running the guest with the constructed input:
 2025-10-03T16:42:55.895463Z  INFO risc0_zkvm::host::server::exec::executor: execution time: 79.894667ms
 Commitment { version: "Block", id: 23498519, digest: 0x5ae45981786f213026c2d8c378e7bf1779b090f1f6e4a324bf15208bd148d969, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
