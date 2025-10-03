@@ -21,7 +21,7 @@ use alloy_primitives::BlockNumber;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-/// An ordered map of block numbers to [EthEvmEnv] that form a subsequence in a single chain.
+/// An ordered map of block numbers to [EvmEnv] that form a subsequence in a single chain.
 pub struct MultiblockEvmEnv<D, F: EvmFactory, C>(BTreeMap<BlockNumber, EvmEnv<D, F, C>>);
 
 /// The serializable input to derive and validate an [MultiblockEvmInput] from.
@@ -180,9 +180,11 @@ pub(crate) mod host {
     }
 
     #[allow(private_bounds)]
-    impl<'a, N: Network, P: Provider<N> + Clone + Send + Sync + 'static, F: EvmFactory, B>
-        HostMultiblockEvmEnv<'a, N, P, F, B>
+    impl<'a, N, P, F, B> HostMultiblockEvmEnv<'a, N, P, F, B>
     where
+        N: Network,
+        P: Provider<N> + Clone + Send + Sync + 'static,
+        F: EvmFactory,
         F::Header: TryFrom<<N as Network>::HeaderResponse>,
         <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
         F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
