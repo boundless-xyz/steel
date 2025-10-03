@@ -14,8 +14,8 @@
 
 use alloy_sol_types::SolValue;
 use risc0_steel::{
-    ethereum::{EthEvmInput, ETH_MAINNET_CHAIN_SPEC},
-    Contract, SteelVerifier,
+    ethereum::{EthMultiblockEvmInput, ETH_MAINNET_CHAIN_SPEC},
+    Contract,
 };
 use risc0_zkvm::guest::env;
 use token_stats_core::{APRCommitment, CometMainInterface, CONTRACT};
@@ -24,36 +24,25 @@ const SECONDS_PER_YEAR: u64 = 60 * 60 * 24 * 365;
 
 fn main() {
     // Read the first input from the guest environment. It corresponds to the older EVM state.
-    let input: EthEvmInput = env::read();
+    let input: EthMultiblockEvmInput = env::read();
 
     // Converts the input into a `EvmEnv` for execution.
-    let env_prev = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
+    let envs = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
 
-    // Execute the view calls on the older EVM state.
-    let contract = Contract::new(CONTRACT, &env_prev);
-    let utilization = contract
-        .call_builder(&CometMainInterface::getUtilizationCall {})
-        .call();
-    let supply_rate_prev = contract
-        .call_builder(&CometMainInterface::getSupplyRateCall { utilization })
-        .call();
-
-    // Prepare the second `EvmEnv` for execution.  It corresponds to the recent EVM state.
-    let input: EthEvmInput = env::read();
-    let env_cur = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
-
-    // Verify that the older EVM state is valid wrt the recent EVM state.
-    // We initialize the SteelVerifier with the recent state, to check the previous commitment.
-    SteelVerifier::new(&env_cur).verify(env_prev.commitment());
-
-    // Execute the view calls also on the recent EVM state.
-    let contract = Contract::new(CONTRACT, &env_cur);
-    let utilization = contract
-        .call_builder(&CometMainInterface::getUtilizationCall {})
-        .call();
-    let supply_rate_cur = contract
-        .call_builder(&CometMainInterface::getSupplyRateCall { utilization })
-        .call();
+    // Execute the view calls on each EVM state.
+    let rates = envs
+        .iter()
+        .map(|env| {
+            // Execute the view calls on the older EVM state.
+            let contract = Contract::new(CONTRACT, env);
+            let utilization = contract
+                .call_builder(&CometMainInterface::getUtilizationCall {})
+                .call();
+            contract
+                .call_builder(&CometMainInterface::getSupplyRateCall { utilization })
+                .call()
+        })
+        .collect::<Vec<_>>();
 
     // The formula for APR in percentage is the following:
     // Seconds Per Year = 60 * 60 * 24 * 365
@@ -62,11 +51,11 @@ fn main() {
     // Supply APR = Supply Rate / (10 ^ 18) * Seconds Per Year * 100
     //
     // Compute the average APR, by computing the average over both states.
-    let annual_supply_rate = (supply_rate_prev + supply_rate_cur) * SECONDS_PER_YEAR / 2;
+    let annual_supply_rate = rates.iter().sum::<u64>() * SECONDS_PER_YEAR / rates.len() as u64;
 
     // This commits the APR at current utilization rate for this given block.
     let journal = APRCommitment {
-        commitment: env_cur.into_commitment(),
+        commitment: envs.into_commitment(),
         annualSupplyRate: annual_supply_rate,
     };
     env::commit_slice(&journal.abi_encode());

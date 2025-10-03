@@ -18,7 +18,8 @@ use clap::Parser;
 use risc0_steel::{
     alloy::providers::{Provider, ProviderBuilder},
     ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
-    Contract, SteelVerifier,
+    host::HostMultiblockEvmEnv,
+    Contract,
 };
 use risc0_zkvm::{default_executor, ExecutorEnv};
 use token_stats_core::{APRCommitment, CometMainInterface, CONTRACT};
@@ -32,10 +33,6 @@ struct Args {
     /// URL of the RPC endpoint
     #[arg(long, env = "RPC_URL")]
     rpc_url: Url,
-
-    /// Beacon API endpoint URL
-    #[arg(long, env = "BEACON_API_URL")]
-    beacon_api_url: Url,
 }
 
 #[tokio::main]
@@ -48,90 +45,49 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     // Query the latest block number.
-    let provider = ProviderBuilder::default().connect_http(args.rpc_url);
+    let provider = ProviderBuilder::new().connect_http(args.rpc_url);
     let latest = provider.get_block_number().await?;
 
-    // Create an EVM environment for that provider and about 12h (3600 blocks) ago.
-    let mut env = EthEvmEnv::builder()
-        .provider(provider.clone())
-        .block_number(latest - 3600)
-        .beacon_api(args.beacon_api_url)
-        .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
-        .build()
-        .await?;
-
-    // Preflight the call to prepare the input that is required to execute the function in
-    // the guest without RPC access. It also returns the result of the call.
-    let mut contract = Contract::preflight(CONTRACT, &mut env);
-    let utilization = contract
-        .call_builder(&CometMainInterface::getUtilizationCall {})
-        .call()
-        .await?;
-    println!(
-        "Call {} Function on {:#} returns: {}",
-        CometMainInterface::getUtilizationCall::SIGNATURE,
-        CONTRACT,
-        utilization
-    );
-    let rate = contract
-        .call_builder(&CometMainInterface::getSupplyRateCall { utilization })
-        .call()
-        .await?;
-    println!(
-        "Call {} Function on {:#} returns: {}",
-        CometMainInterface::getSupplyRateCall::SIGNATURE,
-        CONTRACT,
-        rate
-    );
-
-    // Construct the commitment and input from the environment representing the state 12h ago.
-    let commitment_input1 = env.commitment();
-    let input1 = env.into_input().await?;
-
-    // Create another EVM environment for that provider defaulting to the latest block.
-    let mut env = EthEvmEnv::builder()
+    // Create a multiblock environment for the network.
+    let builder = EthEvmEnv::builder()
         .provider(provider)
-        .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
-        .build()
-        .await?;
+        .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
+    let mut envs = HostMultiblockEvmEnv::from_builder(builder);
 
-    // Preflight the verification of the commitment of the previous input.
-    SteelVerifier::preflight(&mut env)
-        .verify(&commitment_input1)
-        .await?;
-
-    // Preflight the actual contract calls.
-    let mut contract = Contract::preflight(CONTRACT, &mut env);
-    let utilization = contract
-        .call_builder(&CometMainInterface::getUtilizationCall {})
-        .call()
-        .await?;
-    println!(
-        "Call {} Function on {:#} returns: {}",
-        CometMainInterface::getUtilizationCall::SIGNATURE,
-        CONTRACT,
-        utilization
-    );
-    let rate = contract
-        .call_builder(&CometMainInterface::getSupplyRateCall { utilization })
-        .call()
-        .await?;
-    println!(
-        "Call {} Function on {:#} returns: {}",
-        CometMainInterface::getSupplyRateCall::SIGNATURE,
-        CONTRACT,
-        rate
-    );
+    // Execute the call for the latest block and about 12h (3600 blocks) ago.
+    for block in [latest - 3600, latest] {
+        // Preflight the call to prepare the input that is required to execute the function in
+        // the guest without RPC access. It also returns the result of the call.
+        let mut contract = Contract::preflight(CONTRACT, envs.get_or_build(block).await?);
+        let utilization = contract
+            .call_builder(&CometMainInterface::getUtilizationCall {})
+            .call()
+            .await?;
+        println!(
+            "Call {} Function on {:#} returns: {}",
+            CometMainInterface::getUtilizationCall::SIGNATURE,
+            CONTRACT,
+            utilization
+        );
+        let rate = contract
+            .call_builder(&CometMainInterface::getSupplyRateCall { utilization })
+            .call()
+            .await?;
+        println!(
+            "Call {} Function on {:#} returns: {}",
+            CometMainInterface::getSupplyRateCall::SIGNATURE,
+            CONTRACT,
+            rate
+        );
+    }
 
     // Finally, construct the second input from the environment representing the latest state.
-    let input2 = env.into_input().await?;
+    let input = envs.into_input().await?;
 
     println!("Running the guest with the constructed input:");
     let session_info = {
         let env = ExecutorEnv::builder()
-            .write(&input1)
-            .unwrap()
-            .write(&input2)
+            .write(&input)
             .unwrap()
             .build()
             .context("failed to build executor env")?;
