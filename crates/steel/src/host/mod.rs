@@ -274,13 +274,13 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
         let Self {
             mut db,
             chain_id,
-            spec_id: spec,
+            spec_id,
             header,
             commit,
         } = self;
 
         ensure!(chain_id == other.chain_id, "configuration mismatch");
-        ensure!(spec == other.spec_id, "configuration mismatch");
+        ensure!(spec_id == other.spec_id, "configuration mismatch");
         ensure!(
             header.seal() == other.header.seal(),
             "execution header mismatch"
@@ -294,7 +294,7 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
         Ok(Self {
             db: Some(db.merge(db_other)),
             chain_id,
-            spec_id: spec,
+            spec_id,
             header,
             commit,
         })
@@ -308,6 +308,8 @@ where
     F: EvmFactory,
     F::Header: TryFrom<<N as Network>::HeaderResponse>,
     <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
 {
     /// Converts the environment into a [EvmInput] committing to an execution block hash.
     pub async fn into_input(self) -> Result<EvmInput<F>> {
@@ -334,6 +336,8 @@ where
     F: EvmFactory,
     F::Header: TryFrom<<N as Network>::HeaderResponse>,
     <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
 {
     /// Converts the environment into a [EvmInput] recursively committing to multiple execution
     /// block hashes.

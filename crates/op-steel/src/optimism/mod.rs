@@ -13,10 +13,13 @@
 // limitations under the License.
 
 use crate::game::DisputeGameInput;
-use alloy_eips::{eip4844, eip7691};
+use alloy_consensus::{Eip658Value, TxReceipt};
+use alloy_eips::{eip4844, eip7691, Encodable2718, Typed2718};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
 use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
-use alloy_primitives::{Address, BlockNumber, Bytes, ChainId, Sealable, TxKind, B256, U256};
+use alloy_primitives::{Address, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, B256, U256};
+use alloy_rlp::BufMut;
+use delegate::delegate;
 use op_alloy_network::{Network, Optimism};
 use op_revm::{spec::OpSpecId, OpTransaction};
 use risc0_steel::{
@@ -27,7 +30,7 @@ use risc0_steel::{
         inspector::NoOpInspector,
         primitives::hardfork::SpecId,
     },
-    serde::RlpHeader,
+    serde::{Eip2718Wrapper, RlpHeader},
     BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
 };
 use serde::{Deserialize, Serialize};
@@ -75,6 +78,30 @@ pub static OP_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Chain
     ),
 });
 
+/// The Base Mainnet [ChainSpec].
+pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
+    chain_id: 8453,
+    forks: BTreeMap::from(
+        [
+            (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
+        ]
+        .map(|(id, cond)| (id.into(), cond)),
+    ),
+});
+
+/// The Base Sepolia [ChainSpec].
+pub static BASE_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
+    chain_id: 84532,
+    forks: OP_SEPOLIA_CHAIN_SPEC.forks.clone(),
+});
+
 /// [EvmFactory] for Optimism.
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -89,6 +116,7 @@ impl EvmFactory for OpEvmFactory {
     type Spec = <AlloyOpEvmFactory as AlloyEvmFactory>::Spec;
     type SpecId = OpEvmSpecId;
     type Header = OpBlockHeader;
+    type Receipt = OpEvmReceipt;
 
     fn new_tx(address: Address, data: Bytes) -> Self::Tx {
         OpTransaction {
@@ -162,12 +190,12 @@ type OpHeader = <Optimism as Network>::Header;
 
 /// [EvmFactory::Header] for Optimism.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct OpBlockHeader(pub RlpHeader<OpHeader>);
 
 impl Sealable for OpBlockHeader {
-    #[inline]
-    fn hash_slow(&self) -> B256 {
-        self.0.hash_slow()
+    delegate! {
+        to self.0 { fn hash_slow(&self) -> B256; }
     }
 }
 
@@ -195,7 +223,7 @@ impl EvmBlockHeader for OpBlockHeader {
         &self.0.inner().receipts_root
     }
     #[inline]
-    fn logs_bloom(&self) -> &alloy_primitives::Bloom {
+    fn logs_bloom(&self) -> &Bloom {
         &self.0.inner().logs_bloom
     }
 
@@ -249,6 +277,53 @@ where
     #[inline]
     fn try_from(value: alloy::rpc::types::Header<H>) -> Result<Self, Self::Error> {
         Ok(Self(RlpHeader::new(value.inner.try_into()?)))
+    }
+}
+
+/// [EvmFactory::Receipt] for Optimism.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct OpEvmReceipt(Eip2718Wrapper<<Optimism as Network>::ReceiptEnvelope>);
+
+impl Typed2718 for OpEvmReceipt {
+    delegate! {
+        to self.0 { fn ty(&self) -> u8; }
+    }
+}
+
+impl Encodable2718 for OpEvmReceipt {
+    delegate! {
+        to self.0 {
+            fn encode_2718_len(&self) -> usize;
+            fn encode_2718(&self, out: &mut dyn BufMut);
+        }
+    }
+}
+
+impl TxReceipt for OpEvmReceipt {
+    type Log = <<Optimism as Network>::ReceiptEnvelope as TxReceipt>::Log;
+
+    delegate! {
+        to self.0 {
+            fn status_or_post_state(&self) -> Eip658Value;
+            fn status(&self) -> bool;
+            fn bloom(&self) -> Bloom;
+            fn cumulative_gas_used(&self) -> u64;
+            fn logs(&self) -> &[Self::Log];
+        }
+    }
+}
+
+#[cfg(feature = "host")]
+impl From<op_alloy_rpc_types::OpTransactionReceipt> for OpEvmReceipt {
+    #[inline]
+    fn from(rpc_receipt: op_alloy_rpc_types::OpTransactionReceipt) -> Self {
+        // Unfortunately ReceiptResponse does not implement ReceiptEnvelope, so we have to
+        // manually convert it.
+        // TODO(https://github.com/alloy-rs/alloy/issues/854): use ReceiptEnvelope directly
+        Self(Eip2718Wrapper::new(
+            rpc_receipt.inner.into_inner().map_logs(Into::into),
+        ))
     }
 }
 

@@ -131,6 +131,15 @@ pub struct Eip2718Wrapper<T: Eip2718Envelope> {
     encoding: Option<Box<[u8]>>,
 }
 
+impl<T: Eip2718Envelope + PartialEq> PartialEq for Eip2718Wrapper<T> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        self.inner.eq(&other.inner)
+    }
+}
+
+impl<T: Eip2718Envelope + Eq> Eq for Eip2718Wrapper<T> {}
+
 impl<T: Eip2718Envelope> Eip2718Wrapper<T> {
     #[must_use]
     pub const fn new(inner: T) -> Self {
