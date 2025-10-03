@@ -140,6 +140,8 @@ pub(crate) mod host {
 
     mod private {
         use super::*;
+        use crate::ethereum::EthChainSpec;
+        use crate::host::History;
         use crate::{
             ethereum::EthEvmFactory,
             host::{Beacon, Eip2935History},
@@ -202,12 +204,19 @@ pub(crate) mod host {
         }
 
         impl<P: Provider<Ethereum> + Clone> InputBuilder<ProviderDb<Ethereum, P>, EthEvmFactory>
-            for EvmEnvBuilder<
-                P,
-                EthEvmFactory,
-                &ChainSpec<<EthEvmFactory as EvmFactory>::SpecId>,
-                Beacon,
-            >
+            for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, Beacon>
+        {
+            async fn build_input(
+                &self,
+                env: HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, ()>,
+            ) -> anyhow::Result<EvmInput<EthEvmFactory>> {
+                let builder = self.clone().block_hash(env.header().seal());
+                builder.build().await?.merge(env)?.into_input().await
+            }
+        }
+
+        impl<P: Provider<Ethereum> + Clone> InputBuilder<ProviderDb<Ethereum, P>, EthEvmFactory>
+            for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, History>
         {
             async fn build_input(
                 &self,
@@ -328,17 +337,19 @@ pub(crate) mod host {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::get_cl_url;
     use crate::{
         ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
         host::HostMultiblockEvmEnv,
         test_utils::get_el_url,
-        Account,
+        Account, CommitmentVersion,
     };
     use alloy::{
         network::TransactionBuilder,
         node_bindings::Anvil,
         providers::{Provider, ProviderBuilder},
     };
+    use alloy_consensus::BlockHeader;
     use alloy_primitives::{address, Address, U256};
     use alloy_rpc_types::{BlockId, TransactionRequest};
     use revm::primitives::hardfork::SpecId;
@@ -386,6 +397,7 @@ mod tests {
         }
 
         let commitment = dbg!(guest_env.into_commitment());
+        assert_eq!(commitment.decode_id().1, CommitmentVersion::Block as u16);
         assert_eq!(commitment.digest, block_hash);
         assert_eq!(commitment.configID, chain_spec.digest());
 
@@ -397,7 +409,7 @@ mod tests {
         any(not(feature = "rpc-tests"), no_auth),
         ignore = "RPC tests are disabled"
     )]
-    async fn history_commitment() -> anyhow::Result<()> {
+    async fn eip2935_history_commitment() -> anyhow::Result<()> {
         const N: u64 = 3;
         // TODO: Make this an Anvil provider, once Anvil has EIP-2935 support
         let provider = ProviderBuilder::new().connect_http(get_el_url());
@@ -422,8 +434,77 @@ mod tests {
 
         let input = host_env.into_input().await?;
         let commitment = dbg!(input.into_env(&ETH_MAINNET_CHAIN_SPEC).into_commitment());
+        assert_eq!(commitment.decode_id().1, CommitmentVersion::Block as u16);
         assert_eq!(commitment.digest, block_hash);
-        assert_eq!(commitment.configID, ETH_MAINNET_CHAIN_SPEC.digest());
+
+        Ok(())
+    }
+
+    #[test(tokio::test)]
+    #[cfg_attr(
+        any(not(feature = "rpc-tests"), no_auth),
+        ignore = "RPC tests are disabled"
+    )]
+    async fn beacon_commitment() -> anyhow::Result<()> {
+        let el = ProviderBuilder::new().connect_http(get_el_url());
+
+        let latest = el.get_block_number().await?;
+        let parent_beacon_block_root = el
+            .get_block_by_number(latest.into())
+            .await?
+            .unwrap()
+            .header
+            .parent_beacon_block_root()
+            .unwrap();
+
+        let builder = EthEvmEnv::builder()
+            .provider(el)
+            .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
+            .beacon_api(get_cl_url());
+        let mut host_env = HostMultiblockEvmEnv::from_builder(builder);
+
+        let env = host_env.get_or_build(latest - 1).await?;
+        Account::preflight(Address::ZERO, env).info().await?;
+
+        let input = host_env.into_input().await?;
+        let commitment = dbg!(input.into_env(&ETH_MAINNET_CHAIN_SPEC).into_commitment());
+        assert_eq!(commitment.decode_id().1, CommitmentVersion::Beacon as u16);
+        assert_eq!(commitment.digest, parent_beacon_block_root);
+
+        Ok(())
+    }
+
+    #[test(tokio::test)]
+    #[cfg_attr(
+        any(not(feature = "rpc-tests"), no_auth),
+        ignore = "RPC tests are disabled"
+    )]
+    async fn history_commitment() -> anyhow::Result<()> {
+        let el = ProviderBuilder::new().connect_http(get_el_url());
+
+        let latest = el.get_block_number().await?;
+        let parent_beacon_block_root = el
+            .get_block_by_number(latest.into())
+            .await?
+            .unwrap()
+            .header
+            .parent_beacon_block_root()
+            .unwrap();
+
+        let builder = EthEvmEnv::builder()
+            .provider(el)
+            .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
+            .beacon_api(get_cl_url())
+            .commitment_block_number(latest - 1);
+        let mut host_env = HostMultiblockEvmEnv::from_builder(builder);
+
+        let env = host_env.get_or_build(latest - 2).await?;
+        Account::preflight(Address::ZERO, env).info().await?;
+
+        let input = host_env.into_input().await?;
+        let commitment = dbg!(input.into_env(&ETH_MAINNET_CHAIN_SPEC).into_commitment());
+        assert_eq!(commitment.decode_id().1, CommitmentVersion::Beacon as u16);
+        assert_eq!(commitment.digest, parent_beacon_block_root);
 
         Ok(())
     }
