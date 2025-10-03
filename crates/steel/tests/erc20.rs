@@ -78,7 +78,8 @@ async fn usdt_mainnet() {
         },
         CallOptions::new(),
     )
-    .await;
+    .await
+    .unwrap();
     assert_eq!(result, uint!(4000000052090000_U256));
 
     // query Arbitrum One: L1 Arb - Custom Gateway
@@ -90,6 +91,7 @@ async fn usdt_mainnet() {
         },
         CallOptions::new(),
     )
-    .await;
+    .await
+    .unwrap();
     assert_eq!(result, uint!(2640479813824172_U256));
 }

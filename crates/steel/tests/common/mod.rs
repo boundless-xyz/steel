@@ -29,7 +29,7 @@ pub async fn eth_call<P, S>(
     address: Address,
     call: S,
     options: CallOptions,
-) -> S::Return
+) -> anyhow::Result<S::Return>
 where
     P: Provider<Ethereum> + 'static,
     S: SolCall + Send + Sync + 'static,
@@ -39,8 +39,7 @@ where
         .provider(provider)
         .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
         .build()
-        .await
-        .unwrap();
+        .await?;
     let block_hash = env.header().seal();
     let block_number = env.header().number;
 
@@ -48,12 +47,12 @@ where
         let mut preflight = Contract::preflight(address, &mut env);
         let mut builder = preflight.call_builder(&call);
         if let Some(access_list) = options.access_list.clone() {
-            builder = builder.prefetch_access_list(access_list).await.unwrap();
+            builder = builder.prefetch_access_list(access_list).await?;
         }
-        options.apply(builder).call().await.unwrap()
+        options.apply(builder).call().await?
     };
 
-    let input = env.into_input().await.unwrap();
+    let input = env.into_input().await?;
     let env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
 
     let commitment = env.commitment();
@@ -73,7 +72,7 @@ where
         "mismatch in preflight and execution"
     );
 
-    result
+    Ok(result)
 }
 
 /// Simple struct to operate over different [CallBuilder] types.

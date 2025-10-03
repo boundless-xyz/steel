@@ -16,7 +16,8 @@
 use crate::{
     config::{ChainSpec, ForkCondition},
     serde::{Eip2718Wrapper, RlpHeader},
-    EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId, MultiblockEvmEnv, MultiblockEvmInput,
+    CallError, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId, MultiblockEvmEnv,
+    MultiblockEvmInput,
 };
 use alloy_consensus::{Eip658Value, TxReceipt};
 use alloy_eips::{eip4844, eip7691, Encodable2718, Typed2718};
@@ -115,6 +116,9 @@ impl EvmFactory for EthEvmFactory {
         AlloyEthEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
     }
 }
+
+/// [CallError] for Ethereum.
+pub type EthCallError = CallError<<EthEvmFactory as EvmFactory>::HaltReason>;
 
 /// [ChainSpec] for Ethereum.
 pub type EthChainSpec = ChainSpec<SpecId>;
