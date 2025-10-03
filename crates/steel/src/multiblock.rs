@@ -381,7 +381,7 @@ mod tests {
 
         let guest_env = input.into_env(&chain_spec);
         for i in 1..=N {
-            let info = Account::new(ADDRESS, guest_env.get(i as u64).unwrap()).info();
+            let info = Account::new(ADDRESS, guest_env.get(i).unwrap()).info();
             assert_eq!(info.balance, U256::from(i));
         }
 
