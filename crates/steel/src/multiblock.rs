@@ -18,6 +18,7 @@ use crate::{
     StateDb, SteelVerifier,
 };
 use alloy_primitives::BlockNumber;
+use delegate::delegate;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -98,14 +99,18 @@ impl<F: EvmFactory> MultiblockEvmInput<F> {
 }
 
 impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
+    delegate! {
+        to self.0 {
+            /// Returns the number of environments.
+            pub fn len(&self) -> usize;
+            /// Returns `true` if it contains no environments.
+            pub fn is_empty(&self) -> bool;
+        }
+    }
+
     /// Returns a reference to the environment corresponding to the block number.
     pub fn get(&self, num: BlockNumber) -> Option<&GuestEvmEnv<F>> {
         self.0.get(&num)
-    }
-
-    /// Returns the number of environments.
-    pub fn len(&self) -> usize {
-        self.0.len()
     }
 
     /// Gets an iterator over the environments in order by their block number.
@@ -140,6 +145,7 @@ pub(crate) mod host {
     };
     use alloy::providers::{Network, Provider};
     use anyhow::{bail, ensure};
+    use delegate::delegate;
     use private::InputBuilder;
     use std::{collections::btree_map::Entry, fmt::Display};
 
@@ -264,12 +270,45 @@ pub(crate) mod host {
             }
         }
 
+        delegate! {
+            to self.env.0 {
+                 /// Returns the number of environments.
+                pub fn len(&self) -> usize;
+                /// Returns `true` if it contains no environments.
+                pub fn is_empty(&self) -> bool;
+            }
+        }
+
+        /// Returns a mutable reference to the environment corresponding to the block number.
+        pub fn get_mut(&mut self, num: u64) -> Option<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
+            self.env.0.get_mut(&num)
+        }
+
+        /// Ensures an environment is in the [HostMultiblockEvmEnv] by using the provided builder to
+        /// create an environment if empty. It then returns a mutable reference to the environment.
+        pub async fn get_or_build(
+            &mut self,
+            num: BlockNumber,
+        ) -> anyhow::Result<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
+            match self.env.0.entry(num) {
+                Entry::Occupied(entry) => Ok(entry.into_mut()),
+                Entry::Vacant(entry) => Ok(entry.insert(self.builder.to_block(num).build().await?)),
+            }
+        }
+
+        /// Gets a mutable iterator over the environments in order by their block number.
+        pub fn iter_mut(
+            &mut self,
+        ) -> impl Iterator<Item = &mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
+            self.env.0.values_mut()
+        }
+
         /// Converts the environment into a [MultiblockEvmInput] using the commitment method which
         /// was specified in the builder during creation.
         ///
         /// This method uses [SteelVerifier] internally to link the individual [EvmEnv].
         pub async fn into_input(self) -> anyhow::Result<MultiblockEvmInput<F>> {
-            ensure!(!self.env.0.is_empty(), "environment must not be empty");
+            ensure!(!self.is_empty(), "environment must not be empty");
 
             let mut inputs = Vec::with_capacity(self.env.0.len());
 
@@ -311,35 +350,6 @@ pub(crate) mod host {
             }
 
             Ok(MultiblockEvmInput(inputs))
-        }
-
-        /// Returns a mutable reference to the environment corresponding to the block number.
-        pub fn get_mut(&mut self, num: u64) -> Option<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
-            self.env.0.get_mut(&num)
-        }
-
-        /// Ensures an environment is in the [HostMultiblockEvmEnv] by using the provided builder to
-        /// create an environment if empty. It then returns a mutable reference to the environment.
-        pub async fn get_or_build(
-            &mut self,
-            num: BlockNumber,
-        ) -> anyhow::Result<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
-            match self.env.0.entry(num) {
-                Entry::Occupied(entry) => Ok(entry.into_mut()),
-                Entry::Vacant(entry) => Ok(entry.insert(self.builder.to_block(num).build().await?)),
-            }
-        }
-
-        /// Returns the number of environments.
-        pub fn len(&self) -> usize {
-            self.env.0.len()
-        }
-
-        /// Gets a mutable iterator over the environments in order by their block number.
-        pub fn iter_mut(
-            &mut self,
-        ) -> impl Iterator<Item = &mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
-            self.env.0.values_mut()
         }
     }
 }
