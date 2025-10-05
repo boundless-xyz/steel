@@ -113,7 +113,7 @@ impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
         self.0.get(&num)
     }
 
-    /// Gets an iterator over the environments in order by their block number.
+    /// Gets an iterator over the environments in order by their block number ascending.
     pub fn iter(&self) -> impl Iterator<Item = &GuestEvmEnv<F>> {
         self.0.values()
     }
