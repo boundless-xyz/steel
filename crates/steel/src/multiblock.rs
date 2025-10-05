@@ -280,7 +280,10 @@ pub(crate) mod host {
         }
 
         /// Returns a mutable reference to the environment corresponding to the block number.
-        pub fn get_mut(&mut self, num: u64) -> Option<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
+        pub fn get_mut(
+            &mut self,
+            num: BlockNumber,
+        ) -> Option<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
             self.env.0.get_mut(&num)
         }
 
