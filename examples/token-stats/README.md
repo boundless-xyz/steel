@@ -21,24 +21,24 @@ RPC_URL=https://ethereum-rpc.publicnode.com RUST_LOG=info,risc0_steel=debug carg
 The output should resemble the following:
 
 ```text
-2025-10-03T16:42:49.978575Z DEBUG risc0_steel::host::builder: Environment initialized with block 23494919 (0xc77d23de17ba1e8c553a40f85389e51af24e1cd859226f72fd7c45b24ad3a311)
-2025-10-03T16:42:49.978795Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getUtilization()'
-Call getUtilization() Function on 0xc3d6…cdc3 returns: 909134506353272671
-2025-10-03T16:42:50.692854Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getSupplyRate(uint256)'
-Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 1953129194
-2025-10-03T16:42:51.386295Z DEBUG risc0_steel::host::builder: Environment initialized with block 23498519 (0x5ae45981786f213026c2d8c378e7bf1779b090f1f6e4a324bf15208bd148d969)
-2025-10-03T16:42:51.386344Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getUtilization()'
-Call getUtilization() Function on 0xc3d6…cdc3 returns: 904841498272350121
-2025-10-03T16:42:52.113304Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getSupplyRate(uint256)'
-Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 1518056457
-2025-10-03T16:42:52.697573Z DEBUG risc0_steel::verifier::host: Executing preflight verifying: Commitment { version: "Block", id: 23494919, digest: 0xc77d23de17ba1e8c553a40f85389e51af24e1cd859226f72fd7c45b24ad3a311, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
-2025-10-03T16:42:52.697612Z DEBUG risc0_steel::contract::host: Executing preflight calling 'raw'
-2025-10-03T16:42:54.061190Z DEBUG risc0_steel::block::host: Preparing input for block 23494919 (0xc77d23de17ba1e8c553a40f85389e51af24e1cd859226f72fd7c45b24ad3a311):
-2025-10-03T16:42:55.406215Z DEBUG risc0_steel::block::host: Preparing input for block 23498519 (0x5ae45981786f213026c2d8c378e7bf1779b090f1f6e4a324bf15208bd148d969):
+2025-10-07T11:35:38.730992Z DEBUG risc0_steel::host::builder: Environment initialized with block 23518416 (0xf3b179a5030338d6d3b6477843ac14027c7e6f25ab4c8d42e61c2fbec616d598)
+2025-10-07T11:35:38.731380Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getUtilization()'
+Call getUtilization() Function on 0xc3d6…cdc3 returns: 901643987632970446
+2025-10-07T11:35:39.566357Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getSupplyRate(uint256)'
+Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 1194006355
+2025-10-07T11:35:40.350225Z DEBUG risc0_steel::host::builder: Environment initialized with block 23525616 (0x3728e8f5dcf4d42b68d5cd424c9c7fcb0582d552f14129f94411aab8e7527746)
+2025-10-07T11:35:40.350296Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getUtilization()'
+Call getUtilization() Function on 0xc3d6…cdc3 returns: 809451025252486797
+2025-10-07T11:35:41.266703Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getSupplyRate(uint256)'
+Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 924030850
+2025-10-07T11:35:41.937053Z DEBUG risc0_steel::verifier::host: Executing preflight verifying Commitment { version: "Block", id: 23518416, digest: 0xf3b179a5030338d6d3b6477843ac14027c7e6f25ab4c8d42e61c2fbec616d598, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
+2025-10-07T11:35:41.937113Z DEBUG risc0_steel::contract::host: Executing preflight calling 'raw'
+2025-10-07T11:35:43.367732Z DEBUG risc0_steel::block::host: Preparing input for block 23518416:
+2025-10-07T11:35:44.295123Z DEBUG risc0_steel::block::host: Preparing input for block 23525616:
 Running the guest with the constructed input:
-2025-10-03T16:42:55.895463Z  INFO risc0_zkvm::host::server::exec::executor: execution time: 79.894667ms
-Commitment { version: "Block", id: 23498519, digest: 0x5ae45981786f213026c2d8c378e7bf1779b090f1f6e4a324bf15208bd148d969, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
-Proven APR calculated is: 5.4733655344968%
+2025-10-07T11:35:44.777284Z  INFO risc0_zkvm::host::server::exec::executor: execution time: 79.718292ms
+Commitment { version: "Block", id: 23525616, digest: 0x3728e8f5dcf4d42b68d5cd424c9c7fcb0582d552f14129f94411aab8e7527746, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
+Proven APR over 2 days is: 3.339721064844
 ```
 
 [install-rust]: https://doc.rust-lang.org/cargo/getting-started/installation.html

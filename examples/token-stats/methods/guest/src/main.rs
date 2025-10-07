@@ -20,7 +20,7 @@ use risc0_steel::{
 use risc0_zkvm::guest::env;
 use token_stats_core::{APRCommitment, CometMainInterface, CONTRACT};
 
-const SECONDS_PER_YEAR: u64 = 60 * 60 * 24 * 365;
+const SECONDS_PER_YEAR: u128 = 60 * 60 * 24 * 365;
 
 fn main() {
     // Read the first input from the guest environment. It corresponds to the older EVM state.
@@ -28,8 +28,11 @@ fn main() {
 
     // Converts the input into a `EvmEnv` for execution.
     let envs = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
-    // Check that there are exactly two EVM states.
-    assert_eq!(envs.len(), 2);
+
+    // Check that the EVM states are exactly 7200 blocks apart.
+    for (env_prev, env) in envs.iter().zip(envs.iter().skip(1)) {
+        assert_eq!(env.header().number - env_prev.header().number, 7200);
+    }
 
     // Execute the view calls on each EVM state.
     let rates = envs
@@ -51,13 +54,14 @@ fn main() {
     // Utilization = getUtilization()
     // Supply Rate = getSupplyRate(Utilization)
     // Supply APR = Supply Rate / (10 ^ 18) * Seconds Per Year * 100
-    //
-    // Compute the average APR, by computing the average over both states.
-    let annual_supply_rate = rates.iter().sum::<u64>() * SECONDS_PER_YEAR / rates.len() as u64;
+    let annual_supply_rate_u128 =
+        rates.iter().map(|&r| r as u128).sum::<u128>() * SECONDS_PER_YEAR / rates.len() as u128;
+    let annual_supply_rate = u64::try_from(annual_supply_rate_u128).unwrap();
 
     // This commits the APR at current utilization rate for this given block.
     let journal = APRCommitment {
         commitment: envs.into_commitment(),
+        days: rates.len() as u64,
         annualSupplyRate: annual_supply_rate,
     };
     env::commit_slice(&journal.abi_encode());

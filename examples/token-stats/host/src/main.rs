@@ -54,8 +54,8 @@ async fn main() -> Result<()> {
         .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
     let mut envs = HostMultiblockEvmEnv::from_builder(builder);
 
-    // Execute the call for the latest block and about 12h (3600 blocks) ago.
-    for block in [latest - 3600, latest] {
+    // Execute the call for the latest block and about 24h (7200 blocks) ago.
+    for block in [latest - 7200, latest] {
         // Preflight the call to prepare the input that is required to execute the function in
         // the guest without RPC access. It also returns the result of the call.
         let mut contract = Contract::preflight(CONTRACT, envs.get_or_build(block).await?);
@@ -103,7 +103,7 @@ async fn main() -> Result<()> {
 
     // Calculation is handling `/ 10^18 * 100` to match precision for a percentage.
     let apr = apr_commit.annualSupplyRate as f64 / 10f64.powi(16);
-    println!("Proven APR calculated is: {apr}%");
+    println!("Proven APR over {} days is: {apr}%", apr_commit.days);
 
     Ok(())
 }

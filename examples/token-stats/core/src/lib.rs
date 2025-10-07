@@ -30,6 +30,7 @@ sol! {
 sol! {
     struct APRCommitment {
         Commitment commitment;
+        uint64 days;
         uint64 annualSupplyRate;
     }
 }

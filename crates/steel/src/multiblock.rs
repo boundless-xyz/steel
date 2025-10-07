@@ -89,10 +89,9 @@ impl<F: EvmFactory> MultiblockEvmInput<F> {
             };
         }
 
-        envs.values().reduce(|env_prev, env| {
+        for (env_prev, env) in envs.values().zip(envs.values().skip(1)) {
             SteelVerifier::new(env).verify(env_prev.commitment());
-            env
-        });
+        }
 
         MultiblockEvmEnv(envs)
     }
