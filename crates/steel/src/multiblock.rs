@@ -112,19 +112,23 @@ impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
         self.0.get(&num)
     }
 
+    /// Returns the final environment, i.e. the environment with the largest block number.
+    pub fn last(&self) -> &GuestEvmEnv<F> {
+        // safe unwrap: MultiblockEvmEnv<StateDb, F, Commitment> cannot be constructed empty
+        self.0.last_key_value().unwrap().1
+    }
+
     /// Gets an iterator over the environments in order by their block number ascending.
     pub fn iter(&self) -> impl Iterator<Item = &GuestEvmEnv<F>> {
         self.0.values()
     }
 
-    /// Returns the [Commitment] used to validate the environment.
+    /// Returns the [Commitment] used to validate the entire chain of environments.
     pub fn commitment(&self) -> &Commitment {
-        // safe unwrap: MultiblockEvmEnv<StateDb, F, Commitment> cannot be constructed empty
-        let env = self.0.last_key_value().unwrap().1;
-        env.commitment()
+        self.last().commitment()
     }
 
-    /// Consumes and returns the [Commitment] used to validate the environment.
+    /// Consumes and returns the [Commitment] used to validate the entire chain of environments.
     pub fn into_commitment(mut self) -> Commitment {
         // safe unwrap: MultiblockEvmEnv<StateDb, F, Commitment> cannot be constructed empty
         let env = self.0.pop_last().unwrap().1;
@@ -187,14 +191,6 @@ pub(crate) mod host {
             }
         }
 
-        /// Returns a mutable reference to the environment corresponding to the block number.
-        pub fn get_mut(
-            &mut self,
-            num: BlockNumber,
-        ) -> Option<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
-            self.env.0.get_mut(&num)
-        }
-
         /// Ensures an environment is in the [HostMultiblockEvmEnv] by using the provided builder to
         /// create an environment if empty. It then returns a mutable reference to the environment.
         pub async fn get_or_build(
@@ -205,6 +201,20 @@ pub(crate) mod host {
                 Entry::Occupied(entry) => Ok(entry.into_mut()),
                 Entry::Vacant(entry) => Ok(entry.insert(self.builder.to_block(num).build().await?)),
             }
+        }
+
+        /// Returns a mutable reference to the environment corresponding to the block number.
+        pub fn get_mut(
+            &mut self,
+            num: BlockNumber,
+        ) -> Option<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
+            self.env.0.get_mut(&num)
+        }
+
+        /// Returns a mutable reference to the final environment, i.e. the environment with the
+        /// largest block number.
+        pub fn last_mut(&mut self) -> Option<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
+            self.env.0.last_entry().map(|entry| entry.into_mut())
         }
 
         /// Gets a mutable iterator over the environments in order by their block number.
