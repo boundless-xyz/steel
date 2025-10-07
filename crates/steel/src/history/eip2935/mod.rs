@@ -29,7 +29,7 @@ mod history_storage;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HistoryInput<F: EvmFactory> {
     input: BlockInput<F>,
-    commit: HistoryCommit<<F as EvmFactory>::Header>,
+    commit: HistoryCommit<F::Header>,
 }
 
 /// Commitment that an execution block is an ancestor of a specific other execution block.

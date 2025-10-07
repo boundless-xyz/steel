@@ -36,7 +36,12 @@ use revm::{
     context::{result::HaltReasonTr, BlockEnv},
     Database as RevmDatabase,
 };
-use std::{error::Error, fmt, fmt::Debug, hash::Hash};
+use std::{
+    error::Error,
+    fmt,
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 pub mod account;
 pub mod beacon;
@@ -435,16 +440,27 @@ impl Commitment {
     }
 }
 
+impl Display for Commitment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (id, version_code) = self.decode_id();
+        let version_str = match CommitmentVersion::n(version_code) {
+            Some(v) => format!("{v:?}"),
+            None => format!("Unknown({version_code:#x})"),
+        };
+        write!(f, "{version_str}({id})={:#}", &self.digest)
+    }
+}
+
 impl Debug for Commitment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (id, version_code) = self.decode_id();
-        let version = match CommitmentVersion::n(version_code) {
+        let version_str = match CommitmentVersion::n(version_code) {
             Some(v) => format!("{v:?}"),
-            None => format!("Unknown({version_code:x})"),
+            None => format!("Unknown({version_code:#x})"),
         };
 
         f.debug_struct("Commitment")
-            .field("version", &version)
+            .field("version", &version_str)
             .field("id", &id)
             .field("digest", &self.digest)
             .field("configID", &self.configID)

@@ -61,7 +61,7 @@ pub struct ProviderDb<N, P> {
     /// Bytecode cache to allow querying bytecode by hash instead of address.
     contracts: B256HashMap<Bytecode>,
 
-    phantom: PhantomData<N>,
+    phantom: PhantomData<fn() -> N>,
 }
 
 /// Additional configuration for a [Provider].

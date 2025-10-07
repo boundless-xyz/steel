@@ -133,7 +133,7 @@ mod host {
     where
         F: EvmFactory,
         N: Network,
-        P: Provider<N> + Send + Sync + 'static,
+        P: Provider<N> + 'static,
     {
         /// Constructor for preflighting Steel commitment verifications on the host.
         ///

@@ -138,105 +138,14 @@ pub(crate) mod host {
     use crate::{
         host::{
             db::{ProofDb, ProviderDb},
-            EvmEnvBuilder, HostCommit, HostEvmEnv,
+            EvmEnvBuilder, HostCommit, HostEvmEnv, InputBuilder,
         },
         verifier, EvmSpecId,
     };
     use alloy::providers::{Network, Provider};
-    use anyhow::{bail, ensure};
+    use anyhow::{bail, ensure, Context};
     use delegate::delegate;
-    use private::InputBuilder;
     use std::{collections::btree_map::Entry, fmt::Display};
-
-    mod private {
-        use super::*;
-        use crate::ethereum::EthChainSpec;
-        use crate::host::History;
-        use crate::{
-            ethereum::EthEvmFactory,
-            host::{Beacon, Eip2935History},
-        };
-        use alloy::network::Ethereum;
-
-        /// A private trait to handle the creation of different `EvmInput` variants from a generic
-        /// `HostEvmEnv`.
-        ///
-        /// ### Design Rationale
-        /// This pattern is an internal implementation detail used to manage the complexity arising
-        /// from supporting multiple commitment types (`Block`, `Beacon`, `Eip2935History`, etc.).
-        ///
-        /// The primary goal is to avoid providing multiple implementations of the `into_input`
-        /// method for all the commitment types. Such an approach would lead to significant code
-        /// duplication and become difficult to maintain as new commitment types are added.
-        /// While this pattern requires `#[allow(private_bounds)]` on a public method that use it,
-        /// the benefit of improved code structure and maintainability is a worthwhile trade-off
-        /// for this internal abstraction.
-        pub(super) trait InputBuilder<D, F: EvmFactory> {
-            async fn build_input(&self, env: HostEvmEnv<D, F, ()>) -> anyhow::Result<EvmInput<F>>;
-        }
-
-        impl<N, P, F: EvmFactory> InputBuilder<ProviderDb<N, P>, F>
-            for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()>
-        where
-            N: Network,
-            P: Provider<N>,
-            F::Header: TryFrom<<N as Network>::HeaderResponse>,
-            <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
-            F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
-            <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
-        {
-            async fn build_input(
-                &self,
-                env: HostEvmEnv<ProviderDb<N, P>, F, ()>,
-            ) -> anyhow::Result<EvmInput<F>> {
-                // ignore the builder and use the available env with block commitment directly
-                env.into_input().await
-            }
-        }
-
-        impl<N, P, F: EvmFactory> InputBuilder<ProviderDb<N, P>, F>
-            for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History>
-        where
-            N: Network,
-            P: Provider<N> + Clone,
-            F::Header: TryFrom<<N as Network>::HeaderResponse>,
-            <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
-            F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
-            <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
-        {
-            async fn build_input(
-                &self,
-                env: HostEvmEnv<ProviderDb<N, P>, F, ()>,
-            ) -> anyhow::Result<EvmInput<F>> {
-                let builder = self.clone().block_hash(env.header().seal());
-                builder.build().await?.merge(env)?.into_input().await
-            }
-        }
-
-        impl<P: Provider<Ethereum> + Clone> InputBuilder<ProviderDb<Ethereum, P>, EthEvmFactory>
-            for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, Beacon>
-        {
-            async fn build_input(
-                &self,
-                env: HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, ()>,
-            ) -> anyhow::Result<EvmInput<EthEvmFactory>> {
-                let builder = self.clone().block_hash(env.header().seal());
-                builder.build().await?.merge(env)?.into_input().await
-            }
-        }
-
-        impl<P: Provider<Ethereum> + Clone> InputBuilder<ProviderDb<Ethereum, P>, EthEvmFactory>
-            for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, History>
-        {
-            async fn build_input(
-                &self,
-                env: HostEvmEnv<ProviderDb<Ethereum, P>, EthEvmFactory, ()>,
-            ) -> anyhow::Result<EvmInput<EthEvmFactory>> {
-                let builder = self.clone().block_hash(env.header().seal());
-                builder.build().await?.merge(env)?.into_input().await
-            }
-        }
-    }
 
     /// A sequence of [EvmEnv] that form a subsequence in a single chain.
     ///
@@ -250,7 +159,7 @@ pub(crate) mod host {
     impl<'a, N, P, F, B> HostMultiblockEvmEnv<'a, N, P, F, B>
     where
         N: Network,
-        P: Provider<N> + Clone + Send + Sync + 'static,
+        P: Provider<N> + Clone + 'static,
         F: EvmFactory,
         F::Header: TryFrom<<N as Network>::HeaderResponse>,
         <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
@@ -316,21 +225,27 @@ pub(crate) mod host {
 
             let mut iter = self.env.0.into_values().peekable();
             while let Some(env) = iter.next() {
+                let number = env.header().number();
                 match iter.peek_mut() {
                     Some(next_env) => {
-                        let dist = next_env.header.number() - env.header().number();
+                        let dist = next_env.header.number() - number;
+                        // decide verification strategy based on distance and spec support
                         let input = if dist > verifier::HISTORY_LIMIT && !env.spec_id.has_eip2935()
                         {
-                            bail!("EIP-2935 required since distance between blocks is too large");
-                        }
-                        // distance between blocks is close enough, so that we can verify directly
-                        else if dist <= verifier::EIP2935_HISTORY_LIMIT {
+                            bail!(
+                                "EIP-2935 required: \
+                                block distance {dist} exceeds BLOCKHASH history limit"
+                            )
+                        } else if dist <= verifier::EIP2935_HISTORY_LIMIT {
+                            // short-range: verify directly using standard block commitment
                             let commit = env.commitment();
-                            SteelVerifier::preflight(next_env).verify(&commit).await?;
-                            env.into_input().await?
-                        }
-                        // use the EIP-2935 history commit to manage larger distances
-                        else {
+                            SteelVerifier::preflight(next_env)
+                                .verify(&commit)
+                                .await
+                                .with_context(|| format!("failed to verify: {commit}"))?;
+                            env.into_input().await
+                        } else {
+                            // long‑range: use an intermediate EIP‑2935 history commit
                             let target = next_env.header.number() - verifier::EIP2935_HISTORY_LIMIT;
                             let builder = self
                                 .builder
@@ -339,19 +254,28 @@ pub(crate) mod host {
                             let env = builder.build().await?.merge(env)?;
 
                             let commit = env.commitment();
-                            SteelVerifier::preflight(next_env).verify(&commit).await?;
-                            env.into_input().await?
-                        };
+                            SteelVerifier::preflight(next_env)
+                                .verify(&commit)
+                                .await
+                                .with_context(|| format!("failed to verify: {commit}"))?;
+                            env.into_input().await
+                        }
+                        .with_context(|| format!("failed to build input for block {number}"))?;
                         inputs.push(input);
                     }
                     None => {
-                        let input = self.builder.build_input(env).await?;
+                        // if there is no next env, we are processing the final env and can return
+                        let input = self.builder.build_input(env).await.with_context(|| {
+                            format!("failed to build final input for block {number}")
+                        })?;
                         inputs.push(input);
+
+                        return Ok(MultiblockEvmInput(inputs));
                     }
                 }
             }
 
-            Ok(MultiblockEvmInput(inputs))
+            unreachable!()
         }
     }
 }
@@ -359,11 +283,10 @@ pub(crate) mod host {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_utils::get_cl_url;
     use crate::{
         ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
         host::HostMultiblockEvmEnv,
-        test_utils::get_el_url,
+        test_utils::{get_cl_url, get_el_url},
         Account, CommitmentVersion,
     };
     use alloy::{

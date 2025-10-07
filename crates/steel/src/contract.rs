@@ -286,7 +286,7 @@ mod host {
     impl<S, F, N, P, C> CallBuilder<F::Tx, S, &mut HostEvmEnv<ProviderDb<N, P>, F, C>>
     where
         N: Network,
-        P: Provider<N> + Send + Sync + 'static,
+        P: Provider<N> + 'static,
         S: SolCall + Send + Sync + 'static,
         <S as SolCall>::Return: Send,
         F: EvmFactory,

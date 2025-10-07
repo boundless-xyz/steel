@@ -19,7 +19,6 @@ use crate::{
 use ::serde::{Deserialize, Serialize};
 use alloy_consensus::TxReceipt;
 use alloy_primitives::{map::HashMap, Bytes, Sealable, Sealed, B256};
-use std::marker::PhantomData;
 
 /// Input committing to the corresponding execution block hash.
 #[derive(Clone, Serialize, Deserialize)]
@@ -30,8 +29,6 @@ pub struct BlockInput<F: EvmFactory> {
     contracts: Vec<Bytes>,
     ancestors: Vec<F::Header>,
     receipts: Option<Vec<F::Receipt>>,
-    #[serde(skip)]
-    phantom: PhantomData<F>,
 }
 
 /// Implement [BlockHeaderCommit] for the unit type.
@@ -121,7 +118,7 @@ pub mod host {
     use alloy_primitives::Sealed;
     use anyhow::{anyhow, ensure};
     use log::debug;
-    use std::{fmt::Display, marker::PhantomData};
+    use std::fmt::Display;
 
     impl<F: EvmFactory> BlockInput<F> {
         /// Creates the `BlockInput` containing the necessary EVM state that can be verified against
@@ -182,7 +179,6 @@ pub mod host {
                 contracts,
                 ancestors,
                 receipts,
-                phantom: PhantomData,
             };
 
             Ok(input)

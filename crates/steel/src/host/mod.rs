@@ -44,7 +44,7 @@ mod builder;
 pub mod db;
 
 pub use crate::multiblock::host::HostMultiblockEvmEnv;
-pub use builder::{Beacon, Eip2935History, EvmEnvBuilder, History};
+pub use builder::{Beacon, Eip2935History, EvmEnvBuilder, History, InputBuilder};
 
 /// A Block Identifier.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -292,12 +292,9 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
             commit,
         } = self;
 
-        ensure!(chain_id == other.chain_id, "configuration mismatch");
-        ensure!(spec_id == other.spec_id, "configuration mismatch");
-        ensure!(
-            header.seal() == other.header.seal(),
-            "execution header mismatch"
-        );
+        ensure!(chain_id == other.chain_id, "chain ID mismatch");
+        ensure!(spec_id == other.spec_id, "EVM specification mismatch");
+        ensure!(header.seal() == other.header.seal(), "header mismatch");
         // the commitments do not need to match as long as the config_id is consistent
         ensure!(
             commit.config_id == other.commit.config_id,

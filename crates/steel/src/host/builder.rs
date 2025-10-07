@@ -16,13 +16,13 @@ use super::BlockId;
 use crate::{
     beacon::BeaconCommit,
     config::ChainSpec,
-    ethereum::EthEvmFactory,
+    ethereum::{EthChainSpec, EthEvmFactory},
     history::{Eip2935HistoryCommit, HistoryCommit},
     host::{
         db::{ProofDb, ProviderConfig, ProviderDb},
         BlockNumberOrTag, EthHostEvmEnv, HostCommit, HostEvmEnv,
     },
-    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId,
+    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
 };
 use alloy::{
     network::{primitives::HeaderResponse, BlockResponse, Ethereum, Network},
@@ -30,7 +30,7 @@ use alloy::{
 };
 use alloy_primitives::{BlockHash, BlockNumber, Sealable, Sealed, B256};
 use anyhow::{anyhow, ensure, Context, Result};
-use std::{fmt::Display, marker::PhantomData};
+use std::{fmt::Display, future::Future, marker::PhantomData};
 use url::Url;
 
 impl<F: EvmFactory> EvmEnv<(), F, ()> {
@@ -62,28 +62,14 @@ impl<F: EvmFactory> EvmEnv<(), F, ()> {
 /// # Usage
 /// The builder can be created using [EvmEnv::builder()]. Various configurations can be chained to
 /// customize the environment before calling the `build` function to create the final [EvmEnv].
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct EvmEnvBuilder<P, F, S, B> {
     provider: P,
     provider_config: ProviderConfig,
     block: BlockId,
     chain_spec: S,
     commitment_config: B,
-    phantom: PhantomData<F>,
-}
-
-// the derive macro would also require F to implement Clone which is not necessary.
-impl<P: Clone, F, S: Clone, B: Clone> Clone for EvmEnvBuilder<P, F, S, B> {
-    fn clone(&self) -> Self {
-        Self {
-            provider: self.provider.clone(),
-            provider_config: self.provider_config.clone(),
-            block: self.block,
-            chain_spec: self.chain_spec.clone(),
-            commitment_config: self.commitment_config.clone(),
-            phantom: PhantomData,
-        }
-    }
+    phantom: PhantomData<fn() -> F>,
 }
 
 impl<F: EvmFactory> EvmEnvBuilder<(), F, (), ()> {
@@ -603,6 +589,81 @@ fn create_host_env<N: Network, P: Provider<N>, F: EvmFactory, C>(
     let spec_id = *chain_spec.active_fork(header.number(), header.timestamp())?;
 
     Ok(EvmEnv::new(db, chain_id, spec_id, header, commit))
+}
+
+/// Extension trait used by [HostMultiblockEvmEnv] to build an [EvmInput] instance from an
+/// [EvmEnvBuilder] given an existing [EvmEnv].
+///
+/// This trait abstracts the process of transforming a configured [EvmEnvBuilder] into a
+/// corresponding [EvmInput]. Essentially, it applies the specified commitment type from the
+/// [EvmEnvBuilder] to the EVM data from the given [EvmEnv].
+///
+/// [HostMultiblockEvmEnv]: crate::multiblock::host::HostMultiblockEvmEnv
+pub trait InputBuilder<D, F: EvmFactory>: Send {
+    /// Consumes this builder and constructs an [EvmInput] from the given [EvmEnv].
+    ///
+    /// The returned future performs any necessary commitment computation, or state verification
+    /// required by the builder’s configuration.
+    /// It returns an error, if this process fails or if the [ChainSpec] config of the
+    /// [EvmEnvBuilder] and the [EvmEnv] do not match.
+    fn build_input(
+        self,
+        env: HostEvmEnv<D, F, ()>,
+    ) -> impl Future<Output = Result<EvmInput<F>>> + Send;
+}
+
+macro_rules! build_input {
+    ($D:ty, $F:ty) => {
+        async fn build_input(self, env: HostEvmEnv<$D, $F, ()>) -> Result<EvmInput<$F>> {
+            // rebuild an empty environment for the same block
+            let builder = self.block_hash(env.header().seal());
+            let empty_env = builder.build().await.context("builder failed")?;
+            // merge execution state and verify compatibility
+            let env = empty_env
+                .merge(env)
+                .context("environment not compatible with builder")?;
+
+            env.into_input().await
+        }
+    };
+}
+
+impl<N, P, F: EvmFactory> InputBuilder<ProviderDb<N, P>, F>
+    for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()>
+where
+    N: Network,
+    P: Provider<N>,
+    F::Header: TryFrom<<N as Network>::HeaderResponse>,
+    <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
+{
+    build_input!(ProviderDb<N, P>, F);
+}
+
+impl<N, P, F: EvmFactory> InputBuilder<ProviderDb<N, P>, F>
+    for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History>
+where
+    N: Network,
+    P: Provider<N>,
+    F::Header: TryFrom<<N as Network>::HeaderResponse>,
+    <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
+{
+    build_input!(ProviderDb<N, P>, F);
+}
+
+impl<P: Provider<Ethereum>> InputBuilder<ProviderDb<Ethereum, P>, EthEvmFactory>
+    for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, Beacon>
+{
+    build_input!(ProviderDb<Ethereum, P>, EthEvmFactory);
+}
+
+impl<P: Provider<Ethereum>> InputBuilder<ProviderDb<Ethereum, P>, EthEvmFactory>
+    for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, History>
+{
+    build_input!(ProviderDb<Ethereum, P>, EthEvmFactory);
 }
 
 #[cfg(test)]
