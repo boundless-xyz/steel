@@ -66,6 +66,10 @@ pub static ETH_MAINNET_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| Cha
     ]),
 });
 
+/// [ChainSpec] for a custom Steel Testnet using the Cancun EVM.
+pub static STEEL_TEST_CANCUN_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
+    LazyLock::new(|| ChainSpec::new_single(5733100017, SpecId::CANCUN));
+
 /// [ChainSpec] for a custom Steel Testnet using the Prague EVM.
 pub static STEEL_TEST_PRAGUE_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
     LazyLock::new(|| ChainSpec::new_single(5733100018, SpecId::PRAGUE));
