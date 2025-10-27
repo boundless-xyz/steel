@@ -269,10 +269,7 @@ impl From<alloy_rpc_types::TransactionReceipt> for EthReceipt {
 mod tests {
     use alloy::primitives::b256;
 
-    use super::{
-        ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
-        STEEL_TEST_PRAGUE_CHAIN_SPEC,
-    };
+    use super::{ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC, STEEL_TEST_CANCUN_CHAIN_SPEC, STEEL_TEST_PRAGUE_CHAIN_SPEC};
 
     // NOTE: If these are updated here, make sure to update them in Steel.sol
 
@@ -301,7 +298,15 @@ mod tests {
     }
 
     #[test]
-    fn testnet_spec_digest() {
+    fn testnet_cancun_spec_digest() {
+        assert_eq!(
+            STEEL_TEST_CANCUN_CHAIN_SPEC.digest(),
+            b256!("0x5ed47b289fa591fbc7ed9e7193f58225a50d151d35072880b1611cced4a2a68b")
+        );
+    }
+
+    #[test]
+    fn testnet_prague_spec_digest() {
         assert_eq!(
             STEEL_TEST_PRAGUE_CHAIN_SPEC.digest(),
             b256!("0x33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87")
