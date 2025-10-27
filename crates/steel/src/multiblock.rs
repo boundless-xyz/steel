@@ -169,7 +169,7 @@ pub(crate) mod host {
         <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
         F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
         <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
-        EvmEnvBuilder<P, F, &'a ChainSpec<F::SpecId>, B>: InputBuilder<ProviderDb<N, P>, F>,
+        EvmEnvBuilder<P, F, &'a ChainSpec<F::SpecId>, B>: InputBuilder<N, P, F>,
     {
         /// Creates a new [HostMultiblockEvmEnv] from the given [EvmEnvBuilder].
         ///

@@ -599,7 +599,7 @@ fn create_host_env<N: Network, P: Provider<N>, F: EvmFactory, C>(
 /// [EvmEnvBuilder] to the EVM data from the given [EvmEnv].
 ///
 /// [HostMultiblockEvmEnv]: crate::multiblock::host::HostMultiblockEvmEnv
-pub trait InputBuilder<D, F: EvmFactory>: Send {
+pub trait InputBuilder<N: Network, P: Provider<N>, F: EvmFactory>: Send {
     /// Consumes this builder and constructs an [EvmInput] from the given [EvmEnv].
     ///
     /// The returned future performs any necessary commitment computation, or state verification
@@ -608,7 +608,7 @@ pub trait InputBuilder<D, F: EvmFactory>: Send {
     /// [EvmEnvBuilder] and the [EvmEnv] do not match.
     fn build_input(
         self,
-        env: HostEvmEnv<D, F, ()>,
+        env: HostEvmEnv<ProviderDb<N, P>, F, ()>,
     ) -> impl Future<Output = Result<EvmInput<F>>> + Send;
 }
 
@@ -628,11 +628,11 @@ macro_rules! build_input {
     };
 }
 
-impl<N, P, F: EvmFactory> InputBuilder<ProviderDb<N, P>, F>
-    for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()>
+impl<N, P, F> InputBuilder<N, P, F> for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()>
 where
     N: Network,
     P: Provider<N>,
+    F: EvmFactory,
     F::Header: TryFrom<<N as Network>::HeaderResponse>,
     <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
     F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
@@ -641,11 +641,11 @@ where
     build_input!(ProviderDb<N, P>, F);
 }
 
-impl<N, P, F: EvmFactory> InputBuilder<ProviderDb<N, P>, F>
-    for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History>
+impl<N, P, F> InputBuilder<N, P, F> for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History>
 where
     N: Network,
     P: Provider<N>,
+    F: EvmFactory,
     F::Header: TryFrom<<N as Network>::HeaderResponse>,
     <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
     F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
@@ -654,13 +654,13 @@ where
     build_input!(ProviderDb<N, P>, F);
 }
 
-impl<P: Provider<Ethereum>> InputBuilder<ProviderDb<Ethereum, P>, EthEvmFactory>
+impl<P: Provider<Ethereum>> InputBuilder<Ethereum, P, EthEvmFactory>
     for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, Beacon>
 {
     build_input!(ProviderDb<Ethereum, P>, EthEvmFactory);
 }
 
-impl<P: Provider<Ethereum>> InputBuilder<ProviderDb<Ethereum, P>, EthEvmFactory>
+impl<P: Provider<Ethereum>> InputBuilder<Ethereum, P, EthEvmFactory>
     for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, History>
 {
     build_input!(ProviderDb<Ethereum, P>, EthEvmFactory);
