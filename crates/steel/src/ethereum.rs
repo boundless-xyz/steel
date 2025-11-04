@@ -269,7 +269,10 @@ impl From<alloy_rpc_types::TransactionReceipt> for EthReceipt {
 mod tests {
     use alloy::primitives::b256;
 
-    use super::{ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC, STEEL_TEST_CANCUN_CHAIN_SPEC, STEEL_TEST_PRAGUE_CHAIN_SPEC};
+    use super::{
+        ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
+        STEEL_TEST_CANCUN_CHAIN_SPEC, STEEL_TEST_PRAGUE_CHAIN_SPEC,
+    };
 
     // NOTE: If these are updated here, make sure to update them in Steel.sol
 
