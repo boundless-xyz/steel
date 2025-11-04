@@ -62,9 +62,9 @@ library Steel {
     ///        specification used to instantiate the EVM within Steel.
     /// @return True if the commitment commits to a block in the current chain, false otherwise.
     function validateCommitmentWithConfig(Commitment memory commitment, bytes32 configID)
-        internal
-        view
-        returns (bool)
+    internal
+    view
+    returns (bool)
     {
         if (configID != commitment.configID) {
             revert InvalidConfigID(configID, commitment.configID);
@@ -162,6 +162,7 @@ library ChainSpec {
     uint256 internal constant ETHEREUM_MAINNET_CHAIN_ID = 1;
     uint256 internal constant ETHEREUM_SEPOLIA_CHAIN_ID = 11155111;
     uint256 internal constant ETHEREUM_HOLESKY_CHAIN_ID = 17000;
+    uint256 internal constant STEEL_TEST_OSAKA_CHAIN_ID = 5733100019;
     uint256 internal constant STEEL_TEST_PRAGUE_CHAIN_ID = 5733100018;
 
     /// @dev Error selector: 0x45b21e77
@@ -174,13 +175,16 @@ library ChainSpec {
     // TODO(povw): Add something to keep this in sync with the Rust.
     function configID(uint256 chainID) internal pure returns (bytes32) {
         if (chainID == ETHEREUM_MAINNET_CHAIN_ID) {
-            return hex"9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839";
+            return hex"47dc59f84afd2e9e7a48c4012004ab7c77fbd9acf822bf1143b8442c6c8851d4";
         }
         if (chainID == ETHEREUM_SEPOLIA_CHAIN_ID) {
-            return hex"5c9552dc9bfad8572ded4f818bb35b0f4260660c1554236986b768ae999b4b60";
+            return hex"90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d";
         }
         if (chainID == ETHEREUM_HOLESKY_CHAIN_ID) {
-            return hex"8eae1ba5f877e6ad7007bf6985f5245be7d758457fb4eb7e6a72d47f49bea389";
+            return hex"d5383ba90170a677231d8a3c739438a4811c75615209cab301f635599a2e83ec";
+        }
+        if (chainID == STEEL_TEST_OSAKA_CHAIN_ID) {
+            return hex"2a80c688d324f578513161dda9e9a5773c0ee052f50304a94339e966da28b2ad";
         }
         if (chainID == STEEL_TEST_PRAGUE_CHAIN_ID) {
             return hex"33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87";

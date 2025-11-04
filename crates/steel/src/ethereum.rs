@@ -36,10 +36,11 @@ use std::{collections::BTreeMap, error::Error, sync::LazyLock};
 pub static ETH_SEPOLIA_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 11155111,
     forks: BTreeMap::from([
-        (SpecId::MERGE, ForkCondition::Block(1735371)),
-        (SpecId::SHANGHAI, ForkCondition::Timestamp(1677557088)),
-        (SpecId::CANCUN, ForkCondition::Timestamp(1706655072)),
-        (SpecId::PRAGUE, ForkCondition::Timestamp(1741159776)),
+        (SpecId::MERGE, ForkCondition::Block(1_735_371)),
+        (SpecId::SHANGHAI, ForkCondition::Timestamp(1_677_557_088)),
+        (SpecId::CANCUN, ForkCondition::Timestamp(1_706_655_072)),
+        (SpecId::PRAGUE, ForkCondition::Timestamp(1_741_159_776)),
+        (SpecId::OSAKA, ForkCondition::Timestamp(1_760_427_360)),
     ]),
 });
 
@@ -48,9 +49,10 @@ pub static ETH_HOLESKY_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| Cha
     chain_id: 17000,
     forks: BTreeMap::from([
         (SpecId::MERGE, ForkCondition::Block(0)),
-        (SpecId::SHANGHAI, ForkCondition::Timestamp(1696000704)),
-        (SpecId::CANCUN, ForkCondition::Timestamp(1707305664)),
-        (SpecId::PRAGUE, ForkCondition::Timestamp(1740434112)),
+        (SpecId::SHANGHAI, ForkCondition::Timestamp(1_696_000_704)),
+        (SpecId::CANCUN, ForkCondition::Timestamp(1_707_305_664)),
+        (SpecId::PRAGUE, ForkCondition::Timestamp(1_740_434_112)),
+        (SpecId::OSAKA, ForkCondition::Timestamp(1_759_308_480)),
     ]),
 });
 
@@ -58,16 +60,21 @@ pub static ETH_HOLESKY_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| Cha
 pub static ETH_MAINNET_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 1,
     forks: BTreeMap::from([
-        (SpecId::MERGE, ForkCondition::Block(15537394)),
-        (SpecId::SHANGHAI, ForkCondition::Timestamp(1681338455)),
-        (SpecId::CANCUN, ForkCondition::Timestamp(1710338135)),
-        (SpecId::PRAGUE, ForkCondition::Timestamp(1746612311)),
+        (SpecId::MERGE, ForkCondition::Block(15_537_394)),
+        (SpecId::SHANGHAI, ForkCondition::Timestamp(1_681_338_455)),
+        (SpecId::CANCUN, ForkCondition::Timestamp(1_710_338_135)),
+        (SpecId::PRAGUE, ForkCondition::Timestamp(1_746_612_311)),
+        (SpecId::OSAKA, ForkCondition::Timestamp(1_764_798_551)),
     ]),
 });
 
 /// [ChainSpec] for a custom Steel Testnet using the Prague EVM.
 pub static STEEL_TEST_PRAGUE_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
     LazyLock::new(|| ChainSpec::new_single(5733100018, SpecId::PRAGUE));
+
+/// [ChainSpec] for a custom Steel Testnet using the Osaka EVM.
+pub static STEEL_TEST_OSAKA_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
+    LazyLock::new(|| ChainSpec::new_single(5733100019, SpecId::OSAKA));
 
 /// [EvmFactory] for Ethereum.
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
@@ -260,7 +267,7 @@ mod tests {
 
     use super::{
         ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
-        STEEL_TEST_PRAGUE_CHAIN_SPEC,
+        STEEL_TEST_OSAKA_CHAIN_SPEC, STEEL_TEST_PRAGUE_CHAIN_SPEC,
     };
 
     // NOTE: If these are updated here, make sure to update them in Steel.sol
@@ -269,7 +276,7 @@ mod tests {
     fn mainnet_spec_digest() {
         assert_eq!(
             ETH_MAINNET_CHAIN_SPEC.digest(),
-            b256!("0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839")
+            b256!("0x47dc59f84afd2e9e7a48c4012004ab7c77fbd9acf822bf1143b8442c6c8851d4")
         );
     }
 
@@ -277,7 +284,7 @@ mod tests {
     fn sepolia_spec_digest() {
         assert_eq!(
             ETH_SEPOLIA_CHAIN_SPEC.digest(),
-            b256!("0x5c9552dc9bfad8572ded4f818bb35b0f4260660c1554236986b768ae999b4b60")
+            b256!("0x90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d")
         );
     }
 
@@ -285,15 +292,23 @@ mod tests {
     fn holesky_spec_digest() {
         assert_eq!(
             ETH_HOLESKY_CHAIN_SPEC.digest(),
-            b256!("0x8eae1ba5f877e6ad7007bf6985f5245be7d758457fb4eb7e6a72d47f49bea389")
+            b256!("0xd5383ba90170a677231d8a3c739438a4811c75615209cab301f635599a2e83ec")
         );
     }
 
     #[test]
-    fn testnet_spec_digest() {
+    fn testnet_prague_spec_digest() {
         assert_eq!(
             STEEL_TEST_PRAGUE_CHAIN_SPEC.digest(),
             b256!("0x33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87")
+        );
+    }
+
+    #[test]
+    fn testnet_osaka_spec_digest() {
+        assert_eq!(
+            STEEL_TEST_OSAKA_CHAIN_SPEC.digest(),
+            b256!("0x2a80c688d324f578513161dda9e9a5773c0ee052f50304a94339e966da28b2ad")
         );
     }
 }
