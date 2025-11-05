@@ -15,10 +15,10 @@
 #![allow(unused_doc_comments)]
 
 use alloy_primitives::{Address, U256};
-use alloy_sol_types::{sol, SolValue};
+use alloy_sol_types::{SolValue, sol};
 use risc0_steel::{
-    ethereum::{EthEvmInput, STEEL_TEST_PRAGUE_CHAIN_SPEC},
     Commitment, Contract,
+    ethereum::{EthEvmInput, STEEL_TEST_PRAGUE_CHAIN_SPEC},
 };
 use risc0_zkvm::guest::env;
 

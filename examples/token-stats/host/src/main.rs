@@ -16,12 +16,12 @@ use alloy_sol_types::{SolCall, SolValue};
 use anyhow::{Context, Result};
 use clap::Parser;
 use risc0_steel::{
-    alloy::providers::{Provider, ProviderBuilder},
-    ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
     Contract, SteelVerifier,
+    alloy::providers::{Provider, ProviderBuilder},
+    ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
 };
-use risc0_zkvm::{default_executor, ExecutorEnv};
-use token_stats_core::{APRCommitment, CometMainInterface, CONTRACT};
+use risc0_zkvm::{ExecutorEnv, default_executor};
+use token_stats_core::{APRCommitment, CONTRACT, CometMainInterface};
 use token_stats_methods::TOKEN_STATS_ELF;
 use tracing_subscriber::EnvFilter;
 use url::Url;

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::history::{Error, SingleContractState};
-use alloy_primitives::{address, b256, uint, Address, B256, U256};
+use alloy_primitives::{Address, B256, U256, address, b256, uint};
 use revm::Database;
 
 /// Address where the EIP-2935 execution hash contract is deployed.
@@ -39,7 +39,7 @@ mod host {
     use super::*;
     use crate::{history::SingleContractState, host::db::ProviderDb};
     use alloy::providers::{Network, Provider};
-    use anyhow::{anyhow, ensure, Context};
+    use anyhow::{Context, anyhow, ensure};
 
     impl<N, P> HistoryStorageContract<ProviderDb<N, P>>
     where
@@ -68,7 +68,8 @@ mod host {
                 .context("invalid eth_getProof response")?;
 
             // validate the returned state and compute the return value
-            match HistoryStorageContract::new(&mut state)?.get_unchecked(block_number) {
+            let result = HistoryStorageContract::new(&mut state)?.get_unchecked(block_number);
+            match result {
                 Ok(returns) => Ok((returns, state)),
                 Err(err) => Err(anyhow!(err)),
             }
@@ -142,9 +143,11 @@ mod tests {
         // executing the contract from the exact state should return the same value
         assert_eq!(
             preflight,
-            dbg!(HistoryStorageContract::new(&mut state)
-                .unwrap()
-                .get_unchecked(block_number))
+            dbg!(
+                HistoryStorageContract::new(&mut state)
+                    .unwrap()
+                    .get_unchecked(block_number)
+            )
             .unwrap()
         );
     }

@@ -13,8 +13,8 @@
 // limitations under the License.
 
 //! Types related to commitments to the beacon block root.
-use crate::{merkle, BlockHeaderCommit, Commitment, CommitmentVersion, ComposeInput};
-use alloy_primitives::{Sealed, B256};
+use crate::{BlockHeaderCommit, Commitment, CommitmentVersion, ComposeInput, merkle};
+use alloy_primitives::{B256, Sealed};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

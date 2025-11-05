@@ -16,13 +16,12 @@ pub use alloy_consensus::Account as StateAccount;
 
 use crate::{event, mpt::MerkleTrie};
 use alloy_primitives::{
-    keccak256,
+    Address, B256, Bytes, Log, Sealed, U256, keccak256,
     map::{AddressHashMap, B256HashMap, HashMap},
-    Address, Bytes, Log, Sealed, B256, U256,
 };
 use revm::{
-    state::{AccountInfo, Bytecode},
     Database as RevmDatabase,
+    state::{AccountInfo, Bytecode},
 };
 use std::{
     convert::Infallible,

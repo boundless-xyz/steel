@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use alloy::{
-    primitives::{address, Address},
+    primitives::{Address, address},
     sol_types::SolCall,
 };
 use anyhow::{Context, Result};
@@ -21,10 +21,10 @@ use clap::Parser;
 use l2_to_l1_core::{CALL, CALLER, CONTRACT, IERC20};
 use l2_to_l1_methods::{L2_TO_L1_GUEST_ELF, L2_TO_L1_GUEST_ID};
 use risc0_op_steel::{
-    optimism::{OpEvmEnv, OP_MAINNET_CHAIN_SPEC},
     Contract, DisputeGameIndex,
+    optimism::{OP_MAINNET_CHAIN_SPEC, OpEvmEnv},
 };
-use risc0_zkvm::{default_prover, Digest, ExecutorEnv, ProverOpts, VerifierContext};
+use risc0_zkvm::{Digest, ExecutorEnv, ProverOpts, VerifierContext, default_prover};
 use tokio::task;
 use tracing_subscriber::EnvFilter;
 use url::Url;

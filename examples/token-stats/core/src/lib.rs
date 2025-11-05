@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloy_primitives::{address, Address};
+use alloy_primitives::{Address, address};
 use alloy_sol_types::sol;
 use risc0_steel::Commitment;
 

@@ -13,18 +13,18 @@
 // limitations under the License.
 
 use alloy::{
-    network::{primitives::HeaderResponse, BlockResponse, Network},
+    network::{BlockResponse, Network, primitives::HeaderResponse},
     providers::Provider,
     rpc::types::EIP1186AccountProofResponse,
     transports::TransportError,
 };
-use alloy_primitives::{map::B256HashMap, Address, BlockHash, Log, StorageKey, B256, U256};
+use alloy_primitives::{Address, B256, BlockHash, Log, StorageKey, U256, map::B256HashMap};
 use alloy_rpc_types::Filter;
 use revm::{
+    Database as RevmDatabase,
     database::DBErrorMarker,
     primitives::KECCAK_EMPTY,
     state::{AccountInfo, Bytecode},
-    Database as RevmDatabase,
 };
 use std::{future::IntoFuture, marker::PhantomData};
 use tokio::runtime::Handle;

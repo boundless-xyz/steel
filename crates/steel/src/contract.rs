@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{state::WrapStateDb, EvmFactory, GuestEvmEnv};
+use crate::{EvmFactory, GuestEvmEnv, state::WrapStateDb};
 use alloy_evm::Evm;
 use alloy_primitives::{Address, Bytes};
-use alloy_sol_types::{sol_data, SolCall, SolError, SolType};
+use alloy_sol_types::{SolCall, SolError, SolType, sol_data};
 use revm::context::result::{ExecutionResult, ResultAndState, SuccessReason};
 use std::{fmt::Debug, marker::PhantomData};
 
@@ -243,7 +243,7 @@ mod host {
     use super::*;
     use crate::{
         ethereum::EthEvmFactory,
-        host::{db::ProviderDb, HostEvmEnv},
+        host::{HostEvmEnv, db::ProviderDb},
     };
     use alloy::{
         eips::eip2930::AccessList,
@@ -551,6 +551,7 @@ where
         ExecutionResult::Revert { output, .. } => return Err(CallError::Reverted(output)),
         ExecutionResult::Halt { reason, .. } => return Err(CallError::Halted(reason)),
     };
+    let data = output.into_data();
 
-    S::abi_decode_returns(&output.into_data()).map_err(CallError::AbiError)
+    S::abi_decode_returns(&data).map_err(CallError::AbiError)
 }

@@ -17,12 +17,12 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
     transports::TransportError,
 };
-use alloy_primitives::{address, Address, BlockNumber};
+use alloy_primitives::{Address, BlockNumber, address};
 use op_alloy_network::Optimism;
 use risc0_steel::{
+    BeaconInput,
     beacon::{BeaconBlockId, BeaconCommit},
     ethereum::EthEvmInput,
-    BeaconInput,
 };
 use std::{cmp::Ordering, future::IntoFuture};
 use url::Url;

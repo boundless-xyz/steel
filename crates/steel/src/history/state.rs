@@ -13,9 +13,9 @@
 // limitations under the License.
 
 use crate::{MerkleTrie, StateAccount};
-use alloy_primitives::{keccak256, Address, B256, U256};
+use alloy_primitives::{Address, B256, U256, keccak256};
 use alloy_rpc_types::EIP1186AccountProofResponse;
-use revm::{bytecode::Bytecode, context::DBErrorMarker, state::AccountInfo, Database};
+use revm::{Database, bytecode::Bytecode, context::DBErrorMarker, state::AccountInfo};
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 
