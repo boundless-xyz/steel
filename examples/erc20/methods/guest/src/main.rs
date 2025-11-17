@@ -18,7 +18,7 @@
 use alloy_primitives::{address, Address};
 use alloy_sol_types::sol;
 use risc0_steel::{
-    ethereum::{EthEvmInput, ETH_SEPOLIA_CHAIN_SPEC},
+    ethereum::{EthEvmInput, ETH_MAINNET_CHAIN_SPEC},
     Contract,
 };
 use risc0_zkvm::guest::env;
@@ -30,19 +30,26 @@ risc0_zkvm::guest::entry!(main);
 sol! {
     /// ERC-20 balance function signature.
     interface IERC20 {
-        function balanceOf(address account) external view returns (uint);
+        // function balanceOf(address account) external view returns (uint);
+         function getRangePricesLP(
+            address lpToken,
+            address pool,
+            address quoteToken
+        ) external returns (uint, uint, bool);
     }
 }
 
 /// Function to call, implements the `SolCall` trait.
-const CALL: IERC20::balanceOfCall = IERC20::balanceOfCall {
-    account: address!("9737100D2F42a196DE56ED0d1f6fF598a250E7E4"),
+const CALL: IERC20::getRangePricesLPCall = IERC20::getRangePricesLPCall {
+    lpToken: address!("64273624eb57c5cA961d366CBF3968e760Bf0452"),
+    pool: address!("64273624eb57c5cA961d366CBF3968e760Bf0452"),
+    quoteToken: address!("A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
 };
 
 /// Address of the deployed contract to call the function on (USDT contract on Sepolia).
-const CONTRACT: Address = address!("aA8E23Fb1079EA71e0a56F48a2aA51851D8433D0");
-/// Address of the caller. If not provided, the caller will be the [CONTRACT].
-const CALLER: Address = address!("f08A50178dfcDe18524640EA6618a1f965821715");
+const CONTRACT: Address = address!("61F8BE7FD721e80C0249829eaE6f0DAf21bc2CaC");
+/// Address of the caller.
+const CALLER: Address = address!("91aa2CcE6B22Ec9eCd8A56C830566e67187fe07E");
 
 fn main() {
     // Read the input from the guest environment.
@@ -50,7 +57,7 @@ fn main() {
 
     // Converts the input into a `EvmEnv` for execution. It checks that the state matches the state
     // root in the header provided in the input.
-    let env = input.into_env(&ETH_SEPOLIA_CHAIN_SPEC);
+    let env = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
     // Commit the block hash and number used when deriving `EvmEnv` to the journal.
     env::commit_slice(&env.commitment().abi_encode());
 
@@ -59,5 +66,8 @@ fn main() {
     let mut builder = contract.call_builder(&CALL);
     builder.tx.caller = CALLER;
     let returns = builder.call();
-    println!("View call result: {returns}");
+    // println!("View call result: {returns}");
+    println!("returns: {:?}", returns._0);
+    println!("returns: {:?}", returns._1);
+    println!("returns: {:?}", returns._2);
 }

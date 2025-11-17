@@ -18,7 +18,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use erc20_methods::ERC20_GUEST_ELF;
 use risc0_steel::{
-    ethereum::{EthEvmEnv, ETH_SEPOLIA_CHAIN_SPEC},
+    ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
     Commitment, Contract,
 };
 use risc0_zkvm::{default_executor, ExecutorEnv};
@@ -29,19 +29,37 @@ sol! {
     /// ERC-20 balance function signature.
     /// This must match the signature in the guest.
     interface IERC20 {
-        function balanceOf(address account) external view returns (uint);
+        // function balanceOf(address account) external view returns (uint);
+        function getRangePricesLP(
+            address lpToken,
+            address pool,
+            address quoteToken
+        ) external returns (uint, uint, bool);
+
+        // function poolMappings(address pool
+        // ) external view returns (address);
     }
 }
 
 /// Function to call, implements the [SolCall] trait.
-const CALL: IERC20::balanceOfCall = IERC20::balanceOfCall {
-    account: address!("9737100D2F42a196DE56ED0d1f6fF598a250E7E4"),
+// const CALL: IERC20::balanceOfCall = IERC20::balanceOfCall {
+//     account: address!("9737100D2F42a196DE56ED0d1f6fF598a250E7E4"),
+// };
+
+const CALL: IERC20::getRangePricesLPCall = IERC20::getRangePricesLPCall {
+    lpToken: address!("64273624eb57c5cA961d366CBF3968e760Bf0452"),
+    pool: address!("64273624eb57c5cA961d366CBF3968e760Bf0452"),
+    quoteToken: address!("A0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"),
 };
 
+// const CALL: IERC20::poolMappingsCall = IERC20::poolMappingsCall {
+//     pool: address!("b819feeF8F0fcDC268AfE14162983A69f6BF179E"),
+// };
+
 /// Address of the deployed contract to call the function on (USDT contract on Sepolia).
-const CONTRACT: Address = address!("aA8E23Fb1079EA71e0a56F48a2aA51851D8433D0");
+const CONTRACT: Address = address!("61F8BE7FD721e80C0249829eaE6f0DAf21bc2CaC");
 /// Address of the caller.
-const CALLER: Address = address!("f08A50178dfcDe18524640EA6618a1f965821715");
+const CALLER: Address = address!("91aa2CcE6B22Ec9eCd8A56C830566e67187fe07E");
 
 /// Simple program to show the use of Ethereum contract data inside the guest.
 #[derive(Parser, Debug)]
@@ -64,7 +82,7 @@ async fn main() -> Result<()> {
     // Create an EVM environment from an RPC endpoint defaulting to the latest block.
     let mut env = EthEvmEnv::builder()
         .rpc(args.rpc_url)
-        .chain_spec(&ETH_SEPOLIA_CHAIN_SPEC)
+        .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
         .build()
         .await?;
 
@@ -74,13 +92,21 @@ async fn main() -> Result<()> {
     let mut builder = contract.call_builder(&CALL);
     builder.tx.caller = CALLER;
     let returns = builder.call().await?;
-    println!(
-        "Call {} Function by {:#} on {:#} returns: {}",
-        IERC20::balanceOfCall::SIGNATURE,
-        CALLER,
-        CONTRACT,
-        returns
-    );
+
+    // println!("CALLING... result:");
+    // println!("Pool mapping result: {}", returns._0);
+    println!("returns: {:?}", returns._0);
+    println!("returns: {:?}", returns._1);
+    println!("returns: {:?}", returns._2);
+
+    // println!(
+    //     "Call {} Function by {:#} on {:#} returns: {}",
+    //     "IERC20::poolMappings::SIGNATURE",
+    //     // IERC20::balanceOfCall::SIGNATURE,
+    //     CALLER,
+    //     CONTRACT,
+    //     returns
+    // );
 
     // Finally, construct the input from the environment.
     let input = env.into_input().await?;
@@ -92,6 +118,7 @@ async fn main() -> Result<()> {
             .unwrap()
             .build()
             .context("failed to build executor env")?;
+        
         let exec = default_executor();
         exec.execute(env, ERC20_GUEST_ELF)
             .context("failed to run executor")?

@@ -14,3 +14,4 @@ risc0-zkvm = { workspace = true }
 tokio = { workspace = true }
 tracing-subscriber = { workspace = true }
 url = { workspace = true }
+hex = "0.4"
