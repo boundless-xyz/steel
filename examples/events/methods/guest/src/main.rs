@@ -15,11 +15,11 @@
 #![allow(unused_doc_comments)]
 #![no_main]
 
-use alloy_primitives::{address, Address, U256};
-use alloy_sol_types::{sol, SolValue};
+use alloy_primitives::{Address, U256, address};
+use alloy_sol_types::{SolValue, sol};
 use risc0_steel::{
-    ethereum::{EthEvmInput, ETH_SEPOLIA_CHAIN_SPEC},
     Commitment, Event,
+    ethereum::{ETH_SEPOLIA_CHAIN_SPEC, EthEvmInput},
 };
 use risc0_zkvm::guest::env;
 

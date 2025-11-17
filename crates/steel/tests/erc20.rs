@@ -15,10 +15,10 @@
 #![cfg(feature = "host")]
 
 use alloy::{
-    providers::{ext::AnvilApi, ProviderBuilder},
+    providers::{ProviderBuilder, ext::AnvilApi},
     uint,
 };
-use alloy_primitives::{address, Address};
+use alloy_primitives::{Address, address};
 use common::CallOptions;
 use test_log::test;
 

@@ -14,14 +14,14 @@
 
 //! Type aliases and specifications for Ethereum.
 use crate::{
+    CallError, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
     config::{ChainSpec, ForkCondition},
     serde::{Eip2718Wrapper, RlpHeader},
-    CallError, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
 };
 use alloy_consensus::{Eip658Value, TxReceipt};
-use alloy_eips::{eip4844, eip7691, Encodable2718, Typed2718};
+use alloy_eips::{Encodable2718, Typed2718, eip4844, eip7691};
 use alloy_evm::{Database, EthEvmFactory as AlloyEthEvmFactory, EvmFactory as AlloyEvmFactory};
-use alloy_primitives::{Address, BlockNumber, Bloom, Bytes, TxKind, B256, U256};
+use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, TxKind, U256};
 use delegate::delegate;
 use revm::{
     context::{BlockEnv, CfgEnv, TxEnv},

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{event, host::db::ProviderDb, mpt::EMPTY_ROOT_HASH, MerkleTrie, StateAccount};
+use crate::{MerkleTrie, StateAccount, event, host::db::ProviderDb, mpt::EMPTY_ROOT_HASH};
 use alloy::{
     consensus::BlockHeader,
     eips::eip2930::{AccessList, AccessListItem},
@@ -21,15 +21,15 @@ use alloy::{
     rpc::types::EIP1186AccountProofResponse,
 };
 use alloy_primitives::{
-    map::{hash_map, AddressHashMap, B256HashMap, B256HashSet, Entry, HashMap, HashSet},
-    Address, BlockNumber, Bytes, Log, StorageKey, StorageValue, B256, U256,
+    Address, B256, BlockNumber, Bytes, Log, StorageKey, StorageValue, U256,
+    map::{AddressHashMap, B256HashMap, B256HashSet, Entry, HashMap, HashSet, hash_map},
 };
 use alloy_rpc_types::Filter;
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use revm::{
+    Database as RevmDatabase,
     primitives::KECCAK_EMPTY,
     state::{AccountInfo, Bytecode},
-    Database as RevmDatabase,
 };
 use std::{
     fmt::{self, Debug},
@@ -429,7 +429,8 @@ where
     map.reserve(lower_bound);
 
     for (key, value2) in iter {
-        match map.entry(key) {
+        let entry = map.entry(key);
+        match entry {
             hash_map::Entry::Vacant(entry) => {
                 entry.insert(value2);
             }
@@ -512,9 +513,5 @@ fn add_proof(
 }
 
 fn default_if_zero(hash: B256, default: B256) -> B256 {
-    if hash.is_zero() {
-        default
-    } else {
-        hash
-    }
+    if hash.is_zero() { default } else { hash }
 }

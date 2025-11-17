@@ -14,15 +14,16 @@
 
 use crate::game::DisputeGameInput;
 use alloy_consensus::{Eip658Value, TxReceipt};
-use alloy_eips::{eip4844, eip7691, Encodable2718, Typed2718};
+use alloy_eips::{Encodable2718, Typed2718, eip4844, eip7691};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
 use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
-use alloy_primitives::{Address, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, B256, U256};
+use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, U256};
 use alloy_rlp::BufMut;
 use delegate::delegate;
 use op_alloy_network::{Network, Optimism};
-use op_revm::{spec::OpSpecId, OpTransaction};
+use op_revm::{OpTransaction, spec::OpSpecId};
 use risc0_steel::{
+    BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
     config::{ChainSpec, ForkCondition},
     revm::{
         context::{BlockEnv, CfgEnv, TxEnv},
@@ -31,7 +32,6 @@ use risc0_steel::{
         primitives::hardfork::SpecId,
     },
     serde::{Eip2718Wrapper, RlpHeader},
-    BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::Into, error::Error, sync::LazyLock};

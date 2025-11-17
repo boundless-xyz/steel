@@ -14,22 +14,22 @@
 
 use super::BlockId;
 use crate::{
+    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId,
     beacon::BeaconCommit,
     config::ChainSpec,
     ethereum::EthEvmFactory,
     history::{Eip2935HistoryCommit, HistoryCommit},
     host::{
-        db::{ProofDb, ProviderConfig, ProviderDb},
         BlockNumberOrTag, EthHostEvmEnv, HostCommit, HostEvmEnv,
+        db::{ProofDb, ProviderConfig, ProviderDb},
     },
-    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId,
 };
 use alloy::{
-    network::{primitives::HeaderResponse, BlockResponse, Ethereum, Network},
+    network::{BlockResponse, Ethereum, Network, primitives::HeaderResponse},
     providers::{Provider, ProviderBuilder, RootProvider},
 };
-use alloy_primitives::{BlockHash, BlockNumber, Sealable, Sealed, B256};
-use anyhow::{anyhow, ensure, Context, Result};
+use alloy_primitives::{B256, BlockHash, BlockNumber, Sealable, Sealed};
+use anyhow::{Context, Result, anyhow, ensure};
 use std::{fmt::Display, marker::PhantomData};
 use url::Url;
 
@@ -573,9 +573,9 @@ fn create_host_env<N: Network, P: Provider<N>, F: EvmFactory, C>(
 mod tests {
     use super::*;
     use crate::{
-        ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
-        test_utils::{get_cl_url, get_el_url},
         BlockHeaderCommit, Commitment, CommitmentVersion,
+        ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
+        test_utils::{get_cl_url, get_el_url},
     };
     use alloy_consensus::BlockHeader;
     use test_log::test;

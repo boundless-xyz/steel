@@ -14,11 +14,11 @@
 
 use alloy_sol_types::SolValue;
 use risc0_steel::{
-    ethereum::{EthEvmInput, ETH_MAINNET_CHAIN_SPEC},
     Contract, SteelVerifier,
+    ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmInput},
 };
 use risc0_zkvm::guest::env;
-use token_stats_core::{APRCommitment, CometMainInterface, CONTRACT};
+use token_stats_core::{APRCommitment, CONTRACT, CometMainInterface};
 
 const SECONDS_PER_YEAR: u64 = 60 * 60 * 24 * 365;
 

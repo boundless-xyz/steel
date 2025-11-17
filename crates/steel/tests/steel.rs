@@ -17,19 +17,19 @@
 use std::fmt::Debug;
 
 use alloy::{
-    providers::{ext::AnvilApi, Provider, ProviderBuilder},
+    providers::{Provider, ProviderBuilder, ext::AnvilApi},
     rpc::types::TransactionRequest,
     uint,
 };
-use alloy_primitives::{address, b256, bytes, hex, keccak256, Address, Bytes, U256};
+use alloy_primitives::{Address, Bytes, U256, address, b256, bytes, hex, keccak256};
 use alloy_sol_types::SolCall;
 use alloy_trie::EMPTY_ROOT_HASH;
 use common::CallOptions;
 use revm::context::result::HaltReason;
 use risc0_steel::{
+    Account, CallError,
     account::AccountInfo,
     ethereum::{EthCallError, EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
-    Account, CallError,
 };
 use sha2::{Digest, Sha256};
 use test_log::test;
@@ -418,7 +418,9 @@ async fn point_evaluation_precompile() {
     .unwrap();
     assert_eq!(
         result,
-        bytes!("000000000000000000000000000000000000000000000000000000000000100073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001")
+        bytes!(
+            "000000000000000000000000000000000000000000000000000000000000100073eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001"
+        )
     );
 }
 

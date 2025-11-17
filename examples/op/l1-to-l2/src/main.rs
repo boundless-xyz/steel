@@ -18,11 +18,12 @@ use clap::Parser;
 use l1_to_l2_core::{CALL, CALLER, CONTRACT, IERC20};
 use l1_to_l2_methods::{L1_TO_L2_GUEST_ELF, L1_TO_L2_GUEST_ID};
 use risc0_op_steel::{
-    ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
+    Contract,
+    ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
     host::BlockNumberOrTag,
-    l1, Contract,
+    l1,
 };
-use risc0_zkvm::{default_prover, Digest, ExecutorEnv, ProverOpts, VerifierContext};
+use risc0_zkvm::{Digest, ExecutorEnv, ProverOpts, VerifierContext, default_prover};
 use tokio::task;
 use tracing_subscriber::EnvFilter;
 use url::Url;
