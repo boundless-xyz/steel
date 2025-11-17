@@ -19,7 +19,7 @@
 use alloy_primitives::B256;
 use ssz::prelude::*;
 
-pub use ethereum_consensus::{altair, bellatrix, capella, deneb, phase0, ssz, Fork};
+pub use ethereum_consensus::{Fork, altair, bellatrix, capella, deneb, phase0, ssz};
 
 pub mod electra {
     use ethereum_consensus::{
@@ -404,28 +404,28 @@ pub enum SignedBeaconBlock<
 }
 
 impl<
-        const MAX_PROPOSER_SLASHINGS: usize,
-        const MAX_VALIDATORS_PER_COMMITTEE: usize,
-        const MAX_ATTESTER_SLASHINGS: usize,
-        const MAX_ATTESTATIONS: usize,
-        const MAX_DEPOSITS: usize,
-        const MAX_VOLUNTARY_EXITS: usize,
-        const SYNC_COMMITTEE_SIZE: usize,
-        const BYTES_PER_LOGS_BLOOM: usize,
-        const MAX_EXTRA_DATA_BYTES: usize,
-        const MAX_BYTES_PER_TRANSACTION: usize,
-        const MAX_TRANSACTIONS_PER_PAYLOAD: usize,
-        const MAX_WITHDRAWALS_PER_PAYLOAD: usize,
-        const MAX_BLS_TO_EXECUTION_CHANGES: usize,
-        const MAX_BLOB_COMMITMENTS_PER_BLOCK: usize,
-        const MAX_VALIDATORS_PER_SLOT: usize,
-        const MAX_COMMITTEES_PER_SLOT: usize,
-        const MAX_ATTESTER_SLASHINGS_ELECTRA: usize,
-        const MAX_ATTESTATIONS_ELECTRA: usize,
-        const MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: usize,
-        const MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: usize,
-        const MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: usize,
-    >
+    const MAX_PROPOSER_SLASHINGS: usize,
+    const MAX_VALIDATORS_PER_COMMITTEE: usize,
+    const MAX_ATTESTER_SLASHINGS: usize,
+    const MAX_ATTESTATIONS: usize,
+    const MAX_DEPOSITS: usize,
+    const MAX_VOLUNTARY_EXITS: usize,
+    const SYNC_COMMITTEE_SIZE: usize,
+    const BYTES_PER_LOGS_BLOOM: usize,
+    const MAX_EXTRA_DATA_BYTES: usize,
+    const MAX_BYTES_PER_TRANSACTION: usize,
+    const MAX_TRANSACTIONS_PER_PAYLOAD: usize,
+    const MAX_WITHDRAWALS_PER_PAYLOAD: usize,
+    const MAX_BLS_TO_EXECUTION_CHANGES: usize,
+    const MAX_BLOB_COMMITMENTS_PER_BLOCK: usize,
+    const MAX_VALIDATORS_PER_SLOT: usize,
+    const MAX_COMMITTEES_PER_SLOT: usize,
+    const MAX_ATTESTER_SLASHINGS_ELECTRA: usize,
+    const MAX_ATTESTATIONS_ELECTRA: usize,
+    const MAX_DEPOSIT_REQUESTS_PER_PAYLOAD: usize,
+    const MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD: usize,
+    const MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD: usize,
+>
     SignedBeaconBlock<
         MAX_PROPOSER_SLASHINGS,
         MAX_VALIDATORS_PER_COMMITTEE,

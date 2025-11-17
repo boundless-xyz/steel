@@ -14,10 +14,10 @@
 
 //! Handling different blockchain specifications.
 use crate::EvmSpecId;
-use alloy_primitives::{BlockNumber, BlockTimestamp, ChainId, B256};
+use alloy_primitives::{B256, BlockNumber, BlockTimestamp, ChainId};
 use anyhow::bail;
 use serde::{Deserialize, Serialize};
-use sha2::{digest::Output, Digest, Sha256};
+use sha2::{Digest, Sha256, digest::Output};
 use std::collections::BTreeMap;
 
 /// The condition at which a fork is activated.

@@ -14,13 +14,13 @@
 
 //! Types related to commitments to a historical state relying on EIP-2935.
 
-use alloy_primitives::{Sealed, B256, U256};
+use alloy_primitives::{B256, Sealed, U256};
 use history_storage::HistoryStorageContract;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::ChainSpec, history::state::SingleContractState, BlockHeaderCommit, BlockInput,
-    Commitment, CommitmentVersion, EvmBlockHeader, EvmFactory, EvmSpecId, GuestEvmEnv,
+    BlockHeaderCommit, BlockInput, Commitment, CommitmentVersion, EvmBlockHeader, EvmFactory,
+    EvmSpecId, GuestEvmEnv, config::ChainSpec, history::state::SingleContractState,
 };
 
 mod history_storage;
@@ -130,7 +130,7 @@ mod host {
         providers::Provider,
     };
     use alloy_primitives::BlockNumber;
-    use anyhow::{anyhow, ensure, Context};
+    use anyhow::{Context, anyhow, ensure};
     use std::{fmt::Display, iter};
 
     impl<H: EvmBlockHeader> HistoryCommit<H> {

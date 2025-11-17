@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use crate::optimism::{OpBlockHeader, OpEvmFactory};
-use alloy_primitives::{keccak256, Sealed, B256};
+use alloy_primitives::{B256, Sealed, keccak256};
 use alloy_sol_types::SolValue;
 use risc0_steel::{BlockHeaderCommit, Commitment, ComposeInput};
 use serde::{Deserialize, Serialize};
@@ -73,16 +73,16 @@ impl BlockHeaderCommit<OpBlockHeader> for DisputeGameCommit {
 #[cfg(feature = "host")]
 pub mod host {
     use super::*;
+    use IDisputeGameFactory::IDisputeGameFactoryInstance;
+    use IOptimismPortal2::IOptimismPortal2Instance;
     use alloy::{
         network::Ethereum,
         providers::Provider,
         rpc::types::state::{AccountOverride, StateOverride},
     };
-    use alloy_primitives::{address, uint, Address, BlockNumber, B256, U256};
-    use anyhow::{bail, ensure, Context};
+    use alloy_primitives::{Address, B256, BlockNumber, U256, address, uint};
+    use anyhow::{Context, bail, ensure};
     use op_alloy_network::Optimism;
-    use IDisputeGameFactory::IDisputeGameFactoryInstance;
-    use IOptimismPortal2::IOptimismPortal2Instance;
 
     /// Address of the L2ToL1MessagePasser contract.
     const MESSAGE_PASSER_ADDRESS: Address = address!("4200000000000000000000000000000000000016");

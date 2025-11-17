@@ -19,8 +19,8 @@ use alloy_primitives::{Address, U256};
 use alloy_sol_types::SolCall;
 use revm::context::TxEnv;
 use risc0_steel::{
-    ethereum::{EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
     CallBuilder, Contract,
+    ethereum::{EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
 };
 
 /// Executes a new [SolCall] using steel.

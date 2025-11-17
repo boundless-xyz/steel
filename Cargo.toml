@@ -3,10 +3,21 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0"
 homepage = "https://beboundless.xyz/"
 repository = "https://github.com/boundless-xyz/steel/"
+
+[workspace.lints.rust]
+# Deny Lints (Will cause the build to fail)
+rust-2018-idioms = "deny"
+unused-must-use = "deny"
+unsafe-code = "deny"
+# Warn Lints (Will only print warnings)
+missing-debug-implementations = "warn"
+missing-docs = "warn"
+unreachable-pub = "warn"
+unnameable-types = "warn"
 
 [workspace.dependencies]
 # Intra-workspace dependencies

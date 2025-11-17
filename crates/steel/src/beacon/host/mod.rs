@@ -13,15 +13,15 @@
 // limitations under the License.
 
 use super::*;
-use crate::{ethereum::EthBlockHeader, EvmBlockHeader};
+use crate::{EvmBlockHeader, ethereum::EthBlockHeader};
 use alloy::{network::Ethereum, providers::Provider};
 use alloy_primitives::B256;
-use anyhow::{bail, ensure, Context};
+use anyhow::{Context, bail, ensure};
 use client::BeaconClient;
 use consensus::{
+    Fork,
     mainnet::SignedBeaconBlock,
     ssz::prelude::{proofs::Proof, *},
-    Fork,
 };
 use proofs::ProofAndWitness;
 use url::Url;

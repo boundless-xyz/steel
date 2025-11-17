@@ -14,7 +14,7 @@
 
 use super::state::Error;
 use crate::history::SingleContractState;
-use alloy_primitives::{address, b256, uint, Address, B256, U256};
+use alloy_primitives::{Address, B256, U256, address, b256, uint};
 use revm::Database;
 
 /// Address where the EIP-4788 beacon roots contract is deployed.
@@ -42,7 +42,7 @@ mod host {
     use super::*;
     use crate::{history::SingleContractState, host::db::ProviderDb};
     use alloy::providers::{Network, Provider};
-    use anyhow::{anyhow, ensure, Context};
+    use anyhow::{Context, anyhow, ensure};
 
     impl<N, P> BeaconRootsContract<ProviderDb<N, P>>
     where
@@ -91,7 +91,8 @@ mod host {
                 .context("invalid eth_getProof response")?;
 
             // validate the returned state and compute the return value
-            match BeaconRootsContract::new(&mut state)?.get(timestamp) {
+            let result = BeaconRootsContract::new(&mut state)?.get(timestamp);
+            match result {
                 Ok(returns) => Ok((returns, state)),
                 Err(err) => match err {
                     Error::Reverted(_) => Err(anyhow!("BeaconRoots({timestamp}) reverted")),

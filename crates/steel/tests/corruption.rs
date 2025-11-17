@@ -18,20 +18,20 @@
 use std::{fs::File, io::BufReader, path::Path};
 
 use alloy::{
-    providers::{ext::AnvilApi, Provider, ProviderBuilder},
+    providers::{Provider, ProviderBuilder, ext::AnvilApi},
     transports::BoxFuture,
 };
-use alloy_primitives::{address, Address, Bytes, B256, U256};
+use alloy_primitives::{Address, B256, Bytes, U256, address};
 use anyhow::Context;
 use risc0_steel::{
+    Commitment, Contract, EvmFactory, StateAccount,
     ethereum::{
-        EthBlockHeader, EthEvmEnv, EthEvmFactory, EthEvmInput, ETH_SEPOLIA_CHAIN_SPEC,
+        ETH_SEPOLIA_CHAIN_SPEC, EthBlockHeader, EthEvmEnv, EthEvmFactory, EthEvmInput,
         STEEL_TEST_PRAGUE_CHAIN_SPEC,
     },
     host::BlockNumberOrTag,
-    Commitment, Contract, EvmFactory, StateAccount,
 };
-use serde_json::{from_value, to_value, Value};
+use serde_json::{Value, from_value, to_value};
 use test_log::test;
 
 #[allow(dead_code)]

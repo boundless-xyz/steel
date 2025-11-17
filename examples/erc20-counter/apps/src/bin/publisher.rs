@@ -17,7 +17,7 @@
 // to your deployed app contract.
 
 use alloy_primitives::{Address, U256};
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result, ensure};
 use clap::Parser;
 use erc20_counter_methods::{BALANCE_OF_ELF, BALANCE_OF_ID};
 use risc0_ethereum_contracts::encode_seal;
@@ -29,11 +29,11 @@ use risc0_steel::alloy::{
     sol_types::{SolCall, SolValue},
 };
 use risc0_steel::{
+    Commitment, Contract,
     ethereum::{EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
     host::BlockNumberOrTag,
-    Commitment, Contract,
 };
-use risc0_zkvm::{default_prover, Digest, ExecutorEnv, ProverOpts, VerifierContext};
+use risc0_zkvm::{Digest, ExecutorEnv, ProverOpts, VerifierContext, default_prover};
 use tokio::task;
 use tracing_subscriber::EnvFilter;
 use url::Url;

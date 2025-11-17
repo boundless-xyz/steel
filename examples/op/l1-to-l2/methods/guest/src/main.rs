@@ -17,8 +17,8 @@
 
 use l1_to_l2_core::{CALL, CALLER, CONTRACT};
 use risc0_steel::{
-    ethereum::{EthEvmInput, ETH_MAINNET_CHAIN_SPEC},
     Contract,
+    ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmInput},
 };
 use risc0_zkvm::guest::env;
 
