@@ -18,7 +18,7 @@ use super::consensus::{mainnet::SignedBeaconBlock, phase0::SignedBeaconBlockHead
 use alloy::transports::http::reqwest;
 use alloy_primitives::B256;
 use ethereum_consensus::Fork;
-use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::DeserializeOwned};
 use std::{collections::HashMap, fmt::Display, result::Result as StdResult};
 use url::Url;
 

@@ -13,10 +13,10 @@
 // limitations under the License.
 
 use crate::{
-    precompiles::{BeaconRootsContract, HistoryStorageContract},
     Commitment, CommitmentVersion, EvmBlockHeader, EvmFactory, EvmSpecId, GuestEvmEnv,
+    precompiles::{BeaconRootsContract, HistoryStorageContract},
 };
-use alloy_primitives::{BlockNumber, B256, U256};
+use alloy_primitives::{B256, BlockNumber, U256};
 use anyhow::{bail, ensure};
 
 /// Number of block hashes the verifier can access via the BLOCKHASH opcode.
@@ -124,7 +124,7 @@ impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
 #[cfg(feature = "host")]
 mod host {
     use super::*;
-    use crate::host::{db::ProviderDb, HostEvmEnv};
+    use crate::host::{HostEvmEnv, db::ProviderDb};
     use alloy::providers::{Network, Provider};
     use anyhow::Context;
     use revm::Database;
@@ -228,15 +228,15 @@ fn validate_history_window(
 mod tests {
     use super::*;
     use crate::{
-        config::ChainSpec,
-        ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
-        test_utils::get_el_url,
         CommitmentVersion,
+        config::ChainSpec,
+        ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
+        test_utils::get_el_url,
     };
     use alloy::{
         consensus::BlockHeader,
-        network::{primitives::HeaderResponse, BlockResponse},
-        providers::{ext::AnvilApi, Provider, ProviderBuilder},
+        network::{BlockResponse, primitives::HeaderResponse},
+        providers::{Provider, ProviderBuilder, ext::AnvilApi},
         rpc::types::BlockNumberOrTag as AlloyBlockNumberOrTag,
     };
     use revm::primitives::hardfork::SpecId;

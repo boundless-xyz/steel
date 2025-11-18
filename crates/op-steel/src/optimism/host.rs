@@ -13,9 +13,9 @@
 // limitations under the License.
 
 use crate::{
+    DisputeGameCommit,
     game::host::{DisputeGameIndex, OptimismPortal2},
     optimism::{OpBlockHeader, OpChainSpec, OpEvmFactory, OpEvmInput},
-    DisputeGameCommit,
 };
 use alloy::{
     network::Ethereum,
@@ -25,11 +25,11 @@ use alloy_primitives::{Address, Sealable};
 use anyhow::{Context, Result};
 use op_alloy_network::Optimism;
 use risc0_steel::{
-    host::{
-        db::{ProofDb, ProviderDb},
-        BlockNumberOrTag, EvmEnvBuilder, HostCommit,
-    },
     BlockHeaderCommit, Commitment, ComposeInput, EvmEnv, EvmInput,
+    host::{
+        BlockNumberOrTag, EvmEnvBuilder, HostCommit,
+        db::{ProofDb, ProviderDb},
+    },
 };
 use std::{
     marker::PhantomData,
@@ -343,7 +343,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{optimism::OP_MAINNET_CHAIN_SPEC, OutputRootProof};
+    use crate::{OutputRootProof, optimism::OP_MAINNET_CHAIN_SPEC};
     use alloy_primitives::address;
     use risc0_steel::Account;
     use test_log::test;

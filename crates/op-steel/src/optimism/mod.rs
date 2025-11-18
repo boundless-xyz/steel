@@ -14,15 +14,16 @@
 
 use crate::game::DisputeGameInput;
 use alloy_consensus::{Eip658Value, TxReceipt};
-use alloy_eips::{eip4844, eip7691, Encodable2718, Typed2718};
+use alloy_eips::{Encodable2718, Typed2718, eip4844, eip7691};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
 use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
-use alloy_primitives::{Address, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, B256, U256};
+use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, U256};
 use alloy_rlp::BufMut;
 use delegate::delegate;
 use op_alloy_network::{Network, Optimism};
-use op_revm::{spec::OpSpecId, OpTransaction};
+use op_revm::{OpTransaction, spec::OpSpecId};
 use risc0_steel::{
+    BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
     config::{ChainSpec, ForkCondition},
     revm::{
         context::{BlockEnv, CfgEnv, TxEnv},
@@ -31,7 +32,6 @@ use risc0_steel::{
         primitives::hardfork::SpecId,
     },
     serde::{Eip2718Wrapper, RlpHeader},
-    BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::Into, error::Error, sync::LazyLock};
@@ -47,14 +47,15 @@ pub static OP_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Chain
     chain_id: 10,
     forks: BTreeMap::from(
         [
-            (OpSpecId::BEDROCK, ForkCondition::Block(105235063)),
+            (OpSpecId::BEDROCK, ForkCondition::Block(105_235_063)),
             (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-            (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
-            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
-            (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
-            (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
-            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
-            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1_704_992_401)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_710_374_401)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1_720_627_201)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1_726_070_401)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
+            (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
         ]
         .map(|(id, cond)| (id.into(), cond)),
     ),
@@ -67,12 +68,13 @@ pub static OP_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Chain
         [
             (OpSpecId::BEDROCK, ForkCondition::Block(0)),
             (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-            (OpSpecId::CANYON, ForkCondition::Timestamp(1699981200)),
-            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1708534800)),
-            (OpSpecId::FJORD, ForkCondition::Timestamp(1716998400)),
-            (OpSpecId::GRANITE, ForkCondition::Timestamp(1723478400)),
-            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1732633200)),
-            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1744905600)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1_699_981_200)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_708_534_800)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1_716_998_400)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1_723_478_400)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
+            (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
         ]
         .map(|(id, cond)| (id.into(), cond)),
     ),
@@ -85,12 +87,13 @@ pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Cha
         [
             (OpSpecId::BEDROCK, ForkCondition::Block(0)),
             (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-            (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
-            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
-            (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
-            (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
-            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
-            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1_704_992_401)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_710_374_401)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1_720_627_201)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1_726_070_401)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
+            (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
         ]
         .map(|(id, cond)| (id.into(), cond)),
     ),
@@ -350,11 +353,43 @@ mod tests {
     use super::*;
     use alloy_primitives::b256;
 
-    #[test]
-    fn mainnet_spec_digest() {
-        assert_eq!(
-            OP_MAINNET_CHAIN_SPEC.digest(),
-            b256!("0x3756bc5a81c05862bc364ef40e6c6667c3400136a38af589be15d1a6cceed686")
-        );
+    mod op {
+        use super::*;
+
+        #[test]
+        fn mainnet_spec_digest() {
+            assert_eq!(
+                OP_MAINNET_CHAIN_SPEC.digest(),
+                b256!("0x6fa1d26e6f4adab901261db61a3b411ad7aebebc7027639d55a3b72cacc4a867")
+            );
+        }
+
+        #[test]
+        fn sepolia_spec_digest() {
+            assert_eq!(
+                OP_SEPOLIA_CHAIN_SPEC.digest(),
+                b256!("0xb5a59c839834a212b03577274ce72572a97933fada4bf63b820173b87dc935c1")
+            );
+        }
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn mainnet_spec_digest() {
+            assert_eq!(
+                BASE_MAINNET_CHAIN_SPEC.digest(),
+                b256!("0xde0027ffd04b70b50fb52de9d6738b0dc66c1d84654ca3889b57f790979f6905")
+            );
+        }
+
+        #[test]
+        fn sepolia_spec_digest() {
+            assert_eq!(
+                BASE_SEPOLIA_CHAIN_SPEC.digest(),
+                b256!("0xa2e376e0229be98aed684c4c52cb9f119f1757ac9d9e5b172a713908f8a3a739")
+            );
+        }
     }
 }

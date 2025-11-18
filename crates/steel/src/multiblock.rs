@@ -14,8 +14,8 @@
 
 //! Types related to queries and environments over multiple blocks of the same chain.
 use crate::{
-    config::ChainSpec, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, GuestEvmEnv,
-    StateDb, SteelVerifier,
+    Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, GuestEvmEnv, StateDb, SteelVerifier,
+    config::ChainSpec,
 };
 use alloy_primitives::BlockNumber;
 use delegate::delegate;
@@ -140,14 +140,15 @@ impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
 pub(crate) mod host {
     use super::*;
     use crate::{
+        EvmSpecId,
         host::{
-            db::{ProofDb, ProviderDb},
             EvmEnvBuilder, HostCommit, HostEvmEnv, InputBuilder,
+            db::{ProofDb, ProviderDb},
         },
-        verifier, EvmSpecId,
+        verifier,
     };
     use alloy::providers::{Network, Provider};
-    use anyhow::{bail, ensure, Context};
+    use anyhow::{Context, bail, ensure};
     use delegate::delegate;
     use std::{collections::btree_map::Entry, fmt::Display};
 
@@ -294,10 +295,10 @@ pub(crate) mod host {
 mod tests {
     use super::*;
     use crate::{
-        ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
+        Account, CommitmentVersion,
+        ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
         host::HostMultiblockEvmEnv,
         test_utils::{get_cl_url, get_el_url},
-        Account, CommitmentVersion,
     };
     use alloy::{
         network::TransactionBuilder,
@@ -305,7 +306,7 @@ mod tests {
         providers::{Provider, ProviderBuilder},
     };
     use alloy_consensus::BlockHeader;
-    use alloy_primitives::{address, Address, U256};
+    use alloy_primitives::{Address, U256, address};
     use alloy_rpc_types::{BlockId, TransactionRequest};
     use revm::primitives::hardfork::SpecId;
     use test_log::test;

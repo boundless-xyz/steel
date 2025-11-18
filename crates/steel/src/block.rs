@@ -13,12 +13,12 @@
 // limitations under the License.
 
 use crate::{
-    config::ChainSpec, state::StateDb, BlockHeaderCommit, Commitment, CommitmentVersion,
-    EvmBlockHeader, EvmEnv, EvmFactory, GuestEvmEnv, MerkleTrie,
+    BlockHeaderCommit, Commitment, CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory,
+    GuestEvmEnv, MerkleTrie, config::ChainSpec, state::StateDb,
 };
 use ::serde::{Deserialize, Serialize};
 use alloy_consensus::TxReceipt;
-use alloy_primitives::{map::HashMap, Bytes, Sealable, Sealed, B256};
+use alloy_primitives::{B256, Bytes, Sealable, Sealed, map::HashMap};
 
 /// Input committing to the corresponding execution block hash.
 #[derive(Clone, Serialize, Deserialize)]
@@ -111,8 +111,8 @@ impl<F: EvmFactory> BlockInput<F> {
 pub mod host {
     use super::BlockInput;
     use crate::{
-        host::db::{ProofDb, ProviderDb},
         EvmBlockHeader, EvmFactory,
+        host::db::{ProofDb, ProviderDb},
     };
     use alloy::{network::Network, providers::Provider};
     use alloy_primitives::Sealed;

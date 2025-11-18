@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloy_primitives::{address, Address};
-use alloy_sol_types::{sol, SolCall, SolType};
+use alloy_primitives::{Address, address};
+use alloy_sol_types::{SolCall, SolType, sol};
 use anyhow::{Context, Result};
 use clap::Parser;
 use erc20_methods::ERC20_GUEST_ELF;
 use risc0_steel::{
-    ethereum::{EthEvmEnv, ETH_SEPOLIA_CHAIN_SPEC},
     Commitment, Contract,
+    ethereum::{ETH_SEPOLIA_CHAIN_SPEC, EthEvmEnv},
 };
-use risc0_zkvm::{default_executor, ExecutorEnv};
+use risc0_zkvm::{ExecutorEnv, default_executor};
 use tracing_subscriber::EnvFilter;
 use url::Url;
 

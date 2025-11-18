@@ -15,7 +15,7 @@
 //! Types related to event queries.
 pub use alloy_rpc_types::{Topic, ValueOrArray};
 
-use crate::{state::WrapStateDb, EvmBlockHeader, EvmDatabase, EvmFactory, GuestEvmEnv};
+use crate::{EvmBlockHeader, EvmDatabase, EvmFactory, GuestEvmEnv, state::WrapStateDb};
 use alloy_primitives::{Address, Bloom, Log, Sealed};
 use alloy_rpc_types::{Filter, FilteredParams};
 use alloy_sol_types::SolEvent;

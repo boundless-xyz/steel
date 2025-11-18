@@ -75,8 +75,8 @@ impl<'a, F: EvmFactory> HistoryStorageContract<&'a GuestEvmEnv<F>> {
 mod host {
     use super::*;
     use crate::{
-        host::{db::ProviderDb, HostEvmEnv},
         Contract,
+        host::{HostEvmEnv, db::ProviderDb},
     };
     use alloy::{network::Network, providers::Provider};
     use alloy_sol_types::SolValue;

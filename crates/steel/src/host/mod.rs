@@ -15,25 +15,25 @@
 //! Functionality that is only needed for the host and not the guest.
 
 use crate::{
+    BlockHeaderCommit, Commitment, ComposeInput, Eip2935HistoryInput, EvmBlockHeader, EvmEnv,
+    EvmFactory, EvmInput,
     beacon::BeaconCommit,
     block::BlockInput,
     config::ChainSpec,
     ethereum::{EthEvmEnv, EthEvmInput},
     history::{Eip2935HistoryCommit, HistoryCommit},
-    BlockHeaderCommit, Commitment, ComposeInput, Eip2935HistoryInput, EvmBlockHeader, EvmEnv,
-    EvmFactory, EvmInput,
 };
 use alloy::{
     eips::{
-        eip1898::{HexStringMissingPrefixError, ParseBlockNumberError},
         BlockId as AlloyBlockId,
+        eip1898::{HexStringMissingPrefixError, ParseBlockNumberError},
     },
     network::{Ethereum, Network},
     providers::Provider,
     rpc::types::BlockNumberOrTag as AlloyBlockNumberOrTag,
 };
-use alloy_primitives::{BlockHash, BlockNumber, B256};
-use anyhow::{ensure, Result};
+use alloy_primitives::{B256, BlockHash, BlockNumber};
+use anyhow::{Result, ensure};
 use db::{ProofDb, ProviderDb};
 use std::{
     fmt::{self, Debug, Display},

@@ -17,8 +17,8 @@
 
 use l2_to_l1_core::{CALL, CALLER, CONTRACT};
 use risc0_op_steel::{
-    optimism::{OpEvmInput, OP_MAINNET_CHAIN_SPEC},
     Contract,
+    optimism::{OP_MAINNET_CHAIN_SPEC, OpEvmInput},
 };
 use risc0_zkvm::guest::env;
 

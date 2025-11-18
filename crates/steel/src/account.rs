@@ -14,7 +14,7 @@
 
 //! Types related to account queries.
 use crate::{EvmFactory, GuestEvmEnv, StateAccount};
-use alloy_primitives::{Address, Bytes, B256, U256};
+use alloy_primitives::{Address, B256, Bytes, U256};
 use anyhow::Result;
 
 /// Information about an Ethereum account.
@@ -144,9 +144,9 @@ impl<'a, F: EvmFactory> Account<&'a GuestEvmEnv<F>> {
 #[cfg(feature = "host")]
 mod host {
     use super::*;
-    use crate::host::{db::ProviderDb, HostEvmEnv};
+    use crate::host::{HostEvmEnv, db::ProviderDb};
     use alloy::{network::Network, providers::Provider};
-    use anyhow::{ensure, Context};
+    use anyhow::{Context, ensure};
     use revm::Database as RevmDatabase;
 
     impl<'a, N, P, F, C> Account<&'a mut HostEvmEnv<ProviderDb<N, P>, F, C>>

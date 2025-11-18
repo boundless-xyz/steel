@@ -27,14 +27,14 @@ use alloy_consensus::TxReceipt;
 use alloy_eips::Encodable2718;
 use alloy_evm::{Database, Evm, EvmError, IntoTxEnv};
 use alloy_primitives::{
-    uint, Address, BlockNumber, Bloom, Bytes, ChainId, Log, Sealable, Sealed, B256, U256,
+    Address, B256, BlockNumber, Bloom, Bytes, ChainId, Log, Sealable, Sealed, U256, uint,
 };
 use alloy_rpc_types::Filter;
 use alloy_sol_types::SolValue;
 use config::ChainSpec;
 use revm::{
-    context::{result::HaltReasonTr, BlockEnv},
     Database as RevmDatabase,
+    context::{BlockEnv, result::HaltReasonTr},
 };
 use std::{
     error::Error,
@@ -72,7 +72,7 @@ pub use history::{Eip2935HistoryInput, HistoryInput};
 pub use mpt::MerkleTrie;
 pub use multiblock::{MultiblockEvmEnv, MultiblockEvmInput};
 pub use state::{StateAccount, StateDb};
-pub use verifier::{SteelVerifier, EIP2935_HISTORY_LIMIT, HISTORY_LIMIT};
+pub use verifier::{EIP2935_HISTORY_LIMIT, HISTORY_LIMIT, SteelVerifier};
 
 /// The serializable input to derive and validate an [EvmEnv] from.
 #[non_exhaustive]
@@ -158,12 +158,12 @@ pub(crate) type GuestEvmEnv<F> = EvmEnv<StateDb, F, Commitment>;
 pub trait EvmFactory {
     /// The concrete EVM execution environment type created by this factory.
     type Evm<DB: Database>: Evm<
-        DB = DB,
-        Tx = Self::Tx,
-        HaltReason = Self::HaltReason,
-        Error = Self::Error<DB::Error>,
-        Spec = Self::Spec,
-    >;
+            DB = DB,
+            Tx = Self::Tx,
+            HaltReason = Self::HaltReason,
+            Error = Self::Error<DB::Error>,
+            Spec = Self::Spec,
+        >;
     /// The transaction environment type compatible with `Self::Evm`.
     type Tx: IntoTxEnv<Self::Tx> + Send + Sync + 'static;
     /// The error type returned by `Self::Evm` during execution.

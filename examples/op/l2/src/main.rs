@@ -18,10 +18,10 @@ use clap::Parser;
 use l2_core::{CALL, CALLER, CONTRACT, IERC20};
 use l2_methods::{L2_GUEST_ELF, L2_GUEST_ID};
 use risc0_op_steel::{
-    optimism::{OpEvmEnv, OP_MAINNET_CHAIN_SPEC},
     Contract,
+    optimism::{OP_MAINNET_CHAIN_SPEC, OpEvmEnv},
 };
-use risc0_zkvm::{default_prover, Digest, ExecutorEnv, ProverOpts, VerifierContext};
+use risc0_zkvm::{Digest, ExecutorEnv, ProverOpts, VerifierContext, default_prover};
 use tokio::task;
 use tracing_subscriber::EnvFilter;
 use url::Url;

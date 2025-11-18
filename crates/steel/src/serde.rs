@@ -14,12 +14,12 @@
 
 //! Serde related helpers.
 use alloy_eips::{
-    eip2718::{Eip2718Envelope, Encodable2718},
     Typed2718,
+    eip2718::{Eip2718Envelope, Encodable2718},
 };
-use alloy_primitives::{bytes::BufMut, hex, keccak256, Sealable, Sealed, B256};
+use alloy_primitives::{B256, Sealable, Sealed, bytes::BufMut, hex, keccak256};
 use alloy_rlp::{Decodable, Encodable};
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
 use std::{
     fmt::{self, Debug},
     ops,

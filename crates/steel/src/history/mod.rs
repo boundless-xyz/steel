@@ -14,14 +14,14 @@
 
 //! Types related to commitments to a historical state relying on EIP-4788.
 
-use alloy_primitives::{Sealed, B256, U256};
+use alloy_primitives::{B256, Sealed, U256};
 use beacon::{BeaconCommit, GeneralizedBeaconCommit, STATE_ROOT_LEAF_INDEX};
 use beacon_roots::BeaconRootsContract;
 use serde::{Deserialize, Serialize};
 use state::{Error, SingleContractState};
 
 use crate::{
-    beacon, beacon::BeaconBlockId, BlockHeaderCommit, Commitment, CommitmentVersion, ComposeInput,
+    BlockHeaderCommit, Commitment, CommitmentVersion, ComposeInput, beacon, beacon::BeaconBlockId,
 };
 
 mod beacon_roots;
@@ -99,16 +99,16 @@ impl<H> BlockHeaderCommit<H> for HistoryCommit {
 mod host {
     use super::*;
     use crate::{
+        EvmBlockHeader,
         beacon::{
-            host::{client::BeaconClient, create_beacon_commit},
             BeaconBlockId,
+            host::{client::BeaconClient, create_beacon_commit},
         },
         ethereum::EthBlockHeader,
         host::db::ProviderDb,
-        EvmBlockHeader,
     };
     use alloy::{network::Ethereum, providers::Provider};
-    use anyhow::{ensure, Context};
+    use anyhow::{Context, ensure};
     use url::Url;
 
     impl HistoryCommit {
@@ -250,9 +250,9 @@ mod host {
 mod tests {
     use super::*;
     use crate::{
+        EvmBlockHeader,
         ethereum::EthBlockHeader,
         test_utils::{get_cl_url, get_el_url},
-        EvmBlockHeader,
     };
     use alloy::providers::{Provider, ProviderBuilder};
     use alloy_consensus::BlockHeader;

@@ -3,10 +3,21 @@ resolver = "2"
 members = ["crates/*"]
 
 [workspace.package]
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0"
 homepage = "https://beboundless.xyz/"
 repository = "https://github.com/boundless-xyz/steel/"
+
+[workspace.lints.rust]
+# Deny Lints (Will cause the build to fail)
+rust-2018-idioms = "deny"
+unused-must-use = "deny"
+unsafe-code = "deny"
+# Warn Lints (Will only print warnings)
+missing-debug-implementations = "warn"
+missing-docs = "warn"
+unreachable-pub = "warn"
+unnameable-types = "warn"
 
 [workspace.dependencies]
 # Intra-workspace dependencies
@@ -16,16 +27,16 @@ risc0-steel = { path = "crates/steel", default-features = false }
 # Alloy guest dependencies
 alloy-consensus = { version = "1.0" }
 alloy-eips = { version = "1.0" }
-alloy-evm = { version = "0.21" }
+alloy-evm = { version = "0.24" }
 alloy-rlp = { version = "0.3.8" }
 alloy-primitives = { version = "1.3" }
 alloy-rpc-types = { version = "1.0" }
 alloy-sol-types = { version = "1.3" }
 
 # OP Steel
-alloy-op-evm = { version = "0.21" }
-op-alloy-network = { version = "0.20" }
-op-alloy-rpc-types = { version = "0.20" }
+alloy-op-evm = { version = "0.24" }
+op-alloy-network = { version = "0.22" }
+op-alloy-rpc-types = { version = "0.22" }
 
 # Alloy host dependencies
 alloy = { version = "1.0", default-features = false }
@@ -39,8 +50,8 @@ bincode = { version = "1.3" }
 delegate = "0.13"
 enumn = "0.1"
 log = "0.4"
-revm = { version = "29.0", default-features = false, features = ["std"] }
-op-revm = { version = "10.0", default-features = false, features = ["std"] }
+revm = { version = "33.0.0", default-features = false, features = ["std"] }
+op-revm = { version = "14.0.0", default-features = false, features = ["std"] }
 serde = "1.0"
 serde_json = "1.0"
 sha2 = { version = "0.10" }
