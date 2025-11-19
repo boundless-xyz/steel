@@ -16,7 +16,7 @@ use alloy_sol_types::{SolCall, SolValue};
 use anyhow::{Context, Result};
 use clap::Parser;
 use risc0_steel::{
-    Contract, SteelVerifier,
+    Contract,
     alloy::providers::{Provider, ProviderBuilder},
     ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
     host::HostMultiblockEvmEnv,

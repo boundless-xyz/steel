@@ -14,7 +14,7 @@
 
 use alloy_sol_types::SolValue;
 use risc0_steel::{
-    Contract, SteelVerifier,
+    Contract,
     ethereum::{ETH_MAINNET_CHAIN_SPEC, EthMultiblockEvmInput},
 };
 use risc0_zkvm::guest::env;
