@@ -665,9 +665,10 @@ mod tests {
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
         // the builder should be cloneable
         let env = builder.clone().build().await.unwrap();
+        let commitment = env.commit.inner.commit(&env.header, env.commit.config_id);
 
         assert_eq!(
-            env.commit.inner.commit(&env.header, env.commit.config_id),
+            commitment,
             Commitment::new(
                 CommitmentVersion::Block as u16,
                 env.header.number(),
