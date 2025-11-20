@@ -109,7 +109,6 @@ mod host {
     };
     use alloy::{network::Ethereum, providers::Provider};
     use anyhow::{Context, ensure};
-    use url::Url;
 
     impl HistoryCommit {
         /// Creates a `HistoryCommit` from an EVM execution block header and a later commitment
@@ -124,7 +123,7 @@ mod host {
             commitment_header: &Sealed<EthBlockHeader>,
             commitment_version: CommitmentVersion,
             rpc_provider: P,
-            beacon_url: Url,
+            beacon_client: &BeaconClient,
         ) -> anyhow::Result<Self>
         where
             P: Provider<Ethereum>,
@@ -133,7 +132,6 @@ mod host {
                 execution_header.number() < commitment_header.number(),
                 "EVM execution block not before commitment block"
             );
-            let client = BeaconClient::new(beacon_url.clone()).context("invalid URL")?;
 
             // 1. Create a beacon commitment for the execution_header.
             // This establishes the target beacon root we need to eventually verify.
@@ -141,7 +139,7 @@ mod host {
                 execution_header,
                 CommitmentVersion::Beacon,
                 &rpc_provider,
-                beacon_url,
+                beacon_client,
             )
             .await
             .context("failed to create beacon commit for the execution header")?;
@@ -160,7 +158,7 @@ mod host {
                 "state_root".into(), // we need to prove the state_root of the commitment_header
                 commitment_version,
                 &rpc_provider,
-                &client,
+                beacon_client,
             )
             .await
             .context("failed to create beacon commit for the commitment header")?;
@@ -212,7 +210,7 @@ mod host {
                 // 2e. If not yet linked, prepare for the next iteration. The parent_beacon_root is
                 // the beacon root of an *earlier* block's state, and we need to find that
                 // execution block and repeat the process with its state.
-                current_state_block_hash = client
+                current_state_block_hash = beacon_client
                     .get_execution_payload_block_hash(parent_beacon_root)
                     .await
                     .with_context(|| {
@@ -224,7 +222,7 @@ mod host {
                 current_state_commit = GeneralizedBeaconCommit::from_beacon_root(
                     "state_root".into(),
                     parent_beacon_root,
-                    &client,
+                    beacon_client,
                     // in the current state, timestamp can be used to look up parent_beacon_root
                     BeaconBlockId::Eip4788(timestamp.to()),
                 )
@@ -249,6 +247,7 @@ mod host {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::beacon::host::client::BeaconClient;
     use crate::{
         EvmBlockHeader,
         ethereum::EthBlockHeader,
@@ -287,12 +286,13 @@ mod tests {
             let execution_header: EthBlockHeader = execution_block.header.try_into()?;
             let execution_header = execution_header.seal_slow();
 
+            let beacon_client = BeaconClient::new(get_cl_url())?;
             let commit = HistoryCommit::from_headers(
                 &execution_header,
                 &commitment_header,
                 CommitmentVersion::Beacon,
                 &el,
-                get_cl_url(),
+                &beacon_client,
             )
             .await?;
 

@@ -95,6 +95,12 @@ impl Display for BlockId {
     }
 }
 
+impl From<BlockHash> for BlockId {
+    fn from(hash: BlockHash) -> Self {
+        Self::Hash(hash)
+    }
+}
+
 /// A block number (or tag - "latest", "safe", "finalized").
 /// This enum is used to specify which block to query when interacting with the blockchain.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]

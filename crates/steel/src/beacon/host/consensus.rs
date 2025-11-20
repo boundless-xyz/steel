@@ -19,6 +19,7 @@
 use alloy_primitives::B256;
 use ssz::prelude::*;
 
+use ethereum_consensus::altair::Slot;
 pub use ethereum_consensus::{Fork, altair, bellatrix, capella, deneb, phase0, ssz};
 
 pub mod electra {
@@ -459,6 +460,18 @@ impl<
             Self::Capella(_) => Fork::Capella,
             Self::Deneb(_) => Fork::Deneb,
             Self::Electra(_) => Fork::Electra,
+        }
+    }
+
+    /// Returns the slot of the block.
+    pub fn slot(&self) -> Slot {
+        match self {
+            Self::Phase0(inner) => inner.message.slot,
+            Self::Altair(inner) => inner.message.slot,
+            Self::Bellatrix(inner) => inner.message.slot,
+            Self::Capella(inner) => inner.message.slot,
+            Self::Deneb(inner) => inner.message.slot,
+            Self::Electra(inner) => inner.message.slot,
         }
     }
 
