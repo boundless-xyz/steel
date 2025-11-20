@@ -647,7 +647,7 @@ fn ensure_distinct<H: EvmBlockHeader>(
 mod tests {
     use super::*;
     use crate::{
-        BlockHeaderCommit, Commitment, CommitmentVersion,
+        Commitment, CommitmentVersion,
         ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
         test_utils::{get_cl_url, get_el_url},
     };
@@ -665,10 +665,9 @@ mod tests {
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
         // the builder should be cloneable
         let env = builder.clone().build().await.unwrap();
-        let commitment = env.commit.inner.commit(&env.header, env.commit.config_id);
 
         assert_eq!(
-            commitment,
+            env.commitment(),
             Commitment::new(
                 CommitmentVersion::Block as u16,
                 env.header.number(),
@@ -692,7 +691,6 @@ mod tests {
             .block_number_or_tag(BlockNumberOrTag::Parent)
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
         let env = builder.clone().build().await.unwrap();
-        let commit = env.commit.inner.commit(&env.header, env.commit.config_id);
 
         // the commitment should verify against the parent_beacon_block_root of the child
         let child_block = provider
@@ -701,7 +699,7 @@ mod tests {
             .unwrap();
         let header = child_block.unwrap().header;
         assert_eq!(
-            commit,
+            env.commitment(),
             Commitment::new(
                 CommitmentVersion::Beacon as u16,
                 header.timestamp,
@@ -732,7 +730,7 @@ mod tests {
 
         // the commitment should verify against the head beacon block
         assert_eq!(
-            env.commit.inner.commit(&env.header, env.commit.config_id),
+            env.commitment(),
             Commitment::new(
                 CommitmentVersion::Consensus as u16,
                 beacon_head.slot(),
@@ -759,13 +757,12 @@ mod tests {
             .commitment_block_number(latest - 1)
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
         let env = builder.clone().build().await.unwrap();
-        let commit = env.commit.inner.commit(&env.header, env.commit.config_id);
 
         // the commitment should verify against the parent_beacon_block_root of the latest block
         let child_block = provider.get_block_by_number(latest.into()).await.unwrap();
         let header = child_block.unwrap().header;
         assert_eq!(
-            commit,
+            env.commitment(),
             Commitment::new(
                 CommitmentVersion::Beacon as u16,
                 header.timestamp,
@@ -798,7 +795,7 @@ mod tests {
 
         // the commitment should verify against the head beacon block
         assert_eq!(
-            env.commit.inner.commit(&env.header, env.commit.config_id),
+            env.commitment(),
             Commitment::new(
                 CommitmentVersion::Consensus as u16,
                 beacon_head.slot(),
@@ -823,10 +820,9 @@ mod tests {
             .commitment_block_hash(latest_header.hash())
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
         let env = builder.clone().build().await.unwrap();
-        let commit = env.commit.inner.commit(&env.header, env.commit.config_id);
 
         assert_eq!(
-            commit,
+            env.commitment(),
             Commitment::new(
                 CommitmentVersion::Block as u16,
                 latest_header.number(),
