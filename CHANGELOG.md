@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [2.4.1](https://github.com/boundless-xyz/steel/releases/tag/v2.4.1)
 
 ### ⚡️ Features
 - Adds host-side support for the Fulu beacon chain fork to enable commitment generation.
