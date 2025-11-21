@@ -83,7 +83,7 @@ impl<S: Ord + Serialize> ChainSpec<S> {
                 return Ok(spec_id);
             }
         }
-        bail!("no supported fork for block {}", block_number)
+        bail!("no supported fork for block {block_number}")
     }
 }
 

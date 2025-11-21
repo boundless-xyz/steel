@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.1](https://github.com/boundless-xyz/steel/releases/tag/v2.4.1)
+
+### ⚡️ Features
+- Adds host-side support for the Fulu beacon chain fork to enable commitment generation.
+  *Note: The EVM execution environment inside the guest remains on the Prague hard fork.*
+
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)
 
 ### ⚡️ Features

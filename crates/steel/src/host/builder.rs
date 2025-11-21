@@ -203,7 +203,7 @@ impl<P, F, S, B> EvmEnvBuilder<P, F, S, B> {
         let rpc_header = rpc_block.header().clone();
         let header: F::Header = rpc_header
             .try_into()
-            .map_err(|err| anyhow!("header invalid: {}", err))?;
+            .map_err(|err| anyhow!("header invalid: {err}"))?;
         let header = header.seal_slow();
         ensure!(
             header.seal() == rpc_block.header().hash(),
