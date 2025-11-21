@@ -157,7 +157,7 @@ pub mod host {
             for rlp_header in db.ancestor_proof(header.number()).await? {
                 let header: F::Header = rlp_header
                     .try_into()
-                    .map_err(|err| anyhow!("header invalid: {}", err))?;
+                    .map_err(|err| anyhow!("header invalid: {err}"))?;
                 ancestors.push(header);
             }
 

@@ -150,7 +150,7 @@ impl BeaconRootsState {
         match BeaconRootsContract::get_from_db(&mut state, calldata) {
             Ok(returns) => Ok((returns, state)),
             Err(err) => match err {
-                Error::Reverted => Err(anyhow!("BeaconRootsContract({}) reverted", calldata)),
+                Error::Reverted => Err(anyhow!("BeaconRootsContract({calldata}) reverted")),
                 err => Err(err).context("RPC error"),
             },
         }
