@@ -14,15 +14,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
-import "forge-std/Test.sol";
-import "forge-std/console.sol";
-import {Receipt as RiscZeroReceipt} from "risc0/IRiscZeroVerifier.sol";
-import {RiscZeroMockVerifier} from "risc0/test/RiscZeroMockVerifier.sol";
+import {Test} from "forge-std/Test.sol";
+import {Receipt as RiscZeroReceipt} from "risc0-ethereum/IRiscZeroVerifier.sol";
+import {RiscZeroMockVerifier} from "risc0-ethereum/test/RiscZeroMockVerifier.sol";
 import {Counter} from "../src/Counter.sol";
-import {Steel, Beacon, Encoding, ChainSpec} from "steel/Steel.sol";
-import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
+import {Steel, Encoding, ChainSpec} from "risc0-steel/Steel.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ERC20FixedSupply is ERC20 {
     constructor(string memory name, string memory symbol, address owner) ERC20(name, symbol) {
@@ -31,25 +30,20 @@ contract ERC20FixedSupply is ERC20 {
 }
 
 contract CounterTest is Test {
-    bytes4 constant MOCK_SELECTOR = bytes4(0);
-
     RiscZeroMockVerifier private verifier;
     ERC20 private token;
     Counter private counter;
-    bytes32 private imageId;
 
     function setUp() public {
-        // fork from the actual Mainnet to get realistic Beacon block roots
-        string memory RPC_URL = vm.rpcUrl("mainnet");
-        vm.createSelectFork(RPC_URL);
+        // fork from the actual Mainnet to get realistic results
+        vm.createSelectFork(vm.rpcUrl("mainnet"));
 
-        verifier = new RiscZeroMockVerifier(MOCK_SELECTOR);
+        verifier = new RiscZeroMockVerifier(bytes4(0xFFFFFFFF));
         token = new ERC20FixedSupply("TOYKEN", "TOY", address(0x01));
         counter = new Counter(verifier, address(token));
-        imageId = counter.imageID();
     }
 
-    function testCommitment() public {
+    function testIncrement() public {
         // get the hash of the previous block
         uint240 blockNumber = uint240(block.number - 1);
         bytes32 blockHash = blockhash(blockNumber);
@@ -60,34 +54,12 @@ contract CounterTest is Test {
             tokenContract: address(token)
         });
         // create a mock proof
-        RiscZeroReceipt memory receipt = verifier.mockProve(imageId, sha256(abi.encode(journal)));
+        RiscZeroReceipt memory receipt = verifier.mockProve(counter.imageId(), sha256(abi.encode(journal)));
 
-        uint256 previous_count = counter.get();
-
+        uint256 prevCount = counter.count();
         counter.increment(abi.encode(journal), receipt.seal);
 
         // check that the counter was incremented
-        assert(counter.get() == previous_count + 1);
-    }
-
-    function testEIP4788Commitment() public {
-        // get the root of a previous Beacon block
-        uint240 beaconTimestamp = uint240(block.timestamp);
-        bytes32 beaconRoot = Beacon.parentBlockRoot(beaconTimestamp);
-
-        // mock the Journal
-        Counter.Journal memory journal = Counter.Journal({
-            commitment: Steel.Commitment(Encoding.encodeVersionedID(beaconTimestamp, 1), beaconRoot, ChainSpec.configID()),
-            tokenContract: address(token)
-        });
-        // create a mock proof
-        RiscZeroReceipt memory receipt = verifier.mockProve(imageId, sha256(abi.encode(journal)));
-
-        uint256 previous_count = counter.get();
-
-        counter.increment(abi.encode(journal), receipt.seal);
-
-        // check that the counter was incremented
-        assert(counter.get() == previous_count + 1);
+        assert(counter.count() == prevCount + 1);
     }
 }

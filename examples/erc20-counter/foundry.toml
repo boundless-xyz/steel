@@ -1,10 +1,13 @@
 [profile.default]
 src = "contracts/src"
-out = "out"
-libs = ["../../lib", "../../contracts/src"]
 test = "contracts/test"
 script = "contracts/script"
-evm_version = 'cancun'
+out = "contracts/out"
+libs = ["../../lib"]
+cache_path = "contracts/cache"
+broadcast = "contracts/broadcast"
+
+evm_version = "paris"
 
 [rpc_endpoints]
 mainnet = "https://ethereum-rpc.publicnode.com"

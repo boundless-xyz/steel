@@ -14,16 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
 interface ICounter {
-    /// @notice Increments the counter, if the Steel proof verifies that the specified account holds at least 1 token.
+    /// @notice Increments the counter if both the Steel journal and the RISC0 seal are valid.
     /// @dev The Steel proof must be generated off-chain using RISC0-zkVM and submitted here.
     function increment(bytes calldata journalData, bytes calldata seal) external;
 
     /// @notice Returns the value of the counter.
-    function get() external view returns (uint256);
+    function count() external view returns (uint256);
 
     /// @notice Returns the image ID used for verification.
-    function imageID() external view returns (bytes32);
+    function imageId() external view returns (bytes32);
 }

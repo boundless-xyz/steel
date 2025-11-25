@@ -1,5 +1,5 @@
 [package]
-name = "apps"
+name = "host"
 version = { workspace = true }
 edition = { workspace = true }
 
@@ -7,6 +7,8 @@ edition = { workspace = true }
 alloy-primitives = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
+dotenvy = { workspace = true }
+erc20-counter-core = { workspace = true }
 erc20-counter-methods = { workspace = true }
 log = { workspace = true }
 risc0-ethereum-contracts = { workspace = true }
@@ -15,6 +17,12 @@ risc0-zkvm = { workspace = true }
 tokio = { workspace = true }
 tracing-subscriber = { workspace = true }
 url = { workspace = true }
+
+[dev-dependencies]
+alloy = { workspace = true, features = ["json", "node-bindings"] }
+alloy-primitives = { workspace = true, features = ["getrandom"] }
+erc20-counter-core = { workspace = true, features = ["build-contracts"] }
+test-log = { workspace = true }
 
 [features]
 beacon = []
