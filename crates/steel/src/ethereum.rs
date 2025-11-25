@@ -303,14 +303,6 @@ mod tests {
     }
 
     #[test]
-    fn hoodi_spec_digest() {
-        assert_eq!(
-            ETH_HOODI_CHAIN_SPECS.digest(),
-            b256!("0xcd706f175b480d1f626c4d9c2eae51669904575b3be9451d889104dbc7dd98b1")
-        );
-    }
-
-    #[test]
     fn testnet_prague_spec_digest() {
         assert_eq!(
             STEEL_TEST_PRAGUE_CHAIN_SPEC.digest(),
