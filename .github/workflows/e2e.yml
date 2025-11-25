@@ -46,3 +46,4 @@ jobs:
           version: ${{ env.FOUNDRY_VERSION }}
       - name: Run tests against RPC
         run: cargo test $CARGO_LOCKED --workspace
+        working-directory: examples/erc20-counter
