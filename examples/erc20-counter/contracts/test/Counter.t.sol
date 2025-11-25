@@ -16,14 +16,14 @@
 
 pragma solidity ^0.8.26;
 
-import {MockVerifier} from "./utils/MockVerifier.sol";
-import {FixedSupplyToken} from "./utils/FixedSupplyToken.sol";
 import {Counter} from "../src/Counter.sol";
+
+import {FixedSupplyToken} from "./utils/FixedSupplyToken.sol";
+import {MockVerifier} from "./utils/MockVerifier.sol";
+import {Test} from "forge-std/Test.sol";
 import {Receipt as RiscZeroReceipt} from "risc0-ethereum/IRiscZeroVerifier.sol";
 import {RiscZeroMockVerifier} from "risc0-ethereum/test/RiscZeroMockVerifier.sol";
-import {Steel, Encoding, ChainSpec} from "risc0-steel/Steel.sol";
-import {Test} from "forge-std/Test.sol";
-import {ImageID} from "../src/ImageID.sol";
+import {ChainSpec, Encoding, Steel} from "risc0-steel/Steel.sol";
 
 contract CounterTest is Test {
     bytes32 private imageId = ImageID.ERC20_COUNTER_GUEST_ID;

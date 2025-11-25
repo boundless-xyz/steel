@@ -16,14 +16,15 @@
 
 pragma solidity ^0.8.26;
 
-import {Script} from "forge-std/Script.sol";
-import {console2} from "forge-std/console2.sol";
-import {IRiscZeroVerifier} from "risc0-ethereum/IRiscZeroVerifier.sol";
-import {RiscZeroCheats} from "risc0-ethereum/test/RiscZeroCheats.sol";
 import {Counter} from "../src/Counter.sol";
 import {ImageID} from "../src/ImageID.sol";
-import {IERC20Metadata} from "openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
 import {FixedSupplyToken} from "../test/utils/FixedSupplyToken.sol";
+import {Script} from "forge-std/Script.sol";
+import {console2} from "forge-std/console2.sol";
+import {IERC20Metadata} from "openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IRiscZeroVerifier} from "risc0-ethereum/IRiscZeroVerifier.sol";
+import {RiscZeroCheats} from "risc0-ethereum/test/RiscZeroCheats.sol";
 
 /// @notice Deployment script for the Counter contract.
 /// @dev Use the following environment variable to control the deployment:

@@ -16,9 +16,9 @@
 
 pragma solidity ^0.8.26;
 
+import {ICounter} from "./ICounter.sol";
 import {IRiscZeroVerifier} from "risc0-ethereum/IRiscZeroVerifier.sol";
 import {Steel} from "risc0-steel/Steel.sol";
-import {ICounter} from "./ICounter.sol";
 
 /// @title Counter
 /// @notice Implements a counter that increments based on off-chain Steel proofs submitted to this contract.
