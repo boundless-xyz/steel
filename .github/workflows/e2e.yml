@@ -30,10 +30,10 @@ jobs:
       matrix:
         include:
           - chain: Mainnet
-            rpc: https://eth-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
+            rpc_base: https://eth-mainnet.g.alchemy.com/v2
             beacon_api: https://ethereum-beacon-api.publicnode.com
           - chain: Sepolia
-            rpc: https://eth-sepolia.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
+            rpc_base: https://eth-mainnet.g.alchemy.com/v2
             beacon_api: https://ethereum-sepolia-beacon-api.publicnode.com
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
@@ -57,5 +57,5 @@ jobs:
         run: cargo test $CARGO_LOCKED --workspace
         working-directory: examples/erc20-counter
         env:
-          ETH_RPC_URL: ${{ matrix.rpc }}
+          ETH_RPC_URL: ${{ matrix.rpc_base }}/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
           BEACON_API_URL: ${{ matrix.beacon_api }}
