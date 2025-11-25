@@ -22,18 +22,20 @@ env:
   FOUNDRY_VERSION: v1.3.6
 
 jobs:
-  mainnet:
+  e2e:
     # Skip if the PR is from a fork.
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    name: ${{ matrix.chain }}
     runs-on: [ self-hosted, prod, Linux, cpu ]
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - chain: Mainnet
-            rpc_base: https://eth-mainnet.g.alchemy.com/v2
+          - chain: mainnet
+            rpc_base: https://eth-mainnet.g.alchemy.com/v2/
             beacon_api: https://ethereum-beacon-api.publicnode.com
-          - chain: Sepolia
-            rpc_base: https://eth-mainnet.g.alchemy.com/v2
+          - chain: sepolia
+            rpc_base: https://eth-mainnet.g.alchemy.com/v2/
             beacon_api: https://ethereum-sepolia-beacon-api.publicnode.com
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
@@ -57,5 +59,5 @@ jobs:
         run: cargo test $CARGO_LOCKED --workspace
         working-directory: examples/erc20-counter
         env:
-          ETH_RPC_URL: ${{ matrix.rpc_base }}/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
+          ETH_RPC_URL: ${{ matrix.rpc_base }}${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
           BEACON_API_URL: ${{ matrix.beacon_api }}
