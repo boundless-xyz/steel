@@ -106,7 +106,7 @@ async fn main() -> Result<()> {
     // Load the specification corresponding to the chain ID.
     let chain_id = provider.get_chain_id().await?;
     let chain_spec = EthChainSpec::from_chain_id(chain_id)
-        .with_context(|| format!("Unsupported chain ID: {}", chain_id))?;
+        .with_context(|| format!("Unsupported chain ID: {chain_id}"))?;
 
     // Build the corresponding environment.
     let builder = EthEvmEnv::builder()
