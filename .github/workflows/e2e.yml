@@ -44,6 +44,9 @@ jobs:
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: ${{ env.FOUNDRY_VERSION }}
+      - name: Cargo build
+        run: cargo build $CARGO_LOCKED --workspace
+        working-directory: examples/erc20-counter
       - name: Run tests against RPC
         run: cargo test $CARGO_LOCKED --workspace
         working-directory: examples/erc20-counter
