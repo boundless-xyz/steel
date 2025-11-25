@@ -277,44 +277,53 @@ impl From<alloy_rpc_types::TransactionReceipt> for EthReceipt {
 
 #[cfg(test)]
 mod tests {
-    use alloy::primitives::b256;
-
-    use super::{
-        ETH_HOODI_CHAIN_SPECS, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
-        STEEL_TEST_OSAKA_CHAIN_SPEC, STEEL_TEST_PRAGUE_CHAIN_SPEC,
-    };
-
-    // NOTE: If these are updated here, make sure to update them in Steel.sol
+    use super::*;
 
     #[test]
-    fn mainnet_spec_digest() {
+    fn from_chain_id() {
+        assert!(EthChainSpec::from_chain_id(0).is_none());
         assert_eq!(
-            ETH_MAINNET_CHAIN_SPEC.digest(),
-            b256!("0x47dc59f84afd2e9e7a48c4012004ab7c77fbd9acf822bf1143b8442c6c8851d4")
+            EthChainSpec::from_chain_id(1),
+            Some(&*ETH_MAINNET_CHAIN_SPEC)
         );
     }
 
-    #[test]
-    fn sepolia_spec_digest() {
-        assert_eq!(
-            ETH_SEPOLIA_CHAIN_SPEC.digest(),
-            b256!("0x90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d")
-        );
-    }
+    mod spec_digest {
+        use super::*;
+        use alloy::primitives::b256;
 
-    #[test]
-    fn testnet_prague_spec_digest() {
-        assert_eq!(
-            STEEL_TEST_PRAGUE_CHAIN_SPEC.digest(),
-            b256!("0x33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87")
-        );
-    }
+        // NOTE: If these are updated here, make sure to update them in Steel.sol
 
-    #[test]
-    fn testnet_osaka_spec_digest() {
-        assert_eq!(
-            STEEL_TEST_OSAKA_CHAIN_SPEC.digest(),
-            b256!("0x2a80c688d324f578513161dda9e9a5773c0ee052f50304a94339e966da28b2ad")
-        );
+        #[test]
+        fn mainnet() {
+            assert_eq!(
+                ETH_MAINNET_CHAIN_SPEC.digest(),
+                b256!("0x47dc59f84afd2e9e7a48c4012004ab7c77fbd9acf822bf1143b8442c6c8851d4")
+            );
+        }
+
+        #[test]
+        fn sepolia() {
+            assert_eq!(
+                ETH_SEPOLIA_CHAIN_SPEC.digest(),
+                b256!("0x90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d")
+            );
+        }
+
+        #[test]
+        fn testnet_prague() {
+            assert_eq!(
+                STEEL_TEST_PRAGUE_CHAIN_SPEC.digest(),
+                b256!("0x33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87")
+            );
+        }
+
+        #[test]
+        fn testnet_osaka() {
+            assert_eq!(
+                STEEL_TEST_OSAKA_CHAIN_SPEC.digest(),
+                b256!("0x2a80c688d324f578513161dda9e9a5773c0ee052f50304a94339e966da28b2ad")
+            );
+        }
     }
 }
