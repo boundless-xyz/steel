@@ -35,9 +35,9 @@ library Steel {
     /// @dev Error selector: 0x04e2dd22
     error InvalidCommitmentVersion(uint16 version);
 
-    /// @notice The Commitment is too old and can no longer be validated.
-    /// @dev Error selector: 0xcfef9a95
-    error CommitmentTooOld();
+    /// @notice The block number in the commitment is too old or invalid.
+    /// @dev Error selector: 0xd7c29a3d
+    error InvalidCommitmentBlockNumber();
 
     /// @notice The consensus slot (version 2) commitment is not supported.
     /// @dev Error selector: 0x13d71698
@@ -90,7 +90,7 @@ library Steel {
         // NOTE: blockHash returns all zeroes if the block number is too far in the past.
         bytes32 blockHashResult = Blockhash.blockHash(blockNumber);
         if (blockHashResult == bytes32(0)) {
-            revert CommitmentTooOld();
+            revert InvalidCommitmentBlockNumber();
         }
         return blockHash == blockHashResult;
     }
