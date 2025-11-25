@@ -60,4 +60,4 @@ jobs:
         working-directory: examples/erc20-counter
         env:
           ETH_RPC_URL: ${{ matrix.rpc_base }}${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
-          BEACON_API_URL: ${{ matrix.beacon_api }}
+          BEACON_API_URL: https://eth-mainnetbeacon.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}/
