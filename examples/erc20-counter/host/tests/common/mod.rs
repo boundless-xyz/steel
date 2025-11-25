@@ -82,7 +82,7 @@ static CHAIN_TEST_DATA: LazyLock<BTreeMap<ChainId, (Address, Address)>> = LazyLo
             ETH_SEPOLIA_CHAIN_SPEC.chain_id,
             (
                 address!("0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0"), // Sepolia USDT
-                address!("0xf08A50178dfcDe18524640EA6618a1f965821715"),
+                address!("0xc94b1BEe63A3e101FE5F71C80F912b4F4b055925"),
             ),
         ),
         (
