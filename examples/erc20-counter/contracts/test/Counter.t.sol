@@ -16,31 +16,28 @@
 
 pragma solidity ^0.8.26;
 
-import {Test} from "forge-std/Test.sol";
+import {MockVerifier} from "./utils/MockVerifier.sol";
+import {FixedSupplyToken} from "./utils/FixedSupplyToken.sol";
+import {Counter} from "../src/Counter.sol";
 import {Receipt as RiscZeroReceipt} from "risc0-ethereum/IRiscZeroVerifier.sol";
 import {RiscZeroMockVerifier} from "risc0-ethereum/test/RiscZeroMockVerifier.sol";
-import {Counter} from "../src/Counter.sol";
 import {Steel, Encoding, ChainSpec} from "risc0-steel/Steel.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-contract ERC20FixedSupply is ERC20 {
-    constructor(string memory name, string memory symbol, address owner) ERC20(name, symbol) {
-        _mint(owner, 1000);
-    }
-}
+import {Test} from "forge-std/Test.sol";
+import {ImageID} from "../src/ImageID.sol";
 
 contract CounterTest is Test {
+    bytes32 private imageId = ImageID.ERC20_COUNTER_GUEST_ID;
     RiscZeroMockVerifier private verifier;
-    ERC20 private token;
+    FixedSupplyToken private token;
     Counter private counter;
 
     function setUp() public {
         // fork from the actual Mainnet to get realistic results
         vm.createSelectFork(vm.rpcUrl("mainnet"));
 
-        verifier = new RiscZeroMockVerifier(bytes4(0xFFFFFFFF));
-        token = new ERC20FixedSupply("TOYKEN", "TOY", address(0x01));
-        counter = new Counter(verifier, address(token));
+        verifier = new MockVerifier();
+        token = new FixedSupplyToken("TOYKEN", "TOY", address(0x01));
+        counter = new Counter(verifier, address(token), imageId);
     }
 
     function testIncrement() public {
@@ -54,7 +51,7 @@ contract CounterTest is Test {
             tokenContract: address(token)
         });
         // create a mock proof
-        RiscZeroReceipt memory receipt = verifier.mockProve(counter.imageId(), sha256(abi.encode(journal)));
+        RiscZeroReceipt memory receipt = verifier.mockProve(imageId, sha256(abi.encode(journal)));
 
         uint256 prevCount = counter.count();
         counter.increment(abi.encode(journal), receipt.seal);

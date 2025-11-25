@@ -36,7 +36,7 @@ use alloy::{
     sol,
     sol_types::SolType,
 };
-use alloy_primitives::{Address, ChainId, U256, address};
+use alloy_primitives::{Address, B256, ChainId, U256, address};
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use erc20_counter_core::{IERC20, Input, Journal};
 use erc20_counter_methods::{ERC20_COUNTER_GUEST_ELF, ERC20_COUNTER_GUEST_ID};
@@ -59,8 +59,8 @@ use url::Url;
 sol!(
     #[sol(rpc)]
     #[derive(Debug)]
-    RiscZeroMockVerifier,
-    "../contracts/out/RiscZeroMockVerifier.sol/RiscZeroMockVerifier.json"
+    MockVerifier,
+    "../contracts/out/MockVerifier.sol/MockVerifier.json"
 );
 sol!(
     #[sol(rpc)]
@@ -219,7 +219,7 @@ pub async fn prove_and_verify(cfg: &TestConfig, evm_input: EthEvmInput) -> Resul
                 bail!("call reverted: {sol_error:?}");
             }
             if let Some(sol_error) =
-                e.as_decoded_interface_error::<RiscZeroMockVerifier::RiscZeroMockVerifierErrors>()
+                e.as_decoded_interface_error::<MockVerifier::MockVerifierErrors>()
             {
                 bail!("call reverted: {sol_error:?}");
             }
@@ -228,6 +228,10 @@ pub async fn prove_and_verify(cfg: &TestConfig, evm_input: EthEvmInput) -> Resul
     }
 
     Ok(())
+}
+
+fn to_b256(digest: Digest) -> B256 {
+    <[u8; 32]>::from(digest).into()
 }
 
 fn parse_env_url(key: &str) -> Result<Url> {
@@ -245,21 +249,16 @@ async fn build_contract_overrides(
         .context("failed to start Anvil")?;
 
     let verifier_addr = Address::random();
-    let verifier = RiscZeroMockVerifier::deploy(&provider, 0xFFFFFFFFu32.into())
+    let verifier = MockVerifier::deploy(&provider)
         .await
         .context("verifier deploy failed")?;
     let verifier_code = provider.get_code_at(*verifier.address()).await?;
 
-    let counter = Counter::deploy(&provider, verifier_addr, token_addr)
+    let image_id = to_b256(ERC20_COUNTER_GUEST_ID.into());
+    let counter = Counter::deploy(&provider, verifier_addr, token_addr, image_id)
         .await
         .context("counter deploy failed")?;
     let counter_code = provider.get_code_at(*counter.address()).await?;
-
-    let contract_image_id = Digest::from(counter.imageId().call().await?.0);
-    ensure!(
-        contract_image_id == ERC20_COUNTER_GUEST_ID.into(),
-        "image ID mismatch; rerun 'forge build'"
-    );
 
     let overrides = StateOverridesBuilder::default()
         .append(

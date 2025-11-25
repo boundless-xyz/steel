@@ -21,8 +21,9 @@ import {console2} from "forge-std/console2.sol";
 import {IRiscZeroVerifier} from "risc0-ethereum/IRiscZeroVerifier.sol";
 import {RiscZeroCheats} from "risc0-ethereum/test/RiscZeroCheats.sol";
 import {Counter} from "../src/Counter.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ERC20FixedSupply} from "../test/Counter.t.sol";
+import {ImageID} from "../src/ImageID.sol";
+import {IERC20Metadata} from "openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {FixedSupplyToken} from "../test/utils/FixedSupplyToken.sol";
 
 /// @notice Deployment script for the Counter contract.
 /// @dev Use the following environment variable to control the deployment:
@@ -45,14 +46,14 @@ contract DeployCounter is Script, RiscZeroCheats {
         } catch {
             // deploy a new ERC20 token if no contract has been specified
             address owner = vm.envAddress("TOKEN_OWNER");
-            tokenContract = new ERC20FixedSupply("TOYKEN", "TOY", owner);
+            tokenContract = new FixedSupplyToken("TOYKEN", "TOY", owner);
             console2.log("Deployed ERC20", tokenContract.name(), "to", address(tokenContract));
             console2.log("Account", owner, "has balance:", tokenContract.balanceOf(owner));
         }
 
         IRiscZeroVerifier verifier = deployRiscZeroVerifier();
 
-        Counter counter = new Counter(verifier, address(tokenContract));
+        Counter counter = new Counter(verifier, address(tokenContract), ImageID.ERC20_COUNTER_GUEST_ID);
         console2.log("Deployed Counter to", address(counter));
 
         vm.stopBroadcast();

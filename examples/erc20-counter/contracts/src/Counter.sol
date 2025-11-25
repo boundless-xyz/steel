@@ -19,7 +19,6 @@ pragma solidity ^0.8.26;
 import {IRiscZeroVerifier} from "risc0-ethereum/IRiscZeroVerifier.sol";
 import {Steel} from "risc0-steel/Steel.sol";
 import {ICounter} from "./ICounter.sol";
-import {ImageID} from "./ImageID.sol"; // auto-generated contract after running `cargo build`.
 
 /// @title Counter
 /// @notice Implements a counter that increments based on off-chain Steel proofs submitted to this contract.
@@ -27,13 +26,13 @@ import {ImageID} from "./ImageID.sol"; // auto-generated contract after running 
 /// before incrementing the counter. This contract leverages RISC0-zkVM for generating and verifying these proofs.
 contract Counter is ICounter {
     /// @notice Image ID of the only zkVM binary to accept verification from.
-    bytes32 public constant imageId = ImageID.ERC20_COUNTER_GUEST_ID;
+    bytes32 internal immutable IMAGE_ID;
 
     /// @notice RISC Zero verifier contract address.
-    IRiscZeroVerifier public immutable VERIFIER;
+    IRiscZeroVerifier internal immutable VERIFIER;
 
     /// @notice Address of the ERC-20 token contract.
-    address public immutable TOKEN;
+    address internal immutable TOKEN;
 
     /// @notice Counter to track the number of successful verifications.
     uint256 public count;
@@ -45,9 +44,10 @@ contract Counter is ICounter {
     }
 
     /// @notice Initialize the contract, binding it to a specified RISC Zero verifier and ERC-20 token address.
-    constructor(IRiscZeroVerifier verifier, address token) {
-        VERIFIER = verifier;
-        TOKEN = token;
+    constructor(IRiscZeroVerifier _verifier, address _token, bytes32 _imageId) {
+        VERIFIER = _verifier;
+        TOKEN = _token;
+        IMAGE_ID = _imageId;
     }
 
     /// @inheritdoc ICounter
@@ -59,8 +59,13 @@ contract Counter is ICounter {
 
         // Verify the proof
         bytes32 journalHash = sha256(journalData);
-        VERIFIER.verify(seal, imageId, journalHash);
+        VERIFIER.verify(seal, IMAGE_ID, journalHash);
 
         count += 1;
+    }
+
+    /// @inheritdoc ICounter
+    function imageId() external view returns (bytes32) {
+        return IMAGE_ID;
     }
 }

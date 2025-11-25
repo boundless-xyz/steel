@@ -1,5 +1,5 @@
 [package]
-name = "host"
+name = "erc20-counter-host"
 version = { workspace = true }
 edition = { workspace = true }
 
@@ -21,9 +21,10 @@ url = { workspace = true }
 [dev-dependencies]
 alloy = { workspace = true, features = ["json", "node-bindings"] }
 alloy-primitives = { workspace = true, features = ["getrandom"] }
-erc20-counter-core = { workspace = true, features = ["build-contracts"] }
+erc20-counter-host = { path = ".", features = ["build-contracts"] }
 test-log = { workspace = true }
 
 [features]
 beacon = []
 history = []
+build-contracts = []

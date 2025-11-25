@@ -33,10 +33,15 @@ fn main() {
         .arg("build")
         .arg("--root")
         .arg(foundry_root)
+        .arg("contracts/src/Counter.sol")
+        .arg("contracts/test/utils/MockVerifier.sol")
         .status()
         .expect("failed to execute process");
     assert!(status.success(), "forge build failed");
 
     println!("cargo::rerun-if-changed=build.rs");
-    println!("cargo::rerun-if-changed=../contracts/src/");
+    println!("cargo::rerun-if-changed=../contracts/src/Counter.sol");
+    println!("cargo::rerun-if-changed=../contracts/out/Counter.sol/");
+    println!("cargo::rerun-if-changed=../contracts/test/utils/MockVerifier.sol");
+    println!("cargo::rerun-if-changed=../contracts/out/MockVerifier.sol/");
 }
