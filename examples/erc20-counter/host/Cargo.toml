@@ -25,7 +25,3 @@ url = { workspace = true }
 alloy = { workspace = true, features = ["json", "node-bindings"] }
 alloy-primitives = { workspace = true, features = ["getrandom"] }
 test-log = { workspace = true }
-
-[features]
-beacon = []
-history = []

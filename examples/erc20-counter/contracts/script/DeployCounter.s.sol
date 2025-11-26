@@ -16,45 +16,33 @@
 
 pragma solidity ^0.8.26;
 
-import {Counter} from "../src/Counter.sol";
-import {ImageID} from "../src/ImageID.sol";
-
-import {FixedSupplyToken} from "../test/utils/FixedSupplyToken.sol";
 import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/console2.sol";
-import {IERC20Metadata} from "openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Counter} from "../src/Counter.sol";
+import {ImageID} from "../src/ImageID.sol";
 import {IRiscZeroVerifier} from "risc0-ethereum/IRiscZeroVerifier.sol";
-import {RiscZeroCheats} from "risc0-ethereum/test/RiscZeroCheats.sol";
 
-/// @notice Deployment script for the Counter contract.
-/// @dev Use the following environment variable to control the deployment:
-///   - ETH_WALLET_PRIVATE_KEY private key of the wallet to be used for deployment.
-///   - TOKEN_OWNER to deploy a new ERC 20 token, funding that address with tokens or _alternatively_
-///   - TOKEN_CONTRACT to link the Counter to an existing ERC20 token.
-///
-/// See the Foundry documentation for more information about Solidity scripts.
-/// https://book.getfoundry.sh/tutorials/solidity-scripting
-contract DeployCounter is Script, RiscZeroCheats {
+// Mocks
+import {FixedSupplyToken} from "../test/utils/FixedSupplyToken.sol";
+import {MockVerifier} from "../test/utils/MockVerifier.sol";
+
+contract DeployCounter is Script {
     function run() external {
-        uint256 deployerKey = uint256(vm.envBytes32("ETH_WALLET_PRIVATE_KEY"));
+        vm.startBroadcast();
 
-        vm.startBroadcast(deployerKey);
+        console2.log(unicode"⚠️  Deploying Local Development Environment");
 
-        IERC20Metadata tokenContract = IERC20Metadata(address(0x0));
-        try vm.envAddress("TOKEN_CONTRACT") returns (address val) {
-            tokenContract = IERC20Metadata(val);
-            console2.log("Using ERC20", tokenContract.name(), "at", address(tokenContract));
-        } catch {
-            // deploy a new ERC20 token if no contract has been specified
-            address owner = vm.envAddress("TOKEN_OWNER");
-            tokenContract = new FixedSupplyToken("TOYKEN", "TOY", owner);
-            console2.log("Deployed ERC20", tokenContract.name(), "to", address(tokenContract));
-            console2.log("Account", owner, "has balance:", tokenContract.balanceOf(owner));
-        }
+        // Deploy Mock Token that mints 1000 tokens to the deployer (msg.sender)
+        FixedSupplyToken token = new FixedSupplyToken("Toyken", "TOY", msg.sender);
+        console2.log("Deployed ERC20 TOKEN to", address(token));
+        console2.log("Account", msg.sender, "has balance:", token.balanceOf(msg.sender));
 
-        IRiscZeroVerifier verifier = deployRiscZeroVerifier();
+        // Deploy Mock Verifier, that accepts dev mode proofs with the selector 0xFFFFFFFF
+        IRiscZeroVerifier verifier = new MockVerifier();
+        console2.log("Deployed RiscZeroMockVerifier to", address(verifier));
 
-        Counter counter = new Counter(verifier, address(tokenContract), ImageID.ERC20_COUNTER_GUEST_ID);
+        // Deploy application contract.
+        Counter counter = new Counter(verifier, address(token), ImageID.ERC20_COUNTER_GUEST_ID);
         console2.log("Deployed Counter to", address(counter));
 
         vm.stopBroadcast();

@@ -52,21 +52,9 @@ struct Args {
     #[arg(long, env = "ETH_RPC_URL")]
     eth_rpc_url: Url,
 
-    /// Beacon API endpoint URL
-    ///
-    /// This allows proofs to be validated using the EIP-4788 beacon roots contract.
-    #[cfg(feature = "beacon")]
-    #[arg(long, env = "BEACON_API_URL")]
-    beacon_api_url: Url,
-
     /// Ethereum block to use as the state for the contract call
-    #[arg(long, env = "EXECUTION_BLOCK", default_value_t = BlockNumberOrTag::Parent)]
+    #[arg(long, env = "EXECUTION_BLOCK", default_value_t = BlockNumberOrTag::Latest)]
     execution_block: BlockNumberOrTag,
-
-    /// Ethereum block to use for the history commitment.
-    #[cfg(feature = "history")]
-    #[arg(long, env = "COMMITMENT_BLOCK")]
-    commitment_block: BlockNumberOrTag,
 
     /// Address of the Counter verifier contract
     #[arg(long)]
@@ -92,11 +80,6 @@ async fn main() -> Result<()> {
     // Parse the command line arguments.
     let args = Args::try_parse()?;
 
-    #[cfg(feature = "beacon")]
-    log::info!("Beacon commitment to block {}", args.execution_block);
-    #[cfg(feature = "history")]
-    log::info!("History commitment to block {}", args.commitment_block);
-
     // Create an alloy provider for that private key and URL.
     let wallet = EthereumWallet::from(args.eth_wallet_private_key);
     let provider = ProviderBuilder::new()
@@ -113,10 +96,6 @@ async fn main() -> Result<()> {
         .provider(provider.clone())
         .chain_spec(chain_spec)
         .block_number_or_tag(args.execution_block);
-    #[cfg(feature = "beacon")]
-    let builder = builder.beacon_api(args.beacon_api_url);
-    #[cfg(feature = "history")]
-    let builder = builder.commitment_block_number_or_tag(args.commitment_block);
     let mut env = builder.build().await?;
 
     // Prepare the function call
@@ -161,10 +140,10 @@ async fn main() -> Result<()> {
     // Create an alloy instance of the Counter contract.
     let contract = ICounter::new(args.counter_address, &provider);
 
-    // Call ICounter::imageID() to check that the contract has been deployed correctly.
-    let contract_image_id = Digest::from(contract.imageId().call().await?.0);
+    // Call ICounter::imageId() to check that the contract has been deployed correctly.
+    let contract_image_id = contract.imageId().call().await?;
     ensure!(
-        contract_image_id == ERC20_COUNTER_GUEST_ID.into(),
+        contract_image_id.0 == <[u8; 32]>::from(Digest::from(ERC20_COUNTER_GUEST_ID)),
         "image ID mismatch; redeploying the Counter contract should fix this"
     );
 
@@ -183,6 +162,9 @@ async fn main() -> Result<()> {
         .await
         .with_context(|| format!("transaction did not confirm: {tx_hash}"))?;
     ensure!(receipt.status(), "transaction failed: {tx_hash}");
+
+    let count = contract.count().call().await?;
+    println!("✅ On-chain verification passed; new count: {count}");
 
     Ok(())
 }
