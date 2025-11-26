@@ -17,6 +17,7 @@
 pragma solidity ^0.8.26;
 
 import {Counter} from "../src/Counter.sol";
+import {ImageID} from "../src/ImageID.sol";
 
 import {FixedSupplyToken} from "./utils/FixedSupplyToken.sol";
 import {MockVerifier} from "./utils/MockVerifier.sol";
