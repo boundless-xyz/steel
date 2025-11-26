@@ -315,6 +315,7 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()> {
                 config_id: self.chain_spec.digest(),
             },
         )
+        .await
     }
 }
 
@@ -355,7 +356,8 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History
             self.chain_spec,
             evm_header,
             commit,
-        )?;
+        )
+        .await?;
         ensure!(env.spec_id().has_eip2935(), "EIP-2935 not supported");
 
         Ok(env)
@@ -537,6 +539,7 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
             header,
             commit,
         )
+        .await
     }
 }
 
@@ -608,20 +611,33 @@ impl<P>
             self.chain_spec,
             evm_header,
             commit,
-        )?;
+        )
+        .await?;
         ensure!(env.spec_id().has_eip4788(), "EIP-4788 not supported");
 
         Ok(env)
     }
 }
 
-fn create_host_env<N: Network, P: Provider<N>, F: EvmFactory, C>(
+async fn create_host_env<N: Network, P: Provider<N>, F: EvmFactory, C>(
     provider: P,
     provider_config: ProviderConfig,
     chain_spec: &ChainSpec<F::SpecId>,
     header: Sealed<F::Header>,
     commit: HostCommit<C>,
 ) -> Result<HostEvmEnv<ProviderDb<N, P>, F, C>> {
+    // perform a sanity check to ensure that the provider matches the specifications
+    let provider_chain_id = provider
+        .get_chain_id()
+        .await
+        .context("eth_chainId failed")?;
+    if provider_chain_id != chain_spec.chain_id {
+        log::warn!(
+            "Chain ID mismatch: provider returned {provider_chain_id}, but chain spec expects {}",
+            chain_spec.chain_id
+        );
+    }
+
     let db = ProofDb::new(ProviderDb::new(provider, provider_config, header.seal()));
     let chain_id = chain_spec.chain_id();
     let spec_id = *chain_spec.active_fork(header.number(), header.timestamp())?;
