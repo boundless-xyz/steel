@@ -3,6 +3,9 @@ name = "erc20-counter-host"
 version = { workspace = true }
 edition = { workspace = true }
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(no_auth)'] }
+
 [dependencies]
 alloy-primitives = { workspace = true }
 anyhow = { workspace = true }

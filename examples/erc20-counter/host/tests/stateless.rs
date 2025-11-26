@@ -28,6 +28,7 @@ use risc0_steel::{
 use test_log::test;
 
 #[test(tokio::test)]
+#[cfg_attr(no_auth, ignore = "RPC tests are disabled")]
 async fn test_block_commit() -> Result<()> {
     let cfg = test_config().await;
 
@@ -45,6 +46,7 @@ async fn test_block_commit() -> Result<()> {
 }
 
 #[test(tokio::test)]
+#[cfg_attr(no_auth, ignore = "RPC tests are disabled")]
 async fn test_old_block_commit() -> Result<()> {
     let cfg = test_config().await;
     let provider = cfg.provider();
@@ -67,6 +69,7 @@ async fn test_old_block_commit() -> Result<()> {
 }
 
 #[test(tokio::test)]
+#[cfg_attr(no_auth, ignore = "RPC tests are disabled")]
 async fn test_beacon_commit() -> Result<()> {
     let cfg = test_config().await;
 
@@ -85,6 +88,7 @@ async fn test_beacon_commit() -> Result<()> {
 }
 
 #[test(tokio::test)]
+#[cfg_attr(no_auth, ignore = "RPC tests are disabled")]
 async fn test_consensus_commit() -> Result<()> {
     let cfg = test_config().await;
 
@@ -111,6 +115,7 @@ async fn test_consensus_commit() -> Result<()> {
 }
 
 #[test(tokio::test)]
+#[cfg_attr(no_auth, ignore = "RPC tests are disabled")]
 async fn test_history_commit() -> Result<()> {
     let cfg = test_config().await;
     let provider = cfg.provider();
@@ -134,6 +139,7 @@ async fn test_history_commit() -> Result<()> {
 }
 
 #[test(tokio::test)]
+#[cfg_attr(no_auth, ignore = "RPC tests are disabled")]
 async fn test_eip_history_commit() -> Result<()> {
     let cfg = test_config().await;
     let provider = cfg.provider();
