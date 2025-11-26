@@ -36,7 +36,10 @@ jobs:
             beacon_api_url: https://ethereum-beacon-api.publicnode.com/
           - chain: sepolia
             rpc_base: https://eth-sepolia.g.alchemy.com/v2/
-            beacon_api_url: https://ethereum-sepolia-rpc.publicnode.com/
+            beacon_api_url: https://ethereum-sepolia-beacon-api.publicnode.com/
+          # - chain: hoodi
+          #   rpc_base: https://eth-hoodi.g.alchemy.com/v2/
+          #   beacon_api_url: https://ethereum-hoodi-beacon-api.publicnode.com/
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
       - run: "git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :"
