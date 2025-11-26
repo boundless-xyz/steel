@@ -71,36 +71,31 @@ sol!(
 );
 
 static CHAIN_TEST_DATA: LazyLock<BTreeMap<ChainId, (Address, Address)>> = LazyLock::new(|| {
-    BTreeMap::from([
+    [
         (
             ETH_MAINNET_CHAIN_SPEC.chain_id,
-            (
-                address!("0xdAC17F958D2ee523a2206206994597C13D831ec7"), // USDT
-                address!("0xF977814e90dA44bFA03b6295A0616a897441aceC"),
-            ),
+            address!("0xdAC17F958D2ee523a2206206994597C13D831ec7"), // USDT
+            address!("0xF977814e90dA44bFA03b6295A0616a897441aceC"),
         ),
         (
             ETH_SEPOLIA_CHAIN_SPEC.chain_id,
-            (
-                address!("0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0"), // Sepolia USDT
-                address!("0xc94b1BEe63A3e101FE5F71C80F912b4F4b055925"),
-            ),
+            address!("0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0"), // Sepolia USDT
+            address!("0xc94b1BEe63A3e101FE5F71C80F912b4F4b055925"),
         ),
         (
             ETH_HOODI_CHAIN_SPEC.chain_id,
-            (
-                address!("0x499b095Ed02f76E56444c242EC43A05F9c2A3ac8"), // Hoodi Drosera (DRO)
-                address!("0x780521b58Ff8fFB7df09195E79810580279a4d9d"),
-            ),
+            address!("0x499b095Ed02f76E56444c242EC43A05F9c2A3ac8"), // Hoodi Drosera (DRO)
+            address!("0x780521b58Ff8fFB7df09195E79810580279a4d9d"),
         ),
         (
             STEEL_TEST_PRAGUE_CHAIN_SPEC.chain_id,
-            (
-                address!("0xb158cf0fd130353535210380fc136a8d31714682"), // ERC20 Toyken
-                address!("0x802dCbE1B1A97554B4F50DB5119E37E8e7336417"),
-            ),
+            address!("0xb158cf0fd130353535210380fc136a8d31714682"), // ERC20 Toyken
+            address!("0x802dCbE1B1A97554B4F50DB5119E37E8e7336417"),
         ),
-    ])
+    ]
+    .into_iter()
+    .map(|(id, token, holder)| (id, (token, holder)))
+    .collect()
 });
 
 pub async fn test_config() -> &'static TestConfig {

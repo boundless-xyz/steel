@@ -24,10 +24,8 @@ url = { workspace = true }
 [dev-dependencies]
 alloy = { workspace = true, features = ["json", "node-bindings"] }
 alloy-primitives = { workspace = true, features = ["getrandom"] }
-erc20-counter-host = { path = ".", features = ["build-contracts"] }
 test-log = { workspace = true }
 
 [features]
 beacon = []
 history = []
-build-contracts = []
