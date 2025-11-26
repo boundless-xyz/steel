@@ -93,6 +93,15 @@ define_chain_specs! {
             (SpecId::OSAKA, ForkCondition::Timestamp(1_760_427_360)),
         ],
     }
+    /// The Ethereum Hoodi [ChainSpec].
+    ETH_HOODI_CHAIN_SPEC {
+        chain_id: 560048,
+        forks: [
+            (SpecId::CANCUN, ForkCondition::Block(0)),
+            (SpecId::PRAGUE, ForkCondition::Timestamp(1_742_999_832)),
+            (SpecId::OSAKA, ForkCondition::Timestamp(1_761_677_592)),
+        ],
+    }
     /// [ChainSpec] for a custom Steel Testnet using the Prague EVM.
     STEEL_TEST_PRAGUE_CHAIN_SPEC {
         chain_id: 5733100018,
@@ -307,6 +316,14 @@ mod tests {
             assert_eq!(
                 ETH_SEPOLIA_CHAIN_SPEC.digest(),
                 b256!("0x90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d")
+            );
+        }
+
+        #[test]
+        fn hoodi() {
+            assert_eq!(
+                ETH_HOODI_CHAIN_SPEC.digest(),
+                b256!("0x34cb1defd939572b00439d2c13f93c033b82227067371c910ad104d527c78860")
             );
         }
 

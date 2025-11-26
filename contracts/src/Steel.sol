@@ -161,7 +161,7 @@ library Encoding {
 library ChainSpec {
     uint256 internal constant ETHEREUM_MAINNET_CHAIN_ID = 1;
     uint256 internal constant ETHEREUM_SEPOLIA_CHAIN_ID = 11155111;
-    uint256 internal constant ETHEREUM_HOLESKY_CHAIN_ID = 17000;
+    uint256 internal constant ETHEREUM_HOODI_CHAIN_ID = 560048;
     uint256 internal constant STEEL_TEST_OSAKA_CHAIN_ID = 5733100019;
     uint256 internal constant STEEL_TEST_PRAGUE_CHAIN_ID = 5733100018;
 
@@ -180,8 +180,8 @@ library ChainSpec {
         if (chainID == ETHEREUM_SEPOLIA_CHAIN_ID) {
             return hex"90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d";
         }
-        if (chainID == ETHEREUM_HOLESKY_CHAIN_ID) {
-            return hex"d5383ba90170a677231d8a3c739438a4811c75615209cab301f635599a2e83ec";
+        if (chainID == ETHEREUM_HOODI_CHAIN_ID) {
+            return hex"34cb1defd939572b00439d2c13f93c033b82227067371c910ad104d527c78860";
         }
         if (chainID == STEEL_TEST_OSAKA_CHAIN_ID) {
             return hex"2a80c688d324f578513161dda9e9a5773c0ee052f50304a94339e966da28b2ad";
