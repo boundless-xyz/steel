@@ -40,6 +40,7 @@ use alloy_primitives::{Address, B256, ChainId, U256, address};
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use erc20_counter_core::{IERC20, Input, Journal};
 use erc20_counter_methods::{ERC20_COUNTER_GUEST_ELF, ERC20_COUNTER_GUEST_ID};
+use risc0_steel::ethereum::ETH_HOODI_CHAIN_SPEC;
 use risc0_steel::{
     Contract,
     ethereum::{
@@ -83,6 +84,13 @@ static CHAIN_TEST_DATA: LazyLock<BTreeMap<ChainId, (Address, Address)>> = LazyLo
             (
                 address!("0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0"), // Sepolia USDT
                 address!("0xc94b1BEe63A3e101FE5F71C80F912b4F4b055925"),
+            ),
+        ),
+        (
+            ETH_HOODI_CHAIN_SPEC.chain_id,
+            (
+                address!("0x499b095Ed02f76E56444c242EC43A05F9c2A3ac8"), // Hoodi Drosera (DRO)
+                address!("0x780521b58Ff8fFB7df09195E79810580279a4d9d"),
             ),
         ),
         (
