@@ -17,16 +17,17 @@ permissions:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  RISC0_TOOLCHAIN_VERSION: 1.88.0
+  RISC0_TOOLCHAIN_VERSION: "1.88.0"
   RISC0_CRATE_VERSION: "3.0.3"
-  FOUNDRY_VERSION: v1.3.6
+  FOUNDRY_VERSION: "v1.3.6"
+  RUST_LOG: "info"
 
 jobs:
   public:
     # Skip if the PR is from a fork.
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     name: ${{ matrix.chain }}
-    runs-on: [ self-hosted, prod, Linux, cpu ]
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
