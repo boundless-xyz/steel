@@ -12,26 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This application demonstrates how to send an off-chain proof request
-// to the Bonsai proving service and publish the received proofs directly
-// to your deployed app contract.
-
 use alloy_primitives::{Address, U256};
 use anyhow::{Context, Result, ensure};
 use clap::Parser;
 use erc20_counter_core::{IERC20, Input, Journal};
 use erc20_counter_methods::{ERC20_COUNTER_GUEST_ELF, ERC20_COUNTER_GUEST_ID};
 use risc0_ethereum_contracts::encode_seal;
-use risc0_steel::alloy::providers::Provider;
-use risc0_steel::alloy::{
-    network::EthereumWallet,
-    providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
-    sol,
-    sol_types::{SolCall, SolValue},
+use risc0_steel::{
+    Contract,
+    alloy::{
+        network::EthereumWallet,
+        providers::{Provider, ProviderBuilder},
+        signers::local::PrivateKeySigner,
+        sol,
+        sol_types::{SolCall, SolValue},
+    },
+    ethereum::{EthChainSpec, EthEvmEnv},
+    host::BlockNumberOrTag,
 };
-use risc0_steel::ethereum::EthChainSpec;
-use risc0_steel::{Contract, ethereum::EthEvmEnv, host::BlockNumberOrTag};
 use risc0_zkvm::{Digest, ExecutorEnv, Prover, ProverOpts, default_prover};
 use tracing_subscriber::EnvFilter;
 use url::Url;

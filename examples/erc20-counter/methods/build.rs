@@ -26,11 +26,13 @@ fn main() {
     // guest. Check the RISC0_USE_DOCKER variable and use Docker to build the guest if set.
     println!("cargo:rerun-if-env-changed=RISC0_USE_DOCKER");
     println!("cargo:rerun-if-changed=build.rs");
-    let manifest_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+
     let mut builder = GuestOptionsBuilder::default();
     if env::var("RISC0_USE_DOCKER").is_ok() {
+        let manifest_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+        let root_dir = manifest_dir.join("..").join("..").join("..");
         let docker_options = DockerOptionsBuilder::default()
-            .root_dir(manifest_dir.join(".."))
+            .root_dir(root_dir)
             .build()
             .unwrap();
         builder.use_docker(docker_options);

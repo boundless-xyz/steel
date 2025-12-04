@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This application demonstrates how to send an off-chain proof request
-// to the Bonsai proving service and publish the received proofs directly
-// to your deployed app contract.
-
 //! Integration test helpers for Steel ERC20 counter example.
 //!
 //! These tests run against live Ethereum networks (mainnet, testnets) using:
@@ -28,8 +24,8 @@
 //! - `ETH_RPC_URL`: Ethereum RPC endpoint (required)
 //! - `BEACON_API_URL`: Beacon chain API endpoint (required for beacon tests)
 
-use alloy::network::Ethereum;
 use alloy::{
+    network::Ethereum,
     node_bindings::Anvil,
     providers::{Provider, ProviderBuilder},
     rpc::types::state::{AccountOverride, StateOverride, StateOverridesBuilder},
@@ -40,12 +36,11 @@ use alloy_primitives::{Address, B256, ChainId, U256, address};
 use anyhow::{Context, Result, anyhow, bail, ensure};
 use erc20_counter_core::{IERC20, Input, Journal};
 use erc20_counter_methods::{ERC20_COUNTER_GUEST_ELF, ERC20_COUNTER_GUEST_ID};
-use risc0_steel::ethereum::ETH_HOODI_CHAIN_SPEC;
 use risc0_steel::{
     Contract,
     ethereum::{
-        ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC, EthChainSpec, EthEvmEnv, EthEvmInput,
-        STEEL_TEST_PRAGUE_CHAIN_SPEC,
+        ETH_HOODI_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC, EthChainSpec,
+        EthEvmEnv, EthEvmInput, STEEL_TEST_PRAGUE_CHAIN_SPEC,
     },
     host::{
         HostCommit,
@@ -242,7 +237,8 @@ fn parse_env_url(key: &str) -> Result<Url> {
     Url::parse(&url_str).with_context(|| format!("{key} is not a valid url"))
 }
 
-/// Deploys contracts to a local Anvil instance and captures their bytecode for use in state overrides against live chains.
+/// Deploys contracts to a local Anvil instance and captures their bytecode for use in state
+/// overrides against live chains.
 async fn build_contract_overrides(
     counter_addr: Address,
     token_addr: Address,
