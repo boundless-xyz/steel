@@ -65,6 +65,8 @@ sol!(
     "../contracts/out/Counter.sol/Counter.json"
 );
 
+// NOTE: Holder addresses are chosen for accounts with historically stable balances.
+// If tests become flaky, verify these accounts still hold tokens.
 static CHAIN_TEST_DATA: LazyLock<BTreeMap<ChainId, (Address, Address)>> = LazyLock::new(|| {
     [
         (
