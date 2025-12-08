@@ -486,10 +486,34 @@ impl<P, S> EvmEnvBuilder<P, EthEvmFactory, S, Beacon> {
 
     /// Sets the Beacon Chain slot for the commitment.
     ///
-    /// This allows specifying an exact slot number to commit to, rather than deriving it from
-    /// an execution block. This implies the use of a consensus commitment.
+    /// This allows specifying an exact slot number to commit to, rather than deriving it from an
+    /// execution block. This is particularly useful for light client verification scenarios, where
+    /// the verifier has direct access to the beacon chain state and can look up beacon block roots
+    /// by slot number.
     ///
-    /// See [EvmEnvBuilder<P, EthEvmFactory, S, Beacon>::consensus_commitment] for more info.
+    /// Note that this creates a historical commitment, meaning the execution block and commitment
+    /// block will be different. The commitment slot must correspond to a block more recent than the
+    /// execution block.
+    ///
+    /// # Example
+    /// ```rust,no_run
+    /// # use risc0_steel::ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv};
+    /// # use url::Url;
+    /// # #[tokio::main(flavor = "current_thread")]
+    /// # async fn main() -> anyhow::Result<()> {
+    /// let builder = EthEvmEnv::builder()
+    ///     .rpc(Url::parse("https://ethereum-rpc.publicnode.com")?)
+    ///     .beacon_api(Url::parse("https://ethereum-beacon-api.publicnode.com")?)
+    ///     .block_number(19_000_000) // execute against historical state
+    ///     .consensus_commitment_slot(9_500_000) // commit to a specific beacon slot
+    ///     .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
+    /// let env = builder.build().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// See [EvmEnvBuilder<P, EthEvmFactory, S, Beacon>::consensus_commitment] for more info on
+    /// consensus commitments.
     pub fn consensus_commitment_slot(
         self,
         slot: u64,
@@ -651,9 +675,9 @@ fn ensure_distinct<H: EvmBlockHeader>(
 ) -> Result<()> {
     ensure!(
         evm_header.seal() != commitment_header.seal(),
-        "The execution block ({}) matches the commitment block. In this case, \
-        historical proofs are unnecessary in this case; \
-        remove the explicit commitment target to use a direct commitment.",
+        "The execution block ({}) matches the commitment block. \
+        Historical proofs are unnecessary in this case. \
+        Remove the explicit commitment target to use a direct commitment.",
         evm_header.number()
     );
     Ok(())

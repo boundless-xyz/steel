@@ -247,9 +247,9 @@ mod host {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::beacon::host::client::BeaconClient;
     use crate::{
         EvmBlockHeader,
+        beacon::host::client::BeaconClient,
         ethereum::EthBlockHeader,
         test_utils::{get_cl_url, get_el_url},
     };
