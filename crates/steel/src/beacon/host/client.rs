@@ -92,23 +92,23 @@ impl<'de> serde::Deserialize<'de> for Response<SignedBeaconBlock> {
 #[derive(Debug, Clone)]
 pub struct BeaconClient {
     http: reqwest::Client,
-    base_url: Url,
+    endpoint: Url,
 }
 
 impl BeaconClient {
     /// Creates a new beacon endpoint API client.
-    pub fn new<U: reqwest::IntoUrl>(base_url: U) -> Result<Self> {
-        let mut base_url = base_url.into_url()?;
+    pub fn new<U: reqwest::IntoUrl>(endpoint: U) -> Result<Self> {
+        let mut endpoint = endpoint.into_url()?;
 
         // normalize URL to ensure Url::join() works correctly
         // without trailing slash, join() replaces the last path segment
-        if !base_url.path().ends_with('/') {
-            base_url.set_path(&format!("{}/", base_url.path()));
+        if !endpoint.path().ends_with('/') {
+            endpoint.set_path(&format!("{}/", endpoint.path()));
         }
 
         Ok(Self {
             http: reqwest::Client::new(),
-            base_url,
+            endpoint,
         })
     }
 
@@ -117,7 +117,7 @@ impl BeaconClient {
         path: &str,
         query: Option<&T>,
     ) -> Result<R> {
-        let target = self.base_url.join(path)?;
+        let target = self.endpoint.join(path)?;
         let mut builder = self.http.get(target);
         if let Some(query) = query {
             builder = builder.query(query)
