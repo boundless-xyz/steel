@@ -24,7 +24,6 @@ use consensus::{
     ssz::prelude::{proofs::Proof, *},
 };
 use proofs::ProofAndWitness;
-use url::Url;
 
 pub(crate) mod client;
 mod consensus;
@@ -36,18 +35,17 @@ impl BeaconCommit {
         header: &Sealed<EthBlockHeader>,
         commitment_version: CommitmentVersion,
         rpc_provider: P,
-        beacon_url: Url,
+        beacon_client: &BeaconClient,
     ) -> anyhow::Result<Self>
     where
         P: Provider<Ethereum>,
     {
-        let client = BeaconClient::new(beacon_url).context("invalid URL")?;
         let (commit, beacon_root) = create_beacon_commit(
             header,
             "block_hash".into(),
             commitment_version,
             rpc_provider,
-            &client,
+            beacon_client,
         )
         .await?;
         commit
@@ -228,6 +226,9 @@ async fn create_execution_payload_proof(
             prove_execution_payload_field(signed_block.message, field)?
         }
         SignedBeaconBlock::Electra(signed_block) => {
+            prove_execution_payload_field(signed_block.message, field)?
+        }
+        SignedBeaconBlock::Fulu(signed_block) => {
             prove_execution_payload_field(signed_block.message, field)?
         }
     };

@@ -6,19 +6,27 @@ All notable changes to this project will be documented in this file.
 
 ### ⚡️ Features
 
-- Add Osaka support.
+- Add Fusaka support.
+- Introduce `EthChainSpec::from_chain_id` and the `define_chain_specs!` macro for efficient, dynamic chain specification lookup. Added `ETH_HOODI_CHAIN_SPEC`.
 - Introduce `Eip2935HistoryCommit` to enable historical state proofs using the EIP-2935 history storage contract. This provides a more direct and efficient alternative to the existing beacon-based `HistoryCommit`.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
 - The `Contract` API now includes a `raw` method to allow for direct calls with raw calldata. This provides greater flexibility when interacting with non-standard interfaces, such as precompiles.
 - Add `Event` support for chains other than Ethereum.
 - Added `MultiblockEvmEnv` and `MultiblockEvmInput to enable verifiable computation across multiple blocks within a single proof. The guest environment now securely validates the integrity of the block sequence by verifying commitments between each consecutive block.
 - Improve EVM error handling to support calls without return data.
+- Add `EvmEnvBuilder::consensus_commitment_slot` to specify a beacon chain slot directly as the commitment target. This is useful for light client verification scenarios where the verifier has direct access to beacon chain state.
+
+### 🚨 Breaking Changes
+
+- **Solidity**: Renamed `CommitmentTooOld` error to `InvalidCommitmentBlockNumber` in `Steel.sol` to better reflect validity checks beyond just age.
 
 ### ⚙️ Miscellaneous
 
 - The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
 - Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`. It now includes optimizations for directly verifying adjacent blocks via the parent hash field.
 - The `EvmEnv::merge` function is now more flexible, allowing environments with different commitments to be merged.
+- Add a warning log when the provider's chain ID does not match the chain spec configuration.
+- Improved error messages when the execution block incorrectly matches the commitment block for historical commitments.
 
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)
 

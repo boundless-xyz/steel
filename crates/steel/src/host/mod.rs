@@ -186,7 +186,7 @@ impl<C> HostCommit<C> {
     }
 }
 
-impl<D, FACTORY: EvmFactory, C> HostEvmEnv<D, FACTORY, C>
+impl<D, FACTORY: EvmFactory, C> EvmEnv<D, FACTORY, C>
 where
     D: Send + 'static,
 {
@@ -199,7 +199,7 @@ where
     /// the `HostEvmEnv`, moved into the blocking task, and then restored after the task completes.
     pub(crate) async fn spawn_with_db<F, R>(&mut self, f: F) -> R
     where
-        F: FnOnce(&mut ProofDb<D>) -> R + Send + 'static,
+        F: FnOnce(&mut D) -> R + Send + 'static,
         R: Send + 'static,
     {
         // as mutable references are not possible, the DB must be moved in and out of the task
