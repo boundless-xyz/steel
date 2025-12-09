@@ -228,6 +228,9 @@ async fn create_execution_payload_proof(
         SignedBeaconBlock::Electra(signed_block) => {
             prove_execution_payload_field(signed_block.message, field)?
         }
+        SignedBeaconBlock::Fulu(signed_block) => {
+            prove_execution_payload_field(signed_block.message, field)?
+        }
     };
 
     Ok(proof)

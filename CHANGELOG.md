@@ -6,13 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### ⚡️ Features
 
-- Add Osaka support.
+- Add Fusaka support.
+- Introduce `EthChainSpec::from_chain_id` and the `define_chain_specs!` macro for efficient, dynamic chain specification lookup. Added `ETH_HOODI_CHAIN_SPEC`.
 - Introduce `Eip2935HistoryCommit` to enable historical state proofs using the EIP-2935 history storage contract. This provides a more direct and efficient alternative to the existing beacon-based `HistoryCommit`.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
 - The `Contract` API now includes a `raw` method to allow for direct calls with raw calldata. This provides greater flexibility when interacting with non-standard interfaces, such as precompiles.
 - Add `Event` support for chains other than Ethereum.
 - Improve EVM error handling to support calls without return data.
 - Add `EvmEnvBuilder::consensus_commitment_slot` to specify a beacon chain slot directly as the commitment target. This is useful for light client verification scenarios where the verifier has direct access to beacon chain state.
+
+### 🚨 Breaking Changes
+
+- **Solidity**: Renamed `CommitmentTooOld` error to `InvalidCommitmentBlockNumber` in `Steel.sol` to better reflect validity checks beyond just age.
 
 ### ⚙️ Miscellaneous
 

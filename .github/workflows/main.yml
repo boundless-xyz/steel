@@ -181,7 +181,7 @@ jobs:
     env:
       FEATURE: ${{ matrix.feature }}
       ETH_RPC_URL: https://eth-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
-      BEACON_API_URL: https://ethereum-beacon-api.publicnode.com
+      BEACON_API_URL: https://eth-mainnetbeacon.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}/
       RUST_BACKTRACE: full
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
@@ -210,6 +210,7 @@ jobs:
             device: cpu
     env:
       RUST_BACKTRACE: full
+      RUSTFLAGS: "--cfg no_auth" # don't run RPC tests that require authentication
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
       - run: "git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :"
@@ -243,13 +244,11 @@ jobs:
           RISC0_DEV_MODE: true
           L1_RPC_URL: https://eth-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
           L2_RPC_URL: https://opt-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
-          BEACON_API_URL: https://ethereum-beacon-api.publicnode.com
+          BEACON_API_URL: https://eth-mainnetbeacon.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}/
 
   doc:
     runs-on: ubuntu-latest
     steps:
-      # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
-      - run: "git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :"
       - uses: actions/checkout@v4
         with:
           submodules: recursive
@@ -268,8 +267,6 @@ jobs:
   docs-rs:
     runs-on: ubuntu-latest
     steps:
-      # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
-      - run: "git checkout -f $(git -c user.name=x -c user.email=x@x commit-tree $(git hash-object -t tree /dev/null) < /dev/null) || :"
       - uses: actions/checkout@v4
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
         with:
