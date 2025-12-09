@@ -164,7 +164,6 @@ library ChainSpec {
     uint256 internal constant ETHEREUM_HOODI_CHAIN_ID = 560048;
     uint256 internal constant STEEL_TEST_OSAKA_CHAIN_ID = 5733100019;
     uint256 internal constant STEEL_TEST_PRAGUE_CHAIN_ID = 5733100018;
-    uint256 internal constant STEEL_TEST_CANCUN_CHAIN_ID = 5733100017;
 
     /// @dev Error selector: 0x45b21e77
     error UnknownChainId(uint256 chainID);
@@ -189,9 +188,6 @@ library ChainSpec {
         }
         if (chainID == STEEL_TEST_PRAGUE_CHAIN_ID) {
             return hex"33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87";
-        }
-        if (chainID == STEEL_TEST_CANCUN_CHAIN_ID) {
-            return hex"5ed47b289fa591fbc7ed9e7193f58225a50d151d35072880b1611cced4a2a68b";
         }
         revert UnknownChainId(chainID);
     }
