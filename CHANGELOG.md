@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - The `Contract` API now includes a `raw` method to allow for direct calls with raw calldata. This provides greater flexibility when interacting with non-standard interfaces, such as precompiles.
 - Add `Event` support for chains other than Ethereum.
 - Improve EVM error handling to support calls without return data.
+- Add `EvmEnvBuilder::consensus_commitment_slot` to specify a beacon chain slot directly as the commitment target. This is useful for light client verification scenarios where the verifier has direct access to beacon chain state.
 
 ### 🚨 Breaking Changes
 
@@ -22,6 +23,8 @@ All notable changes to this project will be documented in this file.
 
 - The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
 - Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`.
+- Add a warning log when the provider's chain ID does not match the chain spec configuration.
+- Improved error messages when the execution block incorrectly matches the commitment block for historical commitments.
 
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)
 
