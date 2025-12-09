@@ -21,7 +21,7 @@ use sha2::{Digest, Sha256, digest::Output};
 use std::collections::BTreeMap;
 
 /// The condition at which a fork is activated.
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ForkCondition {
     /// The fork is activated with a certain block.
     Block(BlockNumber),
@@ -41,7 +41,7 @@ impl ForkCondition {
 }
 
 /// Specification of a specific chain.
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChainSpec<S: Ord> {
     /// Chain identifier.
     pub chain_id: ChainId,
