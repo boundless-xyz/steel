@@ -299,11 +299,6 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()> {
         <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
     {
         let header = self.get_header(None).await?;
-        log::debug!(
-            "Environment initialized with block {} ({})",
-            header.number(),
-            header.seal()
-        );
 
         create_host_env::<N, P, F, _>(
             self.provider,
@@ -336,12 +331,6 @@ impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History
         // If the blocks are the same, the overhead of Eip2935HistoryCommit is unnecessary,
         // and the logic in `from_headers` (which expects strict inequality) will fail.
         ensure_distinct(&evm_header, &commitment_header)?;
-
-        log::debug!(
-            "Environment initialized with block {} ({})",
-            evm_header.number(),
-            evm_header.seal()
-        );
 
         let history_commit =
             Eip2935HistoryCommit::from_headers(&evm_header, &commitment_header, &self.provider)
@@ -381,32 +370,29 @@ enum CommitmentTarget {
 impl<P, S> EvmEnvBuilder<P, EthEvmFactory, S, Beacon> {
     /// Configures the environment builder to generate consensus commitments.
     ///
-    /// A consensus commitment contains the beacon block root indexed directly by its slot number.
-    /// This is in contrast to the default mechanism, which relies on timestamps for lookups, for
-    /// verification using the EIP-4788 beacon root contract deployed at the execution layer.
+    /// A consensus commitment contains the beacon block root indexed by its slot number, rather
+    /// than by timestamp. The default beacon commitment uses timestamp-based lookups, which can be
+    /// verified on-chain using the EIP-4788 beacon root contract. Consensus commitments instead
+    /// allow direct verification against the beacon chain state, making them ideal for systems
+    /// using beacon light clients.
     ///
-    /// The use of slot-based indexing is particularly beneficial for verification methods that have
-    /// direct access to the state of the beacon chain, such as systems using beacon light clients.
-    /// This allows the commitment to be verified directly against the state of the consensus layer.
+    /// For historical state execution with consensus commitments, see
+    /// [EvmEnvBuilder::consensus_commitment_slot()], which allows specifying a
+    /// more recent beacon slot as the commitment target.
     ///
     /// # Example
     /// ```rust,no_run
     /// # use risc0_steel::ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv};
-    /// # use alloy_primitives::B256;
     /// # use url::Url;
-    /// # use std::str::FromStr;
     /// # #[tokio::main(flavor = "current_thread")]
     /// # async fn main() -> anyhow::Result<()> {
-    /// let builder = EthEvmEnv::builder()
+    /// let env = EthEvmEnv::builder()
     ///     .rpc(Url::parse("https://ethereum-rpc.publicnode.com")?)
     ///     .beacon_api(Url::parse("https://ethereum-beacon-api.publicnode.com")?)
     ///     .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
-    ///     // Configure the builder to use slot-indexed consensus commitments.
-    ///     .consensus_commitment();
-    ///
-    /// // The resulting 'env' will be configured to generate a consensus commitment
-    /// // (beacon root indexed by slot) when processing blocks or state.
-    /// let env = builder.build().await?;
+    ///     .consensus_commitment()
+    ///     .build()
+    ///     .await?;
     /// # Ok(())
     /// # }
     /// ```
@@ -512,8 +498,7 @@ impl<P, S> EvmEnvBuilder<P, EthEvmFactory, S, Beacon> {
     /// # }
     /// ```
     ///
-    /// See [EvmEnvBuilder<P, EthEvmFactory, S, Beacon>::consensus_commitment] for more info on
-    /// consensus commitments.
+    /// See [(EvmEnvBuilder::consensus_commitment()] for more info on consensus commitments.
     pub fn consensus_commitment_slot(
         self,
         slot: u64,
@@ -542,11 +527,6 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
         P: Provider<Ethereum>,
     {
         let header = self.get_header(None).await?;
-        log::debug!(
-            "Environment initialized with block {} ({})",
-            header.number(),
-            header.seal()
-        );
 
         let client = self.commitment_config.client()?;
         let version = self.commitment_config.version;
@@ -570,14 +550,6 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
 impl<P>
     EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::SpecId>, History>
 {
-    /// Configures the environment builder to generate consensus commitments.
-    ///
-    /// See [EvmEnvBuilder<P, EthEvmFactory, S, Beacon>::consensus_commitment] for more info.
-    pub fn consensus_commitment(mut self) -> Self {
-        self.commitment_config.config.version = CommitmentVersion::Consensus;
-        self
-    }
-
     /// Builds and returns an [EvmEnv] with the configured settings, using a dedicated commitment
     /// block that is different from the execution block.
     pub async fn build(self) -> Result<EthHostEvmEnv<ProviderDb<Ethereum, P>, HistoryCommit>>
@@ -610,12 +582,6 @@ impl<P>
         // If the blocks are the same, the overhead of HistoryCommit is unnecessary,
         // and the logic in `from_headers` (which expects strict inequality) will fail.
         ensure_distinct(&evm_header, &commitment_header)?;
-
-        log::debug!(
-            "Environment initialized with block {} ({})",
-            evm_header.number(),
-            evm_header.seal()
-        );
 
         let history_commit = HistoryCommit::from_headers(
             &evm_header,
@@ -661,6 +627,12 @@ async fn create_host_env<N: Network, P: Provider<N>, F: EvmFactory, C>(
             chain_spec.chain_id
         );
     }
+
+    log::debug!(
+        "Environment initialized with block {} ({})",
+        header.number(),
+        header.seal()
+    );
 
     let db = ProofDb::new(ProviderDb::new(provider, provider_config, header.seal()));
     let chain_id = chain_spec.chain_id();
