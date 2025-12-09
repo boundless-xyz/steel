@@ -30,8 +30,9 @@ fn main() {
     let envs = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
 
     // Check that the EVM states are exactly 7200 blocks apart.
-    for (env_prev, env) in envs.iter().zip(envs.iter().skip(1)) {
-        assert_eq!(env.header().number - env_prev.header().number, 7200);
+    let numbers: Vec<_> = envs.block_numbers().collect();
+    for window in numbers.windows(2) {
+        assert_eq!(window[1] - window[0], 7200);
     }
 
     // Execute the view calls on each EVM state.
@@ -60,7 +61,7 @@ fn main() {
 
     // This commits the APR at current utilization rate for this given block.
     let journal = APRCommitment {
-        days: rates.len() as u64,
+        days: (rates.len() - 1) as u64,
         finalBlockNumber: envs.last().header().number,
         annualSupplyRate: annual_supply_rate,
         commitment: envs.into_commitment(),

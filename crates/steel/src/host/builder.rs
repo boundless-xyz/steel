@@ -260,8 +260,9 @@ impl<P, F, S, C> EvmEnvBuilder<P, F, S, C> {
         self
     }
 
-    /// Returns a copy of the builder with elided commitment config and set EVM execution block.
-    pub(crate) fn to_block(&self, block: impl Into<BlockId>) -> EvmEnvBuilder<P, F, S, ()>
+    /// Creates a clone of this builder configured for the given EVM execution block with elided
+    /// commitment config.
+    pub(crate) fn clone_with_block(&self, block: impl Into<BlockId>) -> EvmEnvBuilder<P, F, S, ()>
     where
         P: Clone,
         S: Clone,

@@ -119,7 +119,7 @@ mod tests {
         ignore = "RPC tests are disabled"
     )]
     async fn contract() {
-        // TODO: Make this an Anvil provider, once Anvil has EIP-2935 support
+        // TODO(https://github.com/foundry-rs/foundry/issues/10357): Use Anvil provider
         let el = ProviderBuilder::new().connect_http(get_el_url());
 
         // get the latest header

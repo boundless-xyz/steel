@@ -285,7 +285,7 @@ mod tests {
         ignore = "RPC tests are disabled"
     )]
     async fn eip2935_verify_block_commitment() {
-        // TODO: Make this an Anvil provider, once Anvil has EIP-2935 support
+        // TODO(https://github.com/foundry-rs/foundry/issues/10357): Use Anvil provider
         let el = ProviderBuilder::new().connect_http(get_el_url());
 
         verify_block_commitment(el.clone(), &ETH_MAINNET_CHAIN_SPEC, 1).await;
