@@ -14,12 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.26;
 
-import {IRiscZeroVerifier} from "risc0/IRiscZeroVerifier.sol";
-import {Steel} from "steel/Steel.sol";
 import {ICounter} from "./ICounter.sol";
-import {ImageID} from "./ImageID.sol"; // auto-generated contract after running `cargo build`.
+import {IRiscZeroVerifier} from "risc0-ethereum/IRiscZeroVerifier.sol";
+import {Steel} from "risc0-steel/Steel.sol";
 
 /// @title Counter
 /// @notice Implements a counter that increments based on off-chain Steel proofs submitted to this contract.
@@ -27,16 +26,16 @@ import {ImageID} from "./ImageID.sol"; // auto-generated contract after running 
 /// before incrementing the counter. This contract leverages RISC0-zkVM for generating and verifying these proofs.
 contract Counter is ICounter {
     /// @notice Image ID of the only zkVM binary to accept verification from.
-    bytes32 public constant imageID = ImageID.BALANCE_OF_ID;
+    bytes32 internal immutable IMAGE_ID;
 
     /// @notice RISC Zero verifier contract address.
-    IRiscZeroVerifier public immutable verifier;
+    IRiscZeroVerifier internal immutable VERIFIER;
 
     /// @notice Address of the ERC-20 token contract.
-    address public immutable tokenContract;
+    address internal immutable TOKEN;
 
     /// @notice Counter to track the number of successful verifications.
-    uint256 public counter;
+    uint256 public count;
 
     /// @notice Journal that is committed to by the guest.
     struct Journal {
@@ -45,28 +44,28 @@ contract Counter is ICounter {
     }
 
     /// @notice Initialize the contract, binding it to a specified RISC Zero verifier and ERC-20 token address.
-    constructor(IRiscZeroVerifier _verifier, address _tokenAddress) {
-        verifier = _verifier;
-        tokenContract = _tokenAddress;
-        counter = 0;
+    constructor(IRiscZeroVerifier _verifier, address _token, bytes32 _imageId) {
+        VERIFIER = _verifier;
+        TOKEN = _token;
+        IMAGE_ID = _imageId;
     }
 
     /// @inheritdoc ICounter
     function increment(bytes calldata journalData, bytes calldata seal) external {
         // Decode and validate the journal data
         Journal memory journal = abi.decode(journalData, (Journal));
-        require(journal.tokenContract == tokenContract, "Invalid token address");
+        require(journal.tokenContract == TOKEN, "Invalid token address");
         require(Steel.validateCommitment(journal.commitment), "Invalid commitment");
 
         // Verify the proof
         bytes32 journalHash = sha256(journalData);
-        verifier.verify(seal, imageID, journalHash);
+        VERIFIER.verify(seal, IMAGE_ID, journalHash);
 
-        counter += 1;
+        count += 1;
     }
 
     /// @inheritdoc ICounter
-    function get() external view returns (uint256) {
-        return counter;
+    function imageId() external view returns (bytes32) {
+        return IMAGE_ID;
     }
 }

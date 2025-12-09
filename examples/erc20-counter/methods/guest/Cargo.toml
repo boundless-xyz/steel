@@ -1,17 +1,13 @@
 [package]
-name = "erc20-counter-guests"
+name = "erc20-counter-guest"
 version = "0.1.0"
 edition = "2024"
-
-[[bin]]
-name = "balance_of"
-path = "src/bin/balance_of.rs"
 
 [workspace]
 
 [dependencies]
-alloy-primitives = { version = "1.0" }
-alloy-sol-types = { version = "1.0" }
+alloy-primitives = "1.0"
+erc20-counter-core = { path = "../../core" }
 risc0-steel = { path = "../../../../crates/steel" }
 risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
 

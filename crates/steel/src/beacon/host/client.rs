@@ -14,10 +14,9 @@
 
 //! A simple Beacon API client.
 
-use super::consensus::{mainnet::SignedBeaconBlock, phase0::SignedBeaconBlockHeader};
+use super::consensus::{Fork, mainnet::SignedBeaconBlock, phase0::SignedBeaconBlockHeader};
 use alloy::transports::http::reqwest;
 use alloy_primitives::B256;
-use ethereum_consensus::Fork;
 use serde::{Deserialize, Deserializer, Serialize, de::DeserializeOwned};
 use std::{collections::HashMap, fmt::Display, result::Result as StdResult};
 use url::Url;
@@ -81,6 +80,7 @@ impl<'de> serde::Deserialize<'de> for Response<SignedBeaconBlock> {
             Fork::Capella => serde_json::from_str(data.get()).map(SignedBeaconBlock::Capella),
             Fork::Deneb => serde_json::from_str(data.get()).map(SignedBeaconBlock::Deneb),
             Fork::Electra => serde_json::from_str(data.get()).map(SignedBeaconBlock::Electra),
+            Fork::Fulu => serde_json::from_str(data.get()).map(SignedBeaconBlock::Fulu),
         }
         .map_err(serde::de::Error::custom)?;
 

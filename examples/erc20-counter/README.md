@@ -1,66 +1,92 @@
-# ERC20-Counter Example
+# RISC Zero Steel: ERC-20 Counter Example
 
-This example implements a counter that increments based on off-chain RISC Zero [Steel] proofs submitted to the [Counter] contract.
-The contract interacts with ERC-20 tokens, using [Steel] proofs to verify that an account holds at least 1 token before incrementing the counter.
+This example demonstrates how to use [Steel] to prove the result of a view call to an ERC-20 contract on Ethereum.
+Specifically, the guest program checks if a specific account holds a token balance > 1. If valid, it generates a [Groth16 SNARK proof] that is submitted to the `Counter` contract on-chain, which verifies the proof and increments a counter.
 
-## Overview
+## Prerequisites
 
-The [Counter] contract is designed to interact with the Ethereum blockchain, leveraging the power of RISC Zero [Steel] proofs to perform a specific operation: incrementing a counter based on the token holdings of an account.
-
-### Contract Functionality
-
-#### Increment Counter
-
-The core functionality of the [Counter] contract is to increment an internal counter whenever a valid proof was submitted.
-This proof must demonstrate that a specified account holds at least one unit of a particular ERC-20 token.
-The contract ensures that the counter is only incremented when the proof is verified and the condition of holding at least one token is met.
-
-#### Steel Proof Submission
-
-Users or entities can submit proofs to the [Counter] contract.
-These proofs are generated off-chain using the RISC Zero zkVM.
-The proof encapsulates the verification of an account's token balance without exposing the account's details or requiring direct on-chain queries.
-
-#### Token Balance Verification
-
-Upon receiving a [Steel] proof, the [Counter] contract decodes the proof and validates it against the contract's state at a certain block height.
-This ensures that the account in question actually holds at least one token at the time the proof was generated.
-
-#### Counter Management
-
-The contract maintains an internal counter, which is publicly viewable.
-This counter represents the number of successful verifications that have occurred.
-The contract includes functionality to query the current value of the counter at any time.
-
-## Dependencies
-
-To get started, you need to have the following installed:
-
+Ensure you have the following installed:
 - [Rust]
 - [Foundry]
 - [RISC Zero]
+- [Docker]
 
-### Configuring Bonsai
+## Quick Start (Local Development)
 
-***Note:*** *To request an API key [complete the form here](https://bonsai.xyz/apply).*
+The easiest way to run this example is on a local [Anvil] chain. The deployment script will automatically set up a Mock Token and Mock Verifier for you.
 
-With the Bonsai proving service, you can produce a [Groth16 SNARK proof] that is verifiable on-chain.
-You can get started by setting the following environment variables with your API key and associated URL.
-
+### 1. Start Anvil
+Open a terminal and run the following to start anvil in the correct configuration:
 ```bash
-export BONSAI_API_KEY="YOUR_API_KEY" # see form linked above
-export BONSAI_API_URL="BONSAI_URL" # provided with your api key
+anvil --chain-id 5733100018 --hardfork prague
 ```
 
-## Deploy Your Application
+*Keep this terminal running.*
 
-When you're ready, follow the [deployment guide] to get your application running on [Sepolia] or a local network.
+### 2. Deploy Contracts
 
+Open a **new terminal**.
+
+Set the default Anvil private key (Account #0):
+```bash
+export ETH_WALLET_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+```
+
+Run the deployment script:
+```bash
+forge script --broadcast contracts/script/DeployCounter.s.sol \
+    --rpc-url http://localhost:8545 \
+    --private-key $ETH_WALLET_PRIVATE_KEY
+```
+
+You will see output similar to this.
+
+```text
+Deployed ERC20 TOKEN to 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Account 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 has balance: 1000
+Deployed RiscZeroMockVerifier to 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+Deployed Counter to 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+...
+```
+
+### 3. Generate Proof & Submit
+
+Run the host application using the addresses from the previous step. 
+
+```bash
+# Replace the addresses below with your deployment output
+RUST_LOG=info RISC0_DEV_MODE=true cargo run -- \
+    --eth-wallet-private-key $ETH_WALLET_PRIVATE_KEY \
+    --eth-rpc-url http://localhost:8545 \
+    --token-owner 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 \
+    --counter-address <PASTE_COUNTER_ADDRESS> \
+    --token-contract <PASTE_TOKEN_ADDRESS>
+```
+
+If successful, you will see:
+`✅ On-chain verification passed ...`
+
+-----
+
+## Integration Tests (Stateless)
+
+This repository includes robust integration tests that verify Steel proofs against **live networks** without requiring a wallet or local deployment. These tests use `eth_call` with state overrides to simulate the verification.
+
+To run the test suite (including Block, History, and Beacon commitment tests):
+
+```bash
+# Requires a valid RPC URL
+export ETH_RPC_URL=https://eth-mainnet.g.alchemy.com/v2/YOUR_API_KEY/
+# Note: The BEACON_API_URL must end with a trailing slash '/'
+# Otherwise, the Rust URL parser may discard the last path segment.
+export BEACON_API_URL=https://eth-mainnetbeacon.g.alchemy.com/v2/YOUR_API_KEY/
+
+cargo test --workspace --test stateless
+```
+
+[Docker]: https://www.docker.com/get-started/
 [Foundry]: https://getfoundry.sh/
 [Groth16 SNARK proof]: https://www.risczero.com/news/on-chain-verification
 [RISC Zero]: https://dev.risczero.com/api/zkvm/install
-[Sepolia]: https://www.alchemy.com/overviews/sepolia-testnet
-[deployment guide]: ./deployment-guide.md
 [Rust]: https://doc.rust-lang.org/cargo/getting-started/installation.html
-[Counter]: ./contracts/src/Counter.sol
 [Steel]: https://www.risczero.com/blog/introducing-steel
