@@ -16,14 +16,6 @@
 
 pragma solidity ^0.8.26;
 
-interface ICounter {
-    /// @notice Increments the counter if both the Steel journal and the RISC0 seal are valid.
-    /// @dev The Steel proof must be generated off-chain using RISC0-zkVM and submitted here.
-    function increment(bytes calldata journalData, bytes calldata seal) external;
+import {RiscZeroMockVerifier} from "risc0-ethereum/test/RiscZeroMockVerifier.sol";
 
-    /// @notice Returns the value of the counter.
-    function count() external view returns (uint256);
-
-    /// @notice Returns the image ID used for verification.
-    function imageId() external view returns (bytes32);
-}
+contract MockVerifier is RiscZeroMockVerifier(bytes4(0xFFFFFFFF)) {}

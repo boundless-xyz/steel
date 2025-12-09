@@ -30,51 +30,89 @@ use revm::{
     primitives::hardfork::SpecId,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, error::Error, sync::LazyLock};
+use std::{collections::BTreeMap, error::Error as StdError, sync::LazyLock};
 
-/// The Ethereum Sepolia [ChainSpec].
-pub static ETH_SEPOLIA_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| ChainSpec {
-    chain_id: 11155111,
-    forks: BTreeMap::from([
-        (SpecId::MERGE, ForkCondition::Block(1_735_371)),
-        (SpecId::SHANGHAI, ForkCondition::Timestamp(1_677_557_088)),
-        (SpecId::CANCUN, ForkCondition::Timestamp(1_706_655_072)),
-        (SpecId::PRAGUE, ForkCondition::Timestamp(1_741_159_776)),
-        (SpecId::OSAKA, ForkCondition::Timestamp(1_760_427_360)),
-    ]),
-});
+/// [ChainSpec] for Ethereum.
+pub type EthChainSpec = ChainSpec<SpecId>;
 
-/// The Ethereum Holešky [ChainSpec].
-pub static ETH_HOLESKY_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| ChainSpec {
-    chain_id: 17000,
-    forks: BTreeMap::from([
-        (SpecId::MERGE, ForkCondition::Block(0)),
-        (SpecId::SHANGHAI, ForkCondition::Timestamp(1_696_000_704)),
-        (SpecId::CANCUN, ForkCondition::Timestamp(1_707_305_664)),
-        (SpecId::PRAGUE, ForkCondition::Timestamp(1_740_434_112)),
-        (SpecId::OSAKA, ForkCondition::Timestamp(1_759_308_480)),
-    ]),
-});
+/// [CallError] for Ethereum.
+pub type EthCallError = CallError<<EthEvmFactory as EvmFactory>::HaltReason>;
 
-/// The Ethereum Mainnet [ChainSpec].
-pub static ETH_MAINNET_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| ChainSpec {
-    chain_id: 1,
-    forks: BTreeMap::from([
-        (SpecId::MERGE, ForkCondition::Block(15_537_394)),
-        (SpecId::SHANGHAI, ForkCondition::Timestamp(1_681_338_455)),
-        (SpecId::CANCUN, ForkCondition::Timestamp(1_710_338_135)),
-        (SpecId::PRAGUE, ForkCondition::Timestamp(1_746_612_311)),
-        (SpecId::OSAKA, ForkCondition::Timestamp(1_764_798_551)),
-    ]),
-});
+/// [EvmEnv] for Ethereum.
+pub type EthEvmEnv<D, C> = EvmEnv<D, EthEvmFactory, C>;
 
-/// [ChainSpec] for a custom Steel Testnet using the Prague EVM.
-pub static STEEL_TEST_PRAGUE_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
-    LazyLock::new(|| ChainSpec::new_single(5733100018, SpecId::PRAGUE));
+/// [EvmInput] for Ethereum.
+pub type EthEvmInput = EvmInput<EthEvmFactory>;
 
-/// [ChainSpec] for a custom Steel Testnet using the Osaka EVM.
-pub static STEEL_TEST_OSAKA_CHAIN_SPEC: LazyLock<ChainSpec<SpecId>> =
-    LazyLock::new(|| ChainSpec::new_single(5733100019, SpecId::OSAKA));
+/// [EvmBlockHeader] for Ethereum.
+pub type EthBlockHeader = RlpHeader<alloy_consensus::Header>;
+
+macro_rules! define_chain_specs {
+    ($($(#[$meta:meta])* $name:ident { chain_id: $id:literal, forks: $forks:expr $(,)? })*) => {
+        $(
+            $(#[$meta])*
+            pub static $name: LazyLock<EthChainSpec> = LazyLock::new(|| EthChainSpec {
+                chain_id: $id,
+                forks: BTreeMap::from($forks),
+            });
+        )*
+
+        impl EthChainSpec {
+            /// Resolves a chain ID to a known [ChainSpec] reference.
+            #[must_use]
+            pub fn from_chain_id(chain_id: u64) -> Option<&'static Self> {
+                match chain_id {
+                    $($id => Some(&$name),)*
+                    _ => None,
+                }
+            }
+        }
+    };
+}
+
+define_chain_specs! {
+    /// The Ethereum Mainnet [ChainSpec].
+    ETH_MAINNET_CHAIN_SPEC {
+        chain_id: 1,
+        forks: [
+            (SpecId::MERGE, ForkCondition::Block(15_537_394)),
+            (SpecId::SHANGHAI, ForkCondition::Timestamp(1_681_338_455)),
+            (SpecId::CANCUN, ForkCondition::Timestamp(1_710_338_135)),
+            (SpecId::PRAGUE, ForkCondition::Timestamp(1_746_612_311)),
+            (SpecId::OSAKA, ForkCondition::Timestamp(1_764_798_551)),
+        ],
+    }
+    /// The Ethereum Sepolia [ChainSpec].
+    ETH_SEPOLIA_CHAIN_SPEC {
+        chain_id: 11155111,
+        forks: [
+            (SpecId::MERGE, ForkCondition::Block(1_735_371)),
+            (SpecId::SHANGHAI, ForkCondition::Timestamp(1_677_557_088)),
+            (SpecId::CANCUN, ForkCondition::Timestamp(1_706_655_072)),
+            (SpecId::PRAGUE, ForkCondition::Timestamp(1_741_159_776)),
+            (SpecId::OSAKA, ForkCondition::Timestamp(1_760_427_360)),
+        ],
+    }
+    /// The Ethereum Hoodi [ChainSpec].
+    ETH_HOODI_CHAIN_SPEC {
+        chain_id: 560048,
+        forks: [
+            (SpecId::CANCUN, ForkCondition::Block(0)),
+            (SpecId::PRAGUE, ForkCondition::Timestamp(1_742_999_832)),
+            (SpecId::OSAKA, ForkCondition::Timestamp(1_761_677_592)),
+        ],
+    }
+    /// [ChainSpec] for a custom Steel Testnet using the Prague EVM.
+    STEEL_TEST_PRAGUE_CHAIN_SPEC {
+        chain_id: 5733100018,
+        forks: [(SpecId::PRAGUE, ForkCondition::Block(0))],
+    }
+    /// [ChainSpec] for a custom Steel Testnet using the Osaka EVM.
+    STEEL_TEST_OSAKA_CHAIN_SPEC {
+        chain_id: 5733100019,
+        forks: [(SpecId::OSAKA, ForkCondition::Block(0))],
+    }
+}
 
 /// [EvmFactory] for Ethereum.
 #[derive(Debug, Default, Clone, Copy, Serialize, Deserialize)]
@@ -84,7 +122,7 @@ pub struct EthEvmFactory;
 impl EvmFactory for EthEvmFactory {
     type Evm<DB: Database> = <AlloyEthEvmFactory as AlloyEvmFactory>::Evm<DB, NoOpInspector>;
     type Tx = <AlloyEthEvmFactory as AlloyEvmFactory>::Tx;
-    type Error<DBError: Error + Send + Sync + 'static> =
+    type Error<DBError: StdError + Send + Sync + 'static> =
         <AlloyEthEvmFactory as AlloyEvmFactory>::Error<DBError>;
     type HaltReason = <AlloyEthEvmFactory as AlloyEvmFactory>::HaltReason;
     type Spec = <AlloyEthEvmFactory as AlloyEvmFactory>::Spec;
@@ -123,12 +161,6 @@ impl EvmFactory for EthEvmFactory {
     }
 }
 
-/// [CallError] for Ethereum.
-pub type EthCallError = CallError<<EthEvmFactory as EvmFactory>::HaltReason>;
-
-/// [ChainSpec] for Ethereum.
-pub type EthChainSpec = ChainSpec<SpecId>;
-
 impl EvmSpecId for SpecId {
     #[inline]
     fn has_eip4788(&self) -> bool {
@@ -143,15 +175,6 @@ impl EvmSpecId for SpecId {
         *self as u32
     }
 }
-
-/// [EvmEnv] for Ethereum.
-pub type EthEvmEnv<D, C> = EvmEnv<D, EthEvmFactory, C>;
-
-/// [EvmInput] for Ethereum.
-pub type EthEvmInput = EvmInput<EthEvmFactory>;
-
-/// [EvmBlockHeader] for Ethereum.
-pub type EthBlockHeader = RlpHeader<alloy_consensus::Header>;
 
 impl EvmBlockHeader for EthBlockHeader {
     type SpecId = SpecId;
@@ -263,52 +286,61 @@ impl From<alloy_rpc_types::TransactionReceipt> for EthReceipt {
 
 #[cfg(test)]
 mod tests {
-    use alloy::primitives::b256;
-
-    use super::{
-        ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
-        STEEL_TEST_OSAKA_CHAIN_SPEC, STEEL_TEST_PRAGUE_CHAIN_SPEC,
-    };
-
-    // NOTE: If these are updated here, make sure to update them in Steel.sol
+    use super::*;
 
     #[test]
-    fn mainnet_spec_digest() {
+    fn from_chain_id() {
+        assert!(EthChainSpec::from_chain_id(0).is_none());
         assert_eq!(
-            ETH_MAINNET_CHAIN_SPEC.digest(),
-            b256!("0x47dc59f84afd2e9e7a48c4012004ab7c77fbd9acf822bf1143b8442c6c8851d4")
+            EthChainSpec::from_chain_id(1),
+            Some(&*ETH_MAINNET_CHAIN_SPEC)
         );
     }
 
-    #[test]
-    fn sepolia_spec_digest() {
-        assert_eq!(
-            ETH_SEPOLIA_CHAIN_SPEC.digest(),
-            b256!("0x90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d")
-        );
-    }
+    mod spec_digest {
+        use super::*;
+        use alloy::primitives::b256;
 
-    #[test]
-    fn holesky_spec_digest() {
-        assert_eq!(
-            ETH_HOLESKY_CHAIN_SPEC.digest(),
-            b256!("0xd5383ba90170a677231d8a3c739438a4811c75615209cab301f635599a2e83ec")
-        );
-    }
+        // NOTE: If these are updated here, make sure to update them in Steel.sol
 
-    #[test]
-    fn testnet_prague_spec_digest() {
-        assert_eq!(
-            STEEL_TEST_PRAGUE_CHAIN_SPEC.digest(),
-            b256!("0x33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87")
-        );
-    }
+        #[test]
+        fn mainnet() {
+            assert_eq!(
+                ETH_MAINNET_CHAIN_SPEC.digest(),
+                b256!("0x47dc59f84afd2e9e7a48c4012004ab7c77fbd9acf822bf1143b8442c6c8851d4")
+            );
+        }
 
-    #[test]
-    fn testnet_osaka_spec_digest() {
-        assert_eq!(
-            STEEL_TEST_OSAKA_CHAIN_SPEC.digest(),
-            b256!("0x2a80c688d324f578513161dda9e9a5773c0ee052f50304a94339e966da28b2ad")
-        );
+        #[test]
+        fn sepolia() {
+            assert_eq!(
+                ETH_SEPOLIA_CHAIN_SPEC.digest(),
+                b256!("0x90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d")
+            );
+        }
+
+        #[test]
+        fn hoodi() {
+            assert_eq!(
+                ETH_HOODI_CHAIN_SPEC.digest(),
+                b256!("0x34cb1defd939572b00439d2c13f93c033b82227067371c910ad104d527c78860")
+            );
+        }
+
+        #[test]
+        fn testnet_prague() {
+            assert_eq!(
+                STEEL_TEST_PRAGUE_CHAIN_SPEC.digest(),
+                b256!("0x33e32d9590cd4b168773ca27de65d535f2e744274b1437acb712dd4264f2eb87")
+            );
+        }
+
+        #[test]
+        fn testnet_osaka() {
+            assert_eq!(
+                STEEL_TEST_OSAKA_CHAIN_SPEC.digest(),
+                b256!("0x2a80c688d324f578513161dda9e9a5773c0ee052f50304a94339e966da28b2ad")
+            );
+        }
     }
 }

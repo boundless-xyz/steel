@@ -12,47 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This application demonstrates how to send an off-chain proof request
-// to the Bonsai proving service and publish the received proofs directly
-// to your deployed app contract.
-
 use alloy_primitives::{Address, U256};
 use anyhow::{Context, Result, ensure};
 use clap::Parser;
-use erc20_counter_methods::{BALANCE_OF_ELF, BALANCE_OF_ID};
+use erc20_counter_core::{IERC20, Input, Journal};
+use erc20_counter_methods::{ERC20_COUNTER_GUEST_ELF, ERC20_COUNTER_GUEST_ID};
 use risc0_ethereum_contracts::encode_seal;
-use risc0_steel::alloy::{
-    network::EthereumWallet,
-    providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
-    sol,
-    sol_types::{SolCall, SolValue},
-};
 use risc0_steel::{
-    Commitment, Contract,
-    ethereum::{EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
+    Contract,
+    alloy::{
+        network::EthereumWallet,
+        providers::{Provider, ProviderBuilder},
+        signers::local::PrivateKeySigner,
+        sol,
+        sol_types::{SolCall, SolValue},
+    },
+    ethereum::{EthChainSpec, EthEvmEnv},
     host::BlockNumberOrTag,
 };
-use risc0_zkvm::{Digest, ExecutorEnv, ProverOpts, VerifierContext, default_prover};
-use tokio::task;
+use risc0_zkvm::{Digest, ExecutorEnv, Prover, ProverOpts, default_prover};
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
-sol! {
-    /// Interface to be called by the guest.
-    interface IERC20 {
-        function balanceOf(address account) external view returns (uint);
-    }
-
-    /// Data committed to by the guest.
-    struct Journal {
-        Commitment commitment;
-        address tokenContract;
-    }
-}
-
 sol!(
-    #[sol(rpc, all_derives)]
+    #[sol(rpc)]
     "../contracts/src/ICounter.sol"
 );
 
@@ -67,22 +50,9 @@ struct Args {
     #[arg(long, env = "ETH_RPC_URL")]
     eth_rpc_url: Url,
 
-    /// Beacon API endpoint URL
-    ///
-    /// Steel uses a beacon block commitment instead of the execution block.
-    /// This allows proofs to be validated using the EIP-4788 beacon roots contract.
-    #[cfg(feature = "beacon")]
-    #[arg(long, env = "BEACON_API_URL")]
-    beacon_api_url: Url,
-
     /// Ethereum block to use as the state for the contract call
-    #[arg(long, env = "EXECUTION_BLOCK", default_value_t = BlockNumberOrTag::Parent)]
+    #[arg(long, env = "EXECUTION_BLOCK", default_value_t = BlockNumberOrTag::Latest)]
     execution_block: BlockNumberOrTag,
-
-    /// Ethereum block to use for the beacon block commitment.
-    #[cfg(feature = "history")]
-    #[arg(long, env = "COMMITMENT_BLOCK")]
-    commitment_block: BlockNumberOrTag,
 
     /// Address of the Counter verifier contract
     #[arg(long)]
@@ -93,12 +63,14 @@ struct Args {
     token_contract: Address,
 
     /// Address to query the token balance of
-    #[arg(long)]
-    account: Address,
+    #[arg(long, env = "TOKEN_OWNER")]
+    token_owner: Address,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load .env file if it exists
+    dotenvy::dotenv().ok();
     // Initialize tracing. In order to view logs, run `RUST_LOG=info cargo run`
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
@@ -112,27 +84,21 @@ async fn main() -> Result<()> {
         .wallet(wallet)
         .connect_http(args.eth_rpc_url);
 
-    #[cfg(feature = "beacon")]
-    log::info!("Beacon commitment to block {}", args.execution_block);
-    #[cfg(feature = "history")]
-    log::info!("History commitment to block {}", args.commitment_block);
+    // Load the specification corresponding to the chain ID.
+    let chain_id = provider.get_chain_id().await?;
+    let chain_spec = EthChainSpec::from_chain_id(chain_id)
+        .with_context(|| format!("Unsupported chain ID: {chain_id}"))?;
 
+    // Build the corresponding environment.
     let builder = EthEvmEnv::builder()
         .provider(provider.clone())
+        .chain_spec(chain_spec)
         .block_number_or_tag(args.execution_block);
-    #[cfg(feature = "beacon")]
-    let builder = builder.beacon_api(args.beacon_api_url);
-    #[cfg(feature = "history")]
-    let builder = builder.commitment_block_number_or_tag(args.commitment_block);
-
-    let mut env = builder
-        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
-        .build()
-        .await?;
+    let mut env = builder.build().await?;
 
     // Prepare the function call
     let call = IERC20::balanceOfCall {
-        account: args.account,
+        account: args.token_owner,
     };
 
     // Preflight the call to prepare the input that is required to execute the function in
@@ -142,25 +108,20 @@ async fn main() -> Result<()> {
     assert!(returns >= U256::from(1));
 
     // Finally, construct the input from the environment.
-    // There are two options: Use EIP-4788 for verification by providing a Beacon API endpoint,
-    // or use the regular `blockhash' opcode.
     let evm_input = env.into_input().await?;
 
-    // Create the steel proof.
-    let prove_info = task::spawn_blocking(move || {
-        let env = ExecutorEnv::builder()
-            .write(&evm_input)?
-            .write(&args.token_contract)?
-            .write(&args.account)?
-            .build()
-            .unwrap();
+    let input = Input {
+        chain_id,
+        evm_input,
+        erc20_contract: args.token_contract,
+        account: args.token_owner,
+    };
 
-        default_prover().prove_with_ctx(
-            env,
-            &VerifierContext::default(),
-            BALANCE_OF_ELF,
-            &ProverOpts::groth16(),
-        )
+    // Create the RiscZERO proof.
+    let prove_info = tokio::task::spawn_blocking(move || {
+        let env = ExecutorEnv::builder().write(&input)?.build().unwrap();
+
+        default_prover().prove_with_opts(env, ERC20_COUNTER_GUEST_ELF, &ProverOpts::groth16())
     })
     .await?
     .context("failed to create proof")?;
@@ -177,9 +138,12 @@ async fn main() -> Result<()> {
     // Create an alloy instance of the Counter contract.
     let contract = ICounter::new(args.counter_address, &provider);
 
-    // Call ICounter::imageID() to check that the contract has been deployed correctly.
-    let contract_image_id = Digest::from(contract.imageID().call().await?.0);
-    ensure!(contract_image_id == BALANCE_OF_ID.into());
+    // Call ICounter::imageId() to check that the contract has been deployed correctly.
+    let contract_image_id = contract.imageId().call().await?;
+    ensure!(
+        contract_image_id.0 == <[u8; 32]>::from(Digest::from(ERC20_COUNTER_GUEST_ID)),
+        "image ID mismatch; redeploying the Counter contract should fix this"
+    );
 
     // Call the increment function of the contract and wait for confirmation.
     log::info!(
@@ -196,6 +160,9 @@ async fn main() -> Result<()> {
         .await
         .with_context(|| format!("transaction did not confirm: {tx_hash}"))?;
     ensure!(receipt.status(), "transaction failed: {tx_hash}");
+
+    let count = contract.count().call().await?;
+    println!("✅ On-chain verification passed; new count: {count}");
 
     Ok(())
 }
