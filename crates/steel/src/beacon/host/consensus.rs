@@ -18,8 +18,9 @@
 
 use alloy_primitives::B256;
 use ssz::prelude::*;
+use std::fmt;
 
-pub use ethereum_consensus::{Fork, altair, bellatrix, capella, deneb, phase0, ssz};
+pub use ethereum_consensus::{altair, bellatrix, capella, deneb, phase0, ssz};
 
 pub mod electra {
     use ethereum_consensus::{
@@ -281,6 +282,36 @@ pub mod electra {
         MAX_VALIDATORS_PER_COMMITTEE * MAX_COMMITTEES_PER_SLOT;
 }
 
+pub mod fulu {
+    pub use super::electra::SignedBeaconBlock;
+}
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Fork {
+    Phase0,
+    Altair,
+    Bellatrix,
+    Capella,
+    Deneb,
+    Electra,
+    Fulu,
+}
+
+impl fmt::Display for Fork {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Phase0 => write!(f, "phase0"),
+            Self::Altair => write!(f, "altair"),
+            Self::Bellatrix => write!(f, "bellatrix"),
+            Self::Capella => write!(f, "capella"),
+            Self::Deneb => write!(f, "deneb"),
+            Self::Electra => write!(f, "electra"),
+            Self::Fulu => write!(f, "fulu"),
+        }
+    }
+}
+
 pub use ethereum_consensus::types::ExecutionPayloadRef;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serializable, HashTreeRoot)]
@@ -401,6 +432,28 @@ pub enum SignedBeaconBlock<
             MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
         >,
     ),
+    Fulu(
+        fulu::SignedBeaconBlock<
+            MAX_PROPOSER_SLASHINGS,
+            MAX_VALIDATORS_PER_SLOT,
+            MAX_COMMITTEES_PER_SLOT,
+            MAX_ATTESTER_SLASHINGS_ELECTRA,
+            MAX_ATTESTATIONS_ELECTRA,
+            MAX_DEPOSITS,
+            MAX_VOLUNTARY_EXITS,
+            SYNC_COMMITTEE_SIZE,
+            BYTES_PER_LOGS_BLOOM,
+            MAX_EXTRA_DATA_BYTES,
+            MAX_BYTES_PER_TRANSACTION,
+            MAX_TRANSACTIONS_PER_PAYLOAD,
+            MAX_WITHDRAWALS_PER_PAYLOAD,
+            MAX_BLS_TO_EXECUTION_CHANGES,
+            MAX_BLOB_COMMITMENTS_PER_BLOCK,
+            MAX_DEPOSIT_REQUESTS_PER_PAYLOAD,
+            MAX_WITHDRAWAL_REQUESTS_PER_PAYLOAD,
+            MAX_CONSOLIDATION_REQUESTS_PER_PAYLOAD,
+        >,
+    ),
 }
 
 impl<
@@ -459,6 +512,7 @@ impl<
             Self::Capella(_) => Fork::Capella,
             Self::Deneb(_) => Fork::Deneb,
             Self::Electra(_) => Fork::Electra,
+            Self::Fulu(_) => Fork::Fulu,
         }
     }
 
@@ -471,6 +525,7 @@ impl<
             Self::Capella(inner) => inner.message.hash_tree_root()?,
             Self::Deneb(inner) => inner.message.hash_tree_root()?,
             Self::Electra(inner) => inner.message.hash_tree_root()?,
+            Self::Fulu(inner) => inner.message.hash_tree_root()?,
         };
         Ok(root.0.into())
     }
@@ -493,6 +548,7 @@ impl<
             Self::Capella(inner) => Some(From::from(&inner.message.body.execution_payload)),
             Self::Deneb(inner) => Some(From::from(&inner.message.body.execution_payload)),
             Self::Electra(inner) => Some(From::from(&inner.message.body.execution_payload)),
+            Self::Fulu(inner) => Some(From::from(&inner.message.body.execution_payload)),
         }
     }
 }

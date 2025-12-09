@@ -102,7 +102,7 @@ contract SteelTest is Test {
         bytes32 someHash = keccak256(abi.encodePacked("some_hash"));
 
         Steel.Commitment memory c = createCommitment(uint240(oldBlockNumber), 0, someHash);
-        vm.expectPartialRevert(Steel.CommitmentTooOld.selector);
+        vm.expectPartialRevert(Steel.InvalidCommitmentBlockNumber.selector);
         verifier.validateCommitment(c);
     }
 
