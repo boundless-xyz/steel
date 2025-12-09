@@ -14,7 +14,8 @@
 
 //! Type aliases and specifications for Ethereum.
 use crate::{
-    CallError, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
+    CallError, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId, MultiblockEvmEnv,
+    MultiblockEvmInput,
     config::{ChainSpec, ForkCondition},
     serde::{Eip2718Wrapper, RlpHeader},
 };
@@ -32,6 +33,9 @@ use revm::{
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, error::Error as StdError, sync::LazyLock};
 
+/// [EvmBlockHeader] for Ethereum.
+pub type EthBlockHeader = RlpHeader<alloy_consensus::Header>;
+
 /// [ChainSpec] for Ethereum.
 pub type EthChainSpec = ChainSpec<SpecId>;
 
@@ -44,8 +48,11 @@ pub type EthEvmEnv<D, C> = EvmEnv<D, EthEvmFactory, C>;
 /// [EvmInput] for Ethereum.
 pub type EthEvmInput = EvmInput<EthEvmFactory>;
 
-/// [EvmBlockHeader] for Ethereum.
-pub type EthBlockHeader = RlpHeader<alloy_consensus::Header>;
+/// [MultiblockEvmEnv] for Ethereum.
+pub type EthMultiblockEvmEnv<D, C> = MultiblockEvmEnv<D, EthEvmFactory, C>;
+
+/// [MultiblockEvmInput] for Ethereum.
+pub type EthMultiblockEvmInput = MultiblockEvmInput<EthEvmFactory>;
 
 macro_rules! define_chain_specs {
     ($($(#[$meta:meta])* $name:ident { chain_id: $id:literal, forks: $forks:expr $(,)? })*) => {
