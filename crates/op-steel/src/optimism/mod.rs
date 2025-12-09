@@ -23,7 +23,7 @@ use delegate::delegate;
 use op_alloy_network::{Network, Optimism};
 use op_revm::{OpTransaction, spec::OpSpecId};
 use risc0_steel::{
-    BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
+    BlockInput, CallError, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
     config::{ChainSpec, ForkCondition},
     revm::{
         context::{BlockEnv, CfgEnv, TxEnv},
@@ -34,7 +34,13 @@ use risc0_steel::{
     serde::{Eip2718Wrapper, RlpHeader},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::Into, error::Error, sync::LazyLock};
+use std::{
+    collections::BTreeMap,
+    convert::Into,
+    error::Error,
+    fmt::{self, Debug, Display},
+    sync::LazyLock,
+};
 
 #[cfg(feature = "host")]
 mod host;
@@ -156,12 +162,21 @@ impl EvmFactory for OpEvmFactory {
     }
 }
 
+/// [CallError] for Optimism.
+pub type OpCallError = CallError<<OpEvmFactory as EvmFactory>::HaltReason>;
+
 /// [ChainSpec] for Optimism.
 pub type OpChainSpec = ChainSpec<OpEvmSpecId>;
 
 /// [EvmFactory::SpecId] for Optimism.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OpEvmSpecId(OpSpecId);
+
+impl Display for OpEvmSpecId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
 
 impl From<OpSpecId> for OpEvmSpecId {
     fn from(spec: OpSpecId) -> Self {
@@ -324,9 +339,19 @@ impl From<op_alloy_rpc_types::OpTransactionReceipt> for OpEvmReceipt {
         // Unfortunately ReceiptResponse does not implement ReceiptEnvelope, so we have to
         // manually convert it.
         // TODO(https://github.com/alloy-rs/alloy/issues/854): use ReceiptEnvelope directly
-        Self(Eip2718Wrapper::new(
-            rpc_receipt.inner.into_inner().map_logs(Into::into),
-        ))
+
+        use op_alloy_consensus::OpReceipt;
+        let (receipt, bloom) = rpc_receipt.inner.into_inner().into_components();
+        let primitive = match receipt {
+            OpReceipt::Legacy(r) => OpReceipt::Legacy(r.map_logs(Into::into)),
+            OpReceipt::Eip2930(r) => OpReceipt::Eip2930(r.map_logs(Into::into)),
+            OpReceipt::Eip1559(r) => OpReceipt::Eip1559(r.map_logs(Into::into)),
+            OpReceipt::Eip7702(r) => OpReceipt::Eip7702(r.map_logs(Into::into)),
+            OpReceipt::Deposit(r) => OpReceipt::Deposit(r.map_logs(Into::into)),
+        };
+        let eip2718_envelope = alloy_consensus::ReceiptWithBloom::new(primitive, bloom);
+
+        Self(Eip2718Wrapper::new(eip2718_envelope))
     }
 }
 
