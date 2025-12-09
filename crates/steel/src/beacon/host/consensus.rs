@@ -547,7 +547,6 @@ impl<
         &self,
     ) -> Option<
         ExecutionPayloadRef<
-            '_,
             BYTES_PER_LOGS_BLOOM,
             MAX_EXTRA_DATA_BYTES,
             MAX_BYTES_PER_TRANSACTION,
