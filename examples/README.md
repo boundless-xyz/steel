@@ -31,17 +31,17 @@ on-chain verification of complex financial metrics.
 
 ### [L2 Execution - L2 Verification](./op/l2)
 
-This example shows how to use [op-steel] to query the `balanceOf` function of an ERC20 token on OP, providing a proof
-that can be verified on OP.
+This example shows how to use [op-steel] to query the `balanceOf` function of an ERC20 token on Base, providing a proof
+that can be verified on Base.
 
 ### [L1 Execution - L2 Verification](./op/l1-to-l2)
 
 This example shows how to use [op-steel] to query the `balanceOf` function of an ERC20 token on Ethereum and how the
-generated proof can be verified on OP.
+generated proof can be verified on Base.
 
 ### [L2 Execution - L1 Verification](./op/l2-to-l1)
 
-This example shows how to use [op-steel] to query the `balanceOf` function of an ERC20 token on OP and how the generated
+This example shows how to use [op-steel] to query the `balanceOf` function of an ERC20 token on Base and how the generated
 proof can be verified on Ethereum.
 
 [coprocessor]: https://risczero.com/blog/a-guide-to-zk-coprocessors-for-scalability
