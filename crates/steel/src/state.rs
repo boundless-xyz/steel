@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use alloy_consensus::Account as StateAccount;
+pub use alloy_consensus::TrieAccount as StateAccount;
 
 use crate::{event, mpt::MerkleTrie};
 use alloy_primitives::{
