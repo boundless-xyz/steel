@@ -18,6 +18,10 @@ All notable changes to this project will be documented in this file.
 
 - **Solidity**: Renamed `CommitmentTooOld` error to `InvalidCommitmentBlockNumber` in `Steel.sol` to better reflect validity checks beyond just age.
 
+### 🛠️ Fixes
+
+- Normalize `BeaconClient` endpoint URL to ensure correct path joining. URLs without a trailing slash (e.g., from Quicknode) now work correctly.
+
 ### ⚙️ Miscellaneous
 
 - The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
