@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ use l2_core::{CALL, CALLER, CONTRACT, IERC20};
 use l2_methods::{L2_GUEST_ELF, L2_GUEST_ID};
 use risc0_op_steel::{
     Contract,
-    optimism::{OP_MAINNET_CHAIN_SPEC, OpEvmEnv},
+    optimism::{BASE_MAINNET_CHAIN_SPEC, OpEvmEnv},
 };
 use risc0_zkvm::{Digest, ExecutorEnv, ProverOpts, VerifierContext, default_prover};
 use tokio::task;
@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
 
     let mut env = OpEvmEnv::builder()
         .rpc(args.l2_rpc_url.clone())
-        .chain_spec(&OP_MAINNET_CHAIN_SPEC)
+        .chain_spec(&BASE_MAINNET_CHAIN_SPEC)
         .build()
         .await?;
 
@@ -80,7 +80,7 @@ async fn main() -> Result<()> {
     #[cfg(feature = "verify")]
     examples_common::verify_on_chain(
         prove_info.receipt,
-        &OP_MAINNET_CHAIN_SPEC,
+        &BASE_MAINNET_CHAIN_SPEC,
         image_id,
         args.l2_rpc_url,
     )

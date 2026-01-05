@@ -19,6 +19,10 @@ All notable changes to this project will be documented in this file.
 
 - **Solidity**: Renamed `CommitmentTooOld` error to `InvalidCommitmentBlockNumber` in `Steel.sol` to better reflect validity checks beyond just age.
 
+### 🛠️ Fixes
+
+- Use `alloy_consensus::TrieAccount` instead of deprecated `alloy_consensus::Account`.
+
 ### ⚙️ Miscellaneous
 
 - The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
