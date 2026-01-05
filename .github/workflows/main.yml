@@ -244,7 +244,7 @@ jobs:
           RUST_LOG: "info,risc0_steel=debug,risc0_op_steel=debug"
           RISC0_DEV_MODE: true
           L1_RPC_URL: https://eth-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
-          L2_RPC_URL: https://opt-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
+          L2_RPC_URL: https://base-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
           BEACON_API_URL: https://eth-mainnetbeacon.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}/
 
   doc:
@@ -272,7 +272,7 @@ jobs:
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
         with:
           # Building with docs.rs config requires the nightly toolchain.
-          toolchain: nightly-2025-04-03
-      - run: cargo +nightly-2025-04-03 doc -p risc0-steel --all-features --no-deps
+          toolchain: nightly-2025-05-09
+      - run: cargo +nightly-2025-05-09 doc -p risc0-steel --all-features --no-deps
         env:
           RUSTDOCFLAGS: "--cfg docsrs -D warnings"

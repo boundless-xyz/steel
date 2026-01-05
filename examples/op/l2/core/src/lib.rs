@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,10 +23,10 @@ sol! {
 
 /// Function to call, implements the `SolCall` trait.
 pub const CALL: IERC20::balanceOfCall = IERC20::balanceOfCall {
-    account: address!("acD03D601e5bB1B275Bb94076fF46ED9D753435A"),
+    account: address!("0x8da91A6298eA5d1A8Bc985e99798fd0A0f05701a"),
 };
 
-/// Address of the deployed contract to call the function on (USDT contract on OP Sepolia).
-pub const CONTRACT: Address = address!("94b008aA00579c1307B0EF2c499aD98a8ce58e58");
+/// Address of the deployed contract to call the function on (USDC contract on Base Mainnet).
+pub const CONTRACT: Address = address!("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
 
 pub const CALLER: Address = Address::ZERO;
