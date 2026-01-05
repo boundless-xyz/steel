@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 
 - The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
 - Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`.
+- Updated dependencies: `alloy-evm` (to 0.25).
 
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)
 
