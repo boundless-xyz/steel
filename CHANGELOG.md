@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.2](https://github.com/boundless-xyz/steel/releases/tag/v2.4.2)
+
+### 🛠️ Fixes
+
+- Use `alloy_consensus::TrieAccount` instead of deprecated `alloy_consensus::Account`.
+
 ## [2.4.1](https://github.com/boundless-xyz/steel/releases/tag/v2.4.1)
 
 ### ⚡️ Features
