@@ -156,3 +156,16 @@ impl BeaconClient {
         Ok(B256::from_slice(execution_payload.block_hash()))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn endpoint_without_trailing_slash() {
+        let client = BeaconClient::new("https://beacon.example.com/api").unwrap();
+        let joined = client.endpoint.join("eth/v1/beacon/headers").unwrap();
+
+        assert_eq!(joined.path(), "/api/eth/v1/beacon/headers");
+    }
+}
