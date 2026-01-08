@@ -22,6 +22,7 @@ All notable changes to this project will be documented in this file.
 ### 🛠️ Fixes
 
 - Use `alloy_consensus::TrieAccount` instead of deprecated `alloy_consensus::Account`.
+- Normalize `BeaconClient` endpoint URL to ensure correct path joining. URLs without a trailing slash (e.g., from Quicknode) now work correctly.
 
 ### ⚙️ Miscellaneous
 
