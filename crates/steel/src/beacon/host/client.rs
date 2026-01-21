@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -98,9 +98,17 @@ pub struct BeaconClient {
 impl BeaconClient {
     /// Creates a new beacon endpoint API client.
     pub fn new<U: reqwest::IntoUrl>(endpoint: U) -> Result<Self> {
+        let mut endpoint = endpoint.into_url()?;
+
+        // normalize URL to ensure Url::join() works correctly
+        // without trailing slash, join() replaces the last path segment
+        if !endpoint.path().ends_with('/') {
+            endpoint.set_path(&format!("{}/", endpoint.path()));
+        }
+
         Ok(Self {
             http: reqwest::Client::new(),
-            endpoint: endpoint.into_url()?,
+            endpoint,
         })
     }
 
@@ -146,5 +154,18 @@ impl BeaconClient {
         let execution_payload = block.execution_payload().ok_or(Error::NoExecutionPayload)?;
 
         Ok(B256::from_slice(execution_payload.block_hash()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn endpoint_without_trailing_slash() {
+        let client = BeaconClient::new("https://beacon.example.com/api").unwrap();
+        let joined = client.endpoint.join("eth/v1/beacon/headers").unwrap();
+
+        assert_eq!(joined.path(), "/api/eth/v1/beacon/headers");
     }
 }
