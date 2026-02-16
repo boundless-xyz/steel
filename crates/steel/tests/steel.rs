@@ -27,7 +27,7 @@ use alloy_trie::EMPTY_ROOT_HASH;
 use common::CallOptions;
 use revm::context::result::HaltReason;
 use risc0_steel::{
-    Account, CallError,
+    Account, CallError, EvmBlockHeader, SyncEnv,
     account::AccountInfo,
     ethereum::{EthCallError, EthEvmEnv, STEEL_TEST_PRAGUE_CHAIN_SPEC},
 };
@@ -601,4 +601,64 @@ async fn prefetch_access_list() {
     common::eth_call(provider, address, call, options)
         .await
         .unwrap();
+}
+
+/// Shared validation logic that runs against any SyncEnv.
+fn sync_validation(env: &mut impl SyncEnv, contract: Address) -> (U256, U256, U256, u64, u64) {
+    let chainid: U256 = env.call(contract, &SteelTest::testChainidCall {});
+    let multi: U256 = env.call(contract, &SteelTest::testMultiContractCallsCall {});
+    let storage: U256 = env.call(contract, &SteelTest::testLoadEmptyStorageCall {});
+    let timestamp = env.header().timestamp();
+    let number = env.header().number();
+
+    (chainid, multi, storage, timestamp, number)
+}
+
+/// Tests that SyncEnv produces identical results on host and guest environments.
+#[test(tokio::test(flavor = "multi_thread"))]
+async fn sync_env_host_guest_match() {
+    let provider = test_provider().await;
+
+    let mut host_env = EthEvmEnv::builder()
+        .provider(provider)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
+        .build()
+        .await
+        .unwrap();
+
+    let host_result = sync_validation(&mut host_env, STEEL_TEST_CONTRACT);
+
+    let input = host_env.into_input().await.unwrap();
+    let mut guest_env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
+
+    let guest_result = sync_validation(&mut guest_env, STEEL_TEST_CONTRACT);
+
+    assert_eq!(host_result, guest_result, "host and guest results differ");
+
+    let (chainid, multi, storage, timestamp, number) = guest_result;
+    assert_eq!(
+        chainid,
+        U256::from(STEEL_TEST_PRAGUE_CHAIN_SPEC.chain_id()),
+        "chainid mismatch"
+    );
+    assert_eq!(multi, uint!(84_U256), "multi-contract call mismatch");
+    assert_eq!(storage, uint!(0_U256), "empty storage mismatch");
+    assert!(timestamp > 0, "timestamp should be non-zero");
+    assert!(number > 0, "block number should be non-zero");
+}
+
+/// Tests that SyncEnv::try_call returns an error (not a panic) for a call to an EOA.
+#[test(tokio::test(flavor = "multi_thread"))]
+async fn sync_env_try_call_error() {
+    let provider = test_provider().await;
+
+    let mut host_env = EthEvmEnv::builder()
+        .provider(provider)
+        .chain_spec(&STEEL_TEST_PRAGUE_CHAIN_SPEC)
+        .build()
+        .await
+        .unwrap();
+
+    let result = host_env.try_call(Address::ZERO, &SteelTest::testChainidCall {});
+    assert!(result.is_err(), "calling an EOA should fail");
 }
