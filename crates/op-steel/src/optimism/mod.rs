@@ -13,14 +13,14 @@
 // limitations under the License.
 
 use crate::game::DisputeGameInput;
-use alloy_consensus::{Eip658Value, TxReceipt};
+use alloy_consensus::{Eip658Value, ReceiptWithBloom, TxReceipt};
 use alloy_eips::{Encodable2718, Typed2718, eip4844, eip7691};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
 use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
 use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, U256};
 use alloy_rlp::BufMut;
 use delegate::delegate;
-use op_alloy_network::{Network, Optimism};
+use op_alloy_consensus::OpReceipt;
 use op_revm::{OpTransaction, spec::OpSpecId};
 use risc0_steel::{
     BlockInput, CallError, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
@@ -204,7 +204,7 @@ impl EvmSpecId for OpEvmSpecId {
     }
 }
 
-type OpHeader = <Optimism as Network>::Header;
+type OpHeader = alloy_consensus::Header;
 
 /// [EvmFactory::Header] for Optimism.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -301,7 +301,7 @@ where
 /// [EvmFactory::Receipt] for Optimism.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct OpEvmReceipt(Eip2718Wrapper<<Optimism as Network>::ReceiptEnvelope>);
+pub struct OpEvmReceipt(Eip2718Wrapper<ReceiptWithBloom<OpReceipt>>);
 
 impl Typed2718 for OpEvmReceipt {
     delegate! {
@@ -319,7 +319,7 @@ impl Encodable2718 for OpEvmReceipt {
 }
 
 impl TxReceipt for OpEvmReceipt {
-    type Log = <<Optimism as Network>::ReceiptEnvelope as TxReceipt>::Log;
+    type Log = <ReceiptWithBloom<OpReceipt> as TxReceipt>::Log;
 
     delegate! {
         to self.0 {
