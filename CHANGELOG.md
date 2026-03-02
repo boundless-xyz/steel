@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.3](https://github.com/boundless-xyz/steel/releases/tag/v2.4.3)
+
+### ⚙️ Miscellaneous
+
+- Update dependencies: `r0vm` (to 3.0.4), `rust` (to 1.91.1)
+
 ## [2.4.2](https://github.com/boundless-xyz/steel/releases/tag/v2.4.2)
 
 ### 🛠️ Fixes
