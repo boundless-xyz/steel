@@ -9,8 +9,8 @@ lto = true
 [workspace.dependencies]
 alloy = "1.0"
 examples-common = { path = "common" }
-risc0-build = { version = "2.3" }
+risc0-build = { version = "3.0" }
 risc0-ethereum-contracts = { version = "2.2" }
 risc0-op-steel = { path = "../../crates/op-steel" }
-risc0-zkvm = { version = "2.3" }
+risc0-zkvm = { version = "3.0" }
 serde = "1.0"
