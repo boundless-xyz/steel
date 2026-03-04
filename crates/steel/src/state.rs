@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use alloy_consensus::Account as StateAccount;
+pub use alloy_consensus::TrieAccount as StateAccount;
 
 use crate::{event, mpt::MerkleTrie};
 use alloy_primitives::{
@@ -162,6 +162,7 @@ impl<H> RevmDatabase for WrapStateDb<'_, H> {
                     balance: account.balance,
                     nonce: account.nonce,
                     code_hash: account.code_hash,
+                    account_id: None,
                     code: None, // we don't need the code here, `code_by_hash` will be used instead
                 }))
             }

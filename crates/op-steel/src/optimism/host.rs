@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -363,7 +363,7 @@ mod tests {
     }
 
     #[test(tokio::test)]
-    #[ignore = "queries actual RPC nodes"]
+    #[cfg_attr(not(feature = "rpc-tests"), ignore = "RPC tests are disabled")]
     async fn build_op_block_env() {
         let builder = OpEvmEnv::builder()
             .rpc(L2_URL.parse().unwrap())
@@ -391,7 +391,7 @@ mod tests {
     }
 
     #[test(tokio::test)]
-    #[ignore = "queries actual RPC nodes"]
+    #[cfg_attr(not(feature = "rpc-tests"), ignore = "RPC tests are disabled")]
     async fn build_op_dispute_game_env() {
         let builder = OpEvmEnv::builder()
             .rpc(L2_URL.parse().unwrap())

@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ pub fn process_proof(
     let mut computed_hash = leaf;
     let mut hasher = Sha256::new();
     for node in branch {
-        if index % 2 != 0 {
+        if !index.is_multiple_of(2) {
             hasher.update(node);
             hasher.update(computed_hash);
         } else {

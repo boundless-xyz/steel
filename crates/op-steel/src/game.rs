@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -75,11 +75,7 @@ pub mod host {
     use super::*;
     use IDisputeGameFactory::IDisputeGameFactoryInstance;
     use IOptimismPortal2::IOptimismPortal2Instance;
-    use alloy::{
-        network::Ethereum,
-        providers::Provider,
-        rpc::types::state::{AccountOverride, StateOverride},
-    };
+    use alloy::{network::Ethereum, providers::Provider, rpc::types::state::StateOverridesBuilder};
     use alloy_primitives::{Address, B256, BlockNumber, U256, address, uint};
     use anyhow::{Context, bail, ensure};
     use op_alloy_network::Optimism;
@@ -254,14 +250,10 @@ pub mod host {
                     // OPGameFinder contract to get it in one call. To ensure that this contract is
                     // always available, we override the code of a random address.
                     let finder = OPGameFinder::new(Address::random(), self.0.provider());
-                    let mut overrides = StateOverride::default();
-                    overrides.insert(
-                        *finder.address(),
-                        AccountOverride {
-                            code: Some(OPGameFinder::DEPLOYED_BYTECODE.clone()),
-                            ..Default::default()
-                        },
-                    );
+                    let overrides = StateOverridesBuilder::default()
+                        .with_code(*finder.address(), OPGameFinder::DEPLOYED_BYTECODE.clone())
+                        .build();
+
                     let find_index = finder.findFinalizedIndex(*self.0.address());
                     let index = match find_index.call().overrides(overrides).await {
                         Ok(index) => index,

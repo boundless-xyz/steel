@@ -16,9 +16,10 @@ permissions:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  RISC0_TOOLCHAIN_VERSION: 1.88.0
-  RISC0_CRATE_VERSION: "3.0.3"
-  FOUNDRY_VERSION: v1.0.0
+  RISC0_TOOLCHAIN_VERSION: "1.91.1"
+  RISC0_CRATE_VERSION: "3.0.4"
+  FOUNDRY_VERSION: "v1.5.1"
+  RUST_LOG: "info"
 
 jobs:
   # see: https://github.com/orgs/community/discussions/26822
@@ -166,6 +167,7 @@ jobs:
           path: target/cargo-timings/
           retention-days: 5
       - run: forge test -vvv
+        working-directory: contracts
 
   rpc-tests:
     # Skip if the PR is not from a fork.
@@ -243,7 +245,7 @@ jobs:
           RUST_LOG: "info,risc0_steel=debug,risc0_op_steel=debug"
           RISC0_DEV_MODE: true
           L1_RPC_URL: https://eth-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
-          L2_RPC_URL: https://opt-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
+          L2_RPC_URL: https://base-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
           BEACON_API_URL: https://eth-mainnetbeacon.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}/
 
   doc:
@@ -271,7 +273,7 @@ jobs:
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
         with:
           # Building with docs.rs config requires the nightly toolchain.
-          toolchain: nightly-2025-04-03
-      - run: cargo +nightly-2025-04-03 doc -p risc0-steel --all-features --no-deps
+          toolchain: nightly-2025-10-30
+      - run: cargo +nightly-2025-10-30 doc -p risc0-steel --all-features --no-deps
         env:
           RUSTDOCFLAGS: "--cfg docsrs -D warnings"
