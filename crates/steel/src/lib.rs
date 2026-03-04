@@ -440,25 +440,28 @@ impl Commitment {
     }
 }
 
-impl Display for Commitment {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Commitment {
+    /// Returns the decoded ID and a human-readable version string.
+    fn decoded_id_version(&self) -> (U256, String) {
         let (id, version_code) = self.decode_id();
         let version_str = match CommitmentVersion::n(version_code) {
             Some(v) => format!("{v:?}"),
             None => format!("Unknown({version_code:#x})"),
         };
+        (id, version_str)
+    }
+}
+
+impl Display for Commitment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (id, version_str) = self.decoded_id_version();
         write!(f, "{version_str}({id})={:#}", &self.digest)
     }
 }
 
 impl Debug for Commitment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (id, version_code) = self.decode_id();
-        let version_str = match CommitmentVersion::n(version_code) {
-            Some(v) => format!("{v:?}"),
-            None => format!("Unknown({version_code:#x})"),
-        };
-
+        let (id, version_str) = self.decoded_id_version();
         f.debug_struct("Commitment")
             .field("version", &version_str)
             .field("id", &id)
