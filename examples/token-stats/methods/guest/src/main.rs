@@ -39,7 +39,7 @@ fn main() {
     let rates = envs
         .iter()
         .map(|env| {
-            // Execute the view calls on the older EVM state.
+            // Execute the view calls.
             let contract = Contract::new(CONTRACT, env);
             let utilization = contract
                 .call_builder(&CometMainInterface::getUtilizationCall {})
