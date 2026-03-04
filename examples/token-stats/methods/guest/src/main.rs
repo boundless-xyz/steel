@@ -23,7 +23,7 @@ use token_stats_core::{APRCommitment, CONTRACT, CometMainInterface};
 const SECONDS_PER_YEAR: u128 = 60 * 60 * 24 * 365;
 
 fn main() {
-    // Read the first input from the guest environment. It corresponds to the older EVM state.
+    // Read the multiblock input from the guest environment.
     let input: EthMultiblockEvmInput = env::read();
 
     // Converts the input into a `EvmEnv` for execution.

@@ -74,14 +74,14 @@ use std::collections::BTreeMap;
 /// ```
 pub struct MultiblockEvmEnv<D, F: EvmFactory, C>(BTreeMap<BlockNumber, EvmEnv<D, F, C>>);
 
-/// The serializable input to derive and validate an [MultiblockEvmEnv] from.
+/// The serializable input to derive and validate a [MultiblockEvmEnv] from.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct MultiblockEvmInput<F: EvmFactory>(Vec<EvmInput<F>>);
 
 impl<F: EvmFactory> MultiblockEvmInput<F> {
     /// Converts the input into a [MultiblockEvmEnv] for verifiable state access in the guest.
     ///
-    /// This method verifies that all the envs belong to the same chain.
+    /// This method verifies that all the envs belong to the same chain and panics if not.
     pub fn into_env(
         self,
         chain_spec: &ChainSpec<F::SpecId>,
@@ -139,7 +139,7 @@ impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
         self.0.keys().copied()
     }
 
-    /// Gets an iterator over the environments, ordered by block number in ascending order.
+    /// Gets an iterator over the environments in ascending block number order.
     pub fn iter(&self) -> impl Iterator<Item = &GuestEvmEnv<F>> {
         self.0.values()
     }
@@ -149,6 +149,7 @@ impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
     /// The returned commitment is from the final (highest) block. Verifying this single commitment
     /// on-chain validates the entire sequence because each block is cryptographically linked to its
     /// predecessors.
+    #[must_use]
     pub fn commitment(&self) -> &Commitment {
         self.last().commitment()
     }
@@ -158,6 +159,7 @@ impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
     /// The returned commitment is from the final (highest) block. Verifying this single commitment
     /// on-chain validates the entire sequence because each block is cryptographically linked to its
     /// predecessors.
+    #[must_use]
     pub fn into_commitment(mut self) -> Commitment {
         // safe unwrap: MultiblockEvmEnv<StateDb, F, Commitment> cannot be constructed empty
         let env = self.0.pop_last().unwrap().1;
@@ -281,6 +283,8 @@ pub(crate) mod host {
         /// Each environment's commitment is verified against its successor using [SteelVerifier],
         /// ensuring all blocks belong to the same chain. The verification strategy adapts based on
         /// distance between blocks (direct block hash vs. EIP-2935 history commitment).
+        ///
+        /// A single block is supported; in that case no inter-block verification is performed.
         pub async fn into_input(self) -> anyhow::Result<MultiblockEvmInput<F>> {
             ensure!(
                 !self.is_empty(),
@@ -316,11 +320,12 @@ pub(crate) mod host {
                 } else {
                     // Long-range: intermediate EIP-2935 history commitment
                     let target_block = next_block - verifier::EIP2935_HISTORY_LIMIT;
-                    // create a new env that contains all the content of the current one but uses an EIP-2935 history commitment
                     let builder = self
                         .template
                         .clone_with_block(current_env.header().seal())
                         .commitment_block_number(target_block);
+                    // Build a new env with the desired commitment, then merge in the EVM data
+                    // from current_env. The merge keeps the new env's commitment and absorbs the data.
                     let history_env = builder.build().await.with_context(|| {
                         format!("block {current_block}: failed to build EIP-2935 history commitment to {target_block}")
                     })?.merge(current_env)?;

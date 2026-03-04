@@ -698,31 +698,34 @@ fn ensure_distinct<H: EvmBlockHeader>(
     Ok(())
 }
 
-/// Extension trait used by [HostMultiblockEvmEnv] to build an [EvmInput] instance from an
-/// [EvmEnvBuilder] given an existing [EvmEnv].
+/// Extension trait used by [HostMultiblockEvmEnv] to convert a commitment-less
+/// `HostEvmEnv<..., ()>` into an [EvmInput] with the commitment type determined by the builder.
 ///
-/// This trait abstracts the process of transforming a configured [EvmEnvBuilder] into a
-/// corresponding [EvmInput]. Essentially, it applies the specified commitment type from the
-/// [EvmEnvBuilder] to the EVM data from the given [EvmEnv].
+/// [HostMultiblockEvmEnv] collects environments without commitments (`()`), because the
+/// commitment for each block is determined later: intermediate blocks get automatic commitments
+/// (block hash or EIP-2935), while the final block gets the user-configured commitment from the
+/// template builder. This trait allows `into_input()` to apply the builder’s commitment type
+/// generically, regardless of whether it is `()`, `Beacon`, `Eip2935History`, or `History`.
+///
+/// For non-trivial commitment types, the implementation rebuilds an empty environment from the
+/// builder (which constructs the commitment via RPC) and then merges in the EVM data from the
+/// given environment. For the simple `()` case, no rebuild is needed.
 ///
 /// [HostMultiblockEvmEnv]: crate::multiblock::host::HostMultiblockEvmEnv
 pub trait InputBuilder<N: Network, P: Provider<N>, F: EvmFactory>: Send {
-    /// Consumes this builder and constructs an [EvmInput] from the given [EvmEnv].
-    ///
-    /// The returned future performs any necessary commitment computation, or state verification
-    /// required by the builder’s configuration.
-    /// It returns an error, if this process fails or if the [ChainSpec] config of the
-    /// [EvmEnvBuilder] and the [EvmEnv] do not match.
+    /// Converts the given commitment-less [EvmEnv] into an [EvmInput], applying the commitment
+    /// configuration from this builder.
     fn build_input(
         self,
         env: HostEvmEnv<ProviderDb<N, P>, F, ()>,
     ) -> impl Future<Output = Result<EvmInput<F>>> + Send;
 }
 
+/// Default implementation for non-trivial commitment types: rebuild an empty env from the builder
+/// to construct the commitment, then merge in the EVM data from the provided env.
 macro_rules! build_input {
     ($D:ty, $F:ty) => {
         async fn build_input(self, env: HostEvmEnv<$D, $F, ()>) -> Result<EvmInput<$F>> {
-            // rebuild an empty environment for the same block
             let builder = self.block_hash(env.header().seal());
             let empty_env = builder.build().await.context("builder failed")?;
             // merge execution state and verify compatibility
@@ -733,19 +736,6 @@ macro_rules! build_input {
             env.into_input().await
         }
     };
-}
-
-impl<N, P, F> InputBuilder<N, P, F> for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()>
-where
-    N: Network,
-    P: Provider<N>,
-    F: EvmFactory,
-    F::Header: TryFrom<<N as Network>::HeaderResponse>,
-    <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
-    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
-    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
-{
-    build_input!(ProviderDb<N, P>, F);
 }
 
 impl<N, P, F> InputBuilder<N, P, F> for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History>
@@ -771,6 +761,21 @@ impl<P: Provider<Ethereum>> InputBuilder<Ethereum, P, EthEvmFactory>
     for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, History>
 {
     build_input!(ProviderDb<Ethereum, P>, EthEvmFactory);
+}
+
+impl<N, P, F> InputBuilder<N, P, F> for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()>
+where
+    N: Network,
+    P: Provider<N>,
+    F: EvmFactory,
+    F::Header: TryFrom<<N as Network>::HeaderResponse>,
+    <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
+{
+    async fn build_input(self, env: HostEvmEnv<ProviderDb<N, P>, F, ()>) -> Result<EvmInput<F>> {
+        env.into_input().await
+    }
 }
 
 #[cfg(test)]

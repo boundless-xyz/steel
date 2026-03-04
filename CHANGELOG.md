@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
 - The `Contract` API now includes a `raw` method to allow for direct calls with raw calldata. This provides greater flexibility when interacting with non-standard interfaces, such as precompiles.
 - Add `Event` support for chains other than Ethereum.
-- Added `MultiblockEvmEnv` and `MultiblockEvmInput to enable verifiable computation across multiple blocks within a single proof. The guest environment now securely validates the integrity of the block sequence by verifying commitments between each consecutive block.
+- Added `MultiblockEvmEnv` and `MultiblockEvmInput` to enable verifiable computation across multiple blocks within a single proof. The guest environment now securely validates the integrity of the block sequence by verifying commitments between each consecutive block.
 - Improve EVM error handling to support calls without return data.
 - Add `EvmEnvBuilder::consensus_commitment_slot` to specify a beacon chain slot directly as the commitment target. This is useful for light client verification scenarios where the verifier has direct access to beacon chain state.
 
