@@ -61,11 +61,7 @@ library Steel {
     /// @param configID The expected configID for the commitment. The configID commits to the chain
     ///        specification used to instantiate the EVM within Steel.
     /// @return True if the commitment commits to a block in the current chain, false otherwise.
-    function validateCommitmentWithConfig(Commitment memory commitment, bytes32 configID)
-        internal
-        view
-        returns (bool)
-    {
+    function validateCommitmentWithConfig(Commitment memory commitment, bytes32 configID) internal view returns (bool) {
         if (configID != commitment.configID) {
             revert InvalidConfigID(configID, commitment.configID);
         }

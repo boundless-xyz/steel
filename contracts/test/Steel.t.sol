@@ -48,9 +48,7 @@ contract SteelTest is Test {
         returns (Steel.Commitment memory)
     {
         return Steel.Commitment({
-            id: Encoding.encodeVersionedID(claimID, version),
-            digest: digest,
-            configID: ChainSpec.configID()
+            id: Encoding.encodeVersionedID(claimID, version), digest: digest, configID: ChainSpec.configID()
         });
     }
 
