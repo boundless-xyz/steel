@@ -19,7 +19,6 @@ use risc0_steel::{
     Contract,
     alloy::providers::{Provider, ProviderBuilder},
     ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
-    host::HostMultiblockEvmEnv,
 };
 use risc0_zkvm::{ExecutorEnv, default_executor};
 use token_stats_core::{APRCommitment, CONTRACT, CometMainInterface};
@@ -49,10 +48,10 @@ async fn main() -> Result<()> {
     let latest = provider.get_block_number().await?;
 
     // Create a multiblock environment for the network.
-    let builder = EthEvmEnv::builder()
+    let mut envs = EthEvmEnv::builder()
         .provider(provider)
-        .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
-    let mut envs = HostMultiblockEvmEnv::from_builder(builder);
+        .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
+        .build_multi();
 
     // Execute the call for the latest block and about 24h (7200 blocks) ago.
     for block in [latest - 7200, latest] {
