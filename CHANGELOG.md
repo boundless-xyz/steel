@@ -38,6 +38,8 @@ All notable changes to this project will be documented in this file.
 - Removed the `c-kzg` feature from `risc0-steel`'s `revm` dependency. Precompile features (`blst`, `bn`, `c-kzg`) should now be enabled by the guest crate directly.
 - Guest examples now enable all accelerated revm precompiles (`blst`, `bn`, `c-kzg`) and pin patched dependency versions (`blst`, `c-kzg`, `k256`, `substrate-bn`, `tiny-keccak`) to match their risc0 forks.
 - Removed the upstream `revm` point evaluation precompile test from the steel integration tests.
+- `Commitment` now implements `Display`.
+- Rewritten the `token-stats` example to use the new `MultiblockEvmEnv` API.
 - Solidity: updated `forge-std` (to v1.15.0) and `openzeppelin-contracts` (to v5.6.1), moved remappings from `remappings.txt` into `contracts/foundry.toml`.
 
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)
