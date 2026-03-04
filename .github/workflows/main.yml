@@ -16,8 +16,8 @@ permissions:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  RISC0_TOOLCHAIN_VERSION: 1.88.0
-  RISC0_CRATE_VERSION: "2.3.0"
+  RISC0_TOOLCHAIN_VERSION: "1.91.1"
+  RISC0_CRATE_VERSION: "3.0.4"
   FOUNDRY_VERSION: v1.0.0
 
 jobs:
@@ -275,7 +275,7 @@ jobs:
       - uses: risc0/risc0/.github/actions/rustup@352dea62857ba57331053cd0986a12c1a4708732
         with:
           # Building with docs.rs config requires the nightly toolchain.
-          toolchain: nightly-2025-05-09
-      - run: cargo +nightly-2025-05-09 doc -p risc0-steel --all-features --no-deps
+          toolchain: nightly-2025-10-30
+      - run: cargo +nightly-2025-10-30 doc -p risc0-steel --all-features --no-deps
         env:
           RUSTDOCFLAGS: "--cfg docsrs -D warnings"

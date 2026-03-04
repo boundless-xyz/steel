@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,11 +26,13 @@ fn main() {
     // guest. Check the RISC0_USE_DOCKER variable and use Docker to build the guest if set.
     println!("cargo:rerun-if-env-changed=RISC0_USE_DOCKER");
     println!("cargo:rerun-if-changed=build.rs");
-    let manifest_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+
     let mut builder = GuestOptionsBuilder::default();
     if env::var("RISC0_USE_DOCKER").is_ok() {
+        let manifest_dir = PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").unwrap());
+        let root_dir = manifest_dir.join("..").join("..").join("..");
         let docker_options = DockerOptionsBuilder::default()
-            .root_dir(manifest_dir.join(".."))
+            .root_dir(root_dir)
             .build()
             .unwrap();
         builder.use_docker(docker_options);
@@ -39,12 +41,14 @@ fn main() {
 
     // Generate Rust source files for the methods crate.
     let guests =
-        embed_methods_with_options(HashMap::from([("erc20-counter-guests", guest_options)]));
+        embed_methods_with_options(HashMap::from([("erc20-counter-guest", guest_options)]));
 
     // Generate Solidity source files for use with Forge.
     let solidity_opts = risc0_build_ethereum::Options::default()
         .with_image_id_sol_path(SOLIDITY_IMAGE_ID_PATH)
         .with_elf_sol_path(SOLIDITY_ELF_PATH);
 
-    generate_solidity_files(guests.as_slice(), &solidity_opts).unwrap();
+    if let Err(e) = generate_solidity_files(guests.as_slice(), &solidity_opts) {
+        println!("cargo:warning=Failed to generate Solidity files: {e}");
+    };
 }
