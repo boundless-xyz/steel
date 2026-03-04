@@ -101,8 +101,7 @@ mod event {
             .unwrap();
 
         let preflight_logs = {
-            let event =
-                risc0_steel::Event::preflight::<Test::Event>(&mut env).address(TEST_CONTRACT);
+            let event = Event::preflight::<Test::Event>(&mut env).address(TEST_CONTRACT);
             event.query().await.unwrap()
         };
 
@@ -110,7 +109,7 @@ mod event {
         let env = input.into_env(&OP_ANVIL_CHAIN_SPEC);
 
         let logs = {
-            let event = risc0_steel::Event::new::<Test::Event>(&env).address(TEST_CONTRACT);
+            let event = Event::new::<Test::Event>(&env).address(TEST_CONTRACT);
             event.query()
         };
         assert_eq!(logs, preflight_logs, "mismatch in preflight and execution");

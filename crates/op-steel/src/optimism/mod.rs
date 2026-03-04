@@ -34,13 +34,7 @@ use risc0_steel::{
     serde::{Eip2718Wrapper, RlpHeader},
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::BTreeMap,
-    convert::Into,
-    error::Error,
-    fmt::{self, Debug, Display},
-    sync::LazyLock,
-};
+use std::{collections::BTreeMap, error::Error, fmt, sync::LazyLock};
 
 #[cfg(feature = "host")]
 mod host;
@@ -172,9 +166,9 @@ pub type OpChainSpec = ChainSpec<OpEvmSpecId>;
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OpEvmSpecId(OpSpecId);
 
-impl Display for OpEvmSpecId {
+impl fmt::Display for OpEvmSpecId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
+        f.write_str(<&'static str>::from(self.0))
     }
 }
 
@@ -340,16 +334,8 @@ impl From<op_alloy_rpc_types::OpTransactionReceipt> for OpEvmReceipt {
         // manually convert it.
         // TODO(https://github.com/alloy-rs/alloy/issues/854): use ReceiptEnvelope directly
 
-        use op_alloy_consensus::OpReceipt;
         let (receipt, bloom) = rpc_receipt.inner.into_inner().into_components();
-        let primitive = match receipt {
-            OpReceipt::Legacy(r) => OpReceipt::Legacy(r.map_logs(Into::into)),
-            OpReceipt::Eip2930(r) => OpReceipt::Eip2930(r.map_logs(Into::into)),
-            OpReceipt::Eip1559(r) => OpReceipt::Eip1559(r.map_logs(Into::into)),
-            OpReceipt::Eip7702(r) => OpReceipt::Eip7702(r.map_logs(Into::into)),
-            OpReceipt::Deposit(r) => OpReceipt::Deposit(r.map_logs(Into::into)),
-        };
-        let eip2718_envelope = alloy_consensus::ReceiptWithBloom::new(primitive, bloom);
+        let eip2718_envelope = ReceiptWithBloom::new(receipt.map_logs(Into::into), bloom);
 
         Self(Eip2718Wrapper::new(eip2718_envelope))
     }
