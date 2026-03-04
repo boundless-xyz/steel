@@ -30,6 +30,13 @@ All notable changes to this project will be documented in this file.
 - Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`.
 - Add a warning log when the provider's chain ID does not match the chain spec configuration.
 - Improved error messages when the execution block incorrectly matches the commitment block for historical commitments.
+- Added integration tests for `risc0-op-steel` covering `Event` queries, revert errors, and `blobbasefee` on OP chains.
+- Re-export `op_revm` from `risc0-op-steel`, so users can access OP-specific revm types (e.g. `OpSpecId`) without adding `op-revm` as a direct dependency.
+- Updated dependencies: `alloy-evm` (to 0.27), `alloy-op-evm` (to 0.27), `revm` (to 34.0), `op-revm` (to 15.0), `op-alloy` (to 0.24).
+- Removed the `c-kzg` feature from `risc0-steel`'s `revm` dependency. Precompile features (`blst`, `bn`, `c-kzg`) should now be enabled by the guest crate directly.
+- Guest examples now enable all accelerated revm precompiles (`blst`, `bn`, `c-kzg`) and pin patched dependency versions (`blst`, `c-kzg`, `k256`, `substrate-bn`, `tiny-keccak`) to match their risc0 forks.
+- Removed the upstream `revm` point evaluation precompile test from the steel integration tests.
+- Solidity: updated `forge-std` (to v1.15.0) and `openzeppelin-contracts` (to v5.6.1), moved remappings from `remappings.txt` into `contracts/foundry.toml`.
 
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)
 
