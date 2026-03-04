@@ -24,7 +24,8 @@ alloy-sol-types = { workspace = true }
 anyhow = { workspace = true }
 delegate = { workspace = true }
 log = { workspace = true }
-op-alloy-network = { workspace = true }
+op-alloy-consensus = { workspace = true }
+op-alloy-network = { workspace = true, optional = true }
 op-alloy-rpc-types = { workspace = true }
 op-revm = { workspace = true, features = ["serde"] }
 risc0-steel = { workspace = true }
@@ -34,8 +35,12 @@ thiserror = { workspace = true }
 tokio = { workspace = true, optional = true }
 url = { workspace = true, optional = true }
 
+[dev-dependencies]
+alloy = { workspace = true, features = ["node-bindings"] }
+
 [features]
 default = []
-host = ["dep:alloy", "dep:tokio", "dep:url", "risc0-steel/host", "alloy-primitives/rand"]
+host = ["dep:alloy", "dep:op-alloy-network", "dep:tokio", "dep:url", "risc0-steel/host", "alloy-primitives/rand"]
 reqwest-native-tls = ["alloy?/reqwest-native-tls", "risc0-steel/reqwest-native-tls"]
 reqwest-rustls-tls = ["alloy?/reqwest-rustls-tls", "risc0-steel/reqwest-rustls-tls"]
+rpc-tests = []

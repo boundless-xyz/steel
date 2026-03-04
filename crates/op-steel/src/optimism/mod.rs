@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,17 +13,17 @@
 // limitations under the License.
 
 use crate::game::DisputeGameInput;
-use alloy_consensus::{Eip658Value, TxReceipt};
+use alloy_consensus::{Eip658Value, ReceiptWithBloom, TxReceipt};
 use alloy_eips::{Encodable2718, Typed2718, eip4844, eip7691};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
 use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
 use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, U256};
 use alloy_rlp::BufMut;
 use delegate::delegate;
-use op_alloy_network::{Network, Optimism};
+use op_alloy_consensus::OpReceipt;
 use op_revm::{OpTransaction, spec::OpSpecId};
 use risc0_steel::{
-    BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
+    BlockInput, CallError, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
     config::{ChainSpec, ForkCondition},
     revm::{
         context::{BlockEnv, CfgEnv, TxEnv},
@@ -34,7 +34,7 @@ use risc0_steel::{
     serde::{Eip2718Wrapper, RlpHeader},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::Into, error::Error, sync::LazyLock};
+use std::{collections::BTreeMap, error::Error, fmt, sync::LazyLock};
 
 #[cfg(feature = "host")]
 mod host;
@@ -156,12 +156,21 @@ impl EvmFactory for OpEvmFactory {
     }
 }
 
+/// [CallError] for Optimism.
+pub type OpCallError = CallError<<OpEvmFactory as EvmFactory>::HaltReason>;
+
 /// [ChainSpec] for Optimism.
 pub type OpChainSpec = ChainSpec<OpEvmSpecId>;
 
 /// [EvmFactory::SpecId] for Optimism.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct OpEvmSpecId(OpSpecId);
+
+impl fmt::Display for OpEvmSpecId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(<&'static str>::from(self.0))
+    }
+}
 
 impl From<OpSpecId> for OpEvmSpecId {
     fn from(spec: OpSpecId) -> Self {
@@ -189,7 +198,7 @@ impl EvmSpecId for OpEvmSpecId {
     }
 }
 
-type OpHeader = <Optimism as Network>::Header;
+type OpHeader = alloy_consensus::Header;
 
 /// [EvmFactory::Header] for Optimism.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -286,7 +295,7 @@ where
 /// [EvmFactory::Receipt] for Optimism.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct OpEvmReceipt(Eip2718Wrapper<<Optimism as Network>::ReceiptEnvelope>);
+pub struct OpEvmReceipt(Eip2718Wrapper<ReceiptWithBloom<OpReceipt>>);
 
 impl Typed2718 for OpEvmReceipt {
     delegate! {
@@ -304,7 +313,7 @@ impl Encodable2718 for OpEvmReceipt {
 }
 
 impl TxReceipt for OpEvmReceipt {
-    type Log = <<Optimism as Network>::ReceiptEnvelope as TxReceipt>::Log;
+    type Log = <ReceiptWithBloom<OpReceipt> as TxReceipt>::Log;
 
     delegate! {
         to self.0 {
@@ -324,9 +333,11 @@ impl From<op_alloy_rpc_types::OpTransactionReceipt> for OpEvmReceipt {
         // Unfortunately ReceiptResponse does not implement ReceiptEnvelope, so we have to
         // manually convert it.
         // TODO(https://github.com/alloy-rs/alloy/issues/854): use ReceiptEnvelope directly
-        Self(Eip2718Wrapper::new(
-            rpc_receipt.inner.into_inner().map_logs(Into::into),
-        ))
+
+        let (receipt, bloom) = rpc_receipt.inner.into_inner().into_components();
+        let eip2718_envelope = ReceiptWithBloom::new(receipt.map_logs(Into::into), bloom);
+
+        Self(Eip2718Wrapper::new(eip2718_envelope))
     }
 }
 

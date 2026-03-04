@@ -3,6 +3,7 @@ src = "src"
 out = "out"
 test = "test"
 libs = ["../lib"]
+remappings = ["openzeppelin/contracts/=../lib/openzeppelin-contracts/contracts/"]
 evm_version = "prague"
 
 [fmt]

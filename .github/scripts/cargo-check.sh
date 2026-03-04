@@ -5,7 +5,7 @@ fmt_sort(){
   while read path; do
     printf "Project: %s\n" "$path"
     cargo fmt --all --check --manifest-path "$path"
-    (cd "${path%/*}"; cargo sort --workspace --check)
+    (cd "${path%/*}"; cargo sort --workspace --grouped --check)
   done
 }
 
