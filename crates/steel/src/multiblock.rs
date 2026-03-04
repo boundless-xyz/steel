@@ -35,11 +35,9 @@ use std::collections::BTreeMap;
 /// ```rust,no_run
 /// # use risc0_steel::{
 /// #    ethereum::{EthEvmEnv, ETH_MAINNET_CHAIN_SPEC},
-/// #    host::HostMultiblockEvmEnv,
-/// #    Contract, EvmBlockHeader
+/// #    EvmBlockHeader
 /// # };
 /// # use alloy::providers::{Provider,ProviderBuilder};
-/// # use alloy_primitives::address;
 /// # #[tokio::main(flavor = "current_thread")]
 /// # async fn main() -> anyhow::Result<()> {
 /// // === Host Setup ===
@@ -48,7 +46,7 @@ use std::collections::BTreeMap;
 /// let latest = provider.get_block_number().await?;
 ///
 /// let builder = EthEvmEnv::builder().provider(provider).chain_spec(&ETH_MAINNET_CHAIN_SPEC);
-/// let mut envs = HostMultiblockEvmEnv::from_builder(builder);
+/// let mut envs = builder.build_multi();
 ///
 /// // Query state at multiple points in time (e.g., every ~24 hours)
 /// for i in 0..3 {

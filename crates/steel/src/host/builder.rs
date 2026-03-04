@@ -22,6 +22,7 @@ use crate::{
         BlockId, BlockNumberOrTag, EthHostEvmEnv, HostCommit, HostEvmEnv,
         db::{ProofDb, ProviderConfig, ProviderDb},
     },
+    multiblock::host::HostMultiblockEvmEnv,
 };
 use alloy::{
     network::{BlockResponse, Ethereum, Network, primitives::HeaderResponse},
@@ -309,6 +310,25 @@ impl<P, F, S, C> EvmEnvBuilder<P, F, S, C> {
         );
 
         Ok(header)
+    }
+}
+
+impl<'a, P, F: EvmFactory, C> EvmEnvBuilder<P, F, &'a ChainSpec<F::SpecId>, C> {
+    /// Creates a [HostMultiblockEvmEnv] using this builder as a template.
+    ///
+    /// This is a convenience method equivalent to [HostMultiblockEvmEnv::from_builder].
+    /// See [MultiblockEvmEnv](crate::MultiblockEvmEnv) for usage examples.
+    pub fn build_multi<N>(self) -> HostMultiblockEvmEnv<'a, N, P, F, C>
+    where
+        N: Network,
+        P: Provider<N> + Clone + 'static,
+        F::Header: TryFrom<<N as Network>::HeaderResponse>,
+        <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+        F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+        <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
+        Self: InputBuilder<N, P, F>,
+    {
+        HostMultiblockEvmEnv::from_builder(self)
     }
 }
 
