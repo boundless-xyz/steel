@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use alloy::eips::BlockNumberOrTag;
 use alloy::sol_types::SolCall;
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -45,6 +46,7 @@ async fn main() -> Result<()> {
     let mut env = OpEvmEnv::builder()
         .rpc(args.l2_rpc_url.clone())
         .chain_spec(&BASE_MAINNET_CHAIN_SPEC)
+        .block_number_or_tag(BlockNumberOrTag::Safe)
         .build()
         .await?;
 
