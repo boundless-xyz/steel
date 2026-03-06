@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloy::eips::BlockNumberOrTag;
 use alloy::sol_types::SolCall;
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -20,6 +19,7 @@ use l2_core::{CALL, CALLER, CONTRACT, IERC20};
 use l2_methods::{L2_GUEST_ELF, L2_GUEST_ID};
 use risc0_op_steel::{
     Contract,
+    host::BlockNumberOrTag,
     optimism::{BASE_MAINNET_CHAIN_SPEC, OpEvmEnv},
 };
 use risc0_zkvm::{Digest, ExecutorEnv, ProverOpts, VerifierContext, default_prover};
