@@ -112,8 +112,7 @@ impl<F: EvmFactory> SyncEnv for GuestEvmEnv<F> {
 mod host_impl {
     use super::*;
     use crate::host::{HostEvmEnv, db::ProviderDb};
-    use alloy::network::Network;
-    use alloy::providers::Provider;
+    use alloy::{network::Network, providers::Provider};
 
     impl<F, N, P, C> SyncEnv for HostEvmEnv<ProviderDb<N, P>, F, C>
     where
