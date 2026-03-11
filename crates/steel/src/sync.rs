@@ -68,12 +68,16 @@ pub trait SyncEnv {
     /// Executes a contract call, panicking on failure.
     ///
     /// This is a convenience wrapper around [`SyncEnv::try_call`] that unwraps the result.
+    #[track_caller]
     fn call<S>(&mut self, addr: Address, call: &S) -> S::Return
     where
         S: SolCall + Send + Sync + 'static,
         S::Return: Send,
     {
-        self.try_call(addr, call).unwrap()
+        match self.try_call(addr, call) {
+            Ok(value) => value,
+            Err(e) => panic!("Executing call '{}' failed: {}", S::SIGNATURE, e),
+        }
     }
 
     /// Returns a reference to the sealed block header.
