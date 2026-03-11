@@ -20,7 +20,7 @@
 //!
 //! # Example
 //!
-//! ```ignore
+//! ```rust,no_run
 //! use alloy_primitives::{Address, U256};
 //! use alloy_sol_types::sol;
 //! use risc0_steel::{EvmBlockHeader, SyncEnv};
