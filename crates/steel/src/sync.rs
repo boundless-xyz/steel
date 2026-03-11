@@ -14,9 +14,10 @@
 
 //! Synchronous contract-call interface for both host and guest environments.
 //!
-//! The [`SyncEnv`] trait provides a unified synchronous API for executing smart contract calls
-//! that works identically in both the host (preflight) and guest (proof) contexts. This allows
-//! users to write their contract interaction logic once and reuse it in both environments.
+//! The [SyncEnv] trait provides a unified API for executing smart contract calls with default
+//! transaction settings that works identically in both the host (preflight) and guest (proof)
+//! contexts. This allows users to write their contract interaction logic once and reuse it in
+//! both environments.
 //!
 //! # Example
 //!
