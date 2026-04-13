@@ -14,7 +14,6 @@ risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
 # Enable accelerated precompiles for the zkVM guest
 revm = { version = "*", default-features = false, features = ["bn"] }
 
-
 # Pin to match the patched version
 k256 = "=0.13.4"
 substrate-bn = "=0.6.0"

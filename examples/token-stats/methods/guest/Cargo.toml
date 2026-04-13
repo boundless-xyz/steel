@@ -15,7 +15,6 @@ risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
 revm = { version = "*", default-features = false, features = ["bn"] }
 token-stats-core = { path = "../../core" }
 
-
 # Pin to match the patched version
 k256 = "=0.13.4"
 substrate-bn = "=0.6.0"
