@@ -122,7 +122,7 @@ impl EvmFactory for OpEvmFactory {
     type Receipt = OpEvmReceipt;
 
     fn new_tx(address: Address, data: Bytes) -> Self::Tx {
-        OpTransaction {
+        alloy_op_evm::OpTx(OpTransaction {
             base: TxEnv {
                 caller: address,
                 kind: TxKind::Call(address),
@@ -132,7 +132,7 @@ impl EvmFactory for OpEvmFactory {
             },
             enveloped_tx: Some(Bytes::new()),
             ..Default::default()
-        }
+        })
     }
 
     fn create_evm<DB: Database>(
@@ -275,6 +275,7 @@ impl EvmBlockHeader for OpBlockHeader {
             difficulty: header.difficulty,
             prevrandao: (spec_id.0 >= OpSpecId::BEDROCK).then_some(header.mix_hash),
             blob_excess_gas_and_price,
+            slot_num: 0,
         }
     }
 }
