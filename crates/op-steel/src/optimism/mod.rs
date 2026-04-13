@@ -275,6 +275,7 @@ impl EvmBlockHeader for OpBlockHeader {
             difficulty: header.difficulty,
             prevrandao: (spec_id.0 >= OpSpecId::BEDROCK).then_some(header.mix_hash),
             blob_excess_gas_and_price,
+            // TODO(https://github.com/boundless-xyz/steel/issues/112): populate from header once alloy supports EIP-7843
             slot_num: 0,
         }
     }
