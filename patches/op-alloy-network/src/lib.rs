@@ -9,7 +9,7 @@
 
 pub use alloy_network::*;
 
-use alloy_consensus::{TxType, TypedTransaction};
+use alloy_consensus::TxType;
 use alloy_primitives::{Address, Bytes, ChainId, TxKind, U256};
 use alloy_rpc_types_eth::AccessList;
 use op_alloy_consensus::{OpTxType, OpTypedTransaction};
