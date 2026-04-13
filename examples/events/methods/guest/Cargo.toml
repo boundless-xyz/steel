@@ -8,14 +8,15 @@ edition = "2024"
 [dependencies]
 alloy-primitives = { version = "1.0", features = ["tiny-keccak"] }
 alloy-sol-types = { version = "1.0" }
-
-# Pin to match the patched version
-k256 = "=0.13.4"
+risc0-steel = { path = "../../../../crates/steel" }
+risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
 
 # Enable accelerated precompiles for the zkVM guest
 revm = { version = "*", default-features = false, features = ["bn"] }
-risc0-steel = { path = "../../../../crates/steel" }
-risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
+
+
+# Pin to match the patched version
+k256 = "=0.13.4"
 substrate-bn = "=0.6.0"
 tiny-keccak = "=2.0.2"
 
