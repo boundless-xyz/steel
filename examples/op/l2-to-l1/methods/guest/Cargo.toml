@@ -7,16 +7,15 @@ edition = "2024"
 
 [dependencies]
 alloy-primitives = { version = "1.0", features = ["tiny-keccak"] }
-l2-to-l1-core = { path = "../../core" }
-risc0-op-steel = { path = "../../../../../crates/op-steel" }
-risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
-
-# Enable accelerated precompiles for the zkVM guest
-revm = { version = "*", default-features = false, features = ["bn"] }
-
 
 # Pin to match the patched version
 k256 = "=0.13.4"
+l2-to-l1-core = { path = "../../core" }
+
+# Enable accelerated precompiles for the zkVM guest
+revm = { version = "*", default-features = false, features = ["bn"] }
+risc0-op-steel = { path = "../../../../../crates/op-steel" }
+risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
 substrate-bn = "=0.6.0"
 tiny-keccak = "=2.0.2"
 
