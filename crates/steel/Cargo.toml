@@ -58,6 +58,8 @@ host = [
     "dep:tokio",
     "dep:url",
 ]
+revm-blst = ["revm/blst"]
+revm-bn = ["revm/bn"]
 reqwest-native-tls = ["alloy?/reqwest-native-tls"]
 reqwest-rustls-tls = ["alloy?/reqwest-rustls-tls"]
 rpc-tests = []

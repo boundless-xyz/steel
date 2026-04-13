@@ -41,6 +41,8 @@ alloy = { workspace = true, features = ["node-bindings"] }
 [features]
 default = []
 host = ["dep:alloy", "dep:op-alloy-network", "dep:tokio", "dep:url", "risc0-steel/host", "alloy-primitives/rand"]
+revm-blst = ["risc0-steel/revm-blst"]
+revm-bn = ["risc0-steel/revm-bn"]
 reqwest-native-tls = ["alloy?/reqwest-native-tls", "risc0-steel/reqwest-native-tls"]
 reqwest-rustls-tls = ["alloy?/reqwest-rustls-tls", "risc0-steel/reqwest-rustls-tls"]
 rpc-tests = []
