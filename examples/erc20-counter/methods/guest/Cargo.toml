@@ -8,8 +8,11 @@ edition = "2024"
 [dependencies]
 alloy-primitives = { version = "1.0", features = ["tiny-keccak"] }
 erc20-counter-core = { path = "../../core" }
-risc0-steel = { path = "../../../../crates/steel", features = ["revm-bn"] }
+risc0-steel = { path = "../../../../crates/steel" }
 risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
+
+# Enable accelerated precompiles for the zkVM guest
+revm = { version = "*", default-features = false, features = ["bn"] }
 
 # Pin to match the patched version
 k256 = "=0.13.4"
