@@ -23,7 +23,7 @@ use alloy::{
         Provider, ProviderBuilder, RootProvider,
         fillers::{ChainIdFiller, GasFiller, JoinFill, NonceFiller, RecommendedFillers},
     },
-    rpc::types::{eth as rpc_types, AccessList},
+    rpc::types::{AccessList, eth as rpc_types},
 };
 use alloy_consensus::{Header, ReceiptWithBloom, TxType};
 use alloy_primitives::{Address, Bytes, ChainId, Sealable, TxKind, U256};
@@ -122,7 +122,8 @@ impl TransactionBuilder<Optimism> for OpTransactionRequest {
         self.as_ref().max_priority_fee_per_gas()
     }
     fn set_max_priority_fee_per_gas(&mut self, max_priority_fee_per_gas: u128) {
-        self.as_mut().set_max_priority_fee_per_gas(max_priority_fee_per_gas);
+        self.as_mut()
+            .set_max_priority_fee_per_gas(max_priority_fee_per_gas);
     }
     fn gas_limit(&self) -> Option<u64> {
         self.as_ref().gas_limit()

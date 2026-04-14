@@ -73,12 +73,12 @@ impl BlockHeaderCommit<OpBlockHeader> for DisputeGameCommit {
 #[cfg(feature = "host")]
 pub mod host {
     use super::*;
+    use crate::optimism::Optimism;
     use IDisputeGameFactory::IDisputeGameFactoryInstance;
     use IOptimismPortal2::IOptimismPortal2Instance;
     use alloy::{network::Ethereum, providers::Provider, rpc::types::state::StateOverridesBuilder};
     use alloy_primitives::{Address, B256, BlockNumber, U256, address, uint};
     use anyhow::{Context, bail, ensure};
-    use crate::optimism::Optimism;
 
     /// Address of the L2ToL1MessagePasser contract.
     const MESSAGE_PASSER_ADDRESS: Address = address!("4200000000000000000000000000000000000016");

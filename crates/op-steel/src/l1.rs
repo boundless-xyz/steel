@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::optimism::Optimism;
 use alloy::{
     eips::BlockId,
     providers::{Provider, ProviderBuilder},
     transports::TransportError,
 };
 use alloy_primitives::{Address, BlockNumber, address};
-use crate::optimism::Optimism;
 use risc0_steel::{
     BeaconInput,
     beacon::{BeaconBlockId, BeaconCommit},
