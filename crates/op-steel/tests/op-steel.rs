@@ -19,12 +19,11 @@ use alloy::{
     uint,
 };
 use alloy_primitives::{Address, U256, address};
-use op_alloy_network::Optimism;
 use risc0_op_steel::{
     Contract,
     config::ChainSpec,
     op_revm::OpSpecId,
-    optimism::{OpCallError, OpChainSpec, OpEvmEnv},
+    optimism::{OpCallError, OpChainSpec, OpEvmEnv, Optimism},
 };
 use std::{fmt::Debug, sync::LazyLock};
 use test_log::test;

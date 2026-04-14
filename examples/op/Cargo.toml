@@ -14,8 +14,3 @@ risc0-ethereum-contracts = { version = "3.0" }
 risc0-op-steel = { path = "../../crates/op-steel" }
 risc0-zkvm = { version = "3.0" }
 serde = "1.0"
-
-# Patch op-alloy-network to fix conflicting NetworkWallet<Optimism> impl with alloy-network 1.8.
-# See: https://github.com/ethereum-optimism/optimism/pull/19756
-[patch.crates-io]
-op-alloy-network = { path = "../../patches/op-alloy-network" }

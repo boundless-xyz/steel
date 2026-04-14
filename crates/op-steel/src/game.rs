@@ -78,7 +78,7 @@ pub mod host {
     use alloy::{network::Ethereum, providers::Provider, rpc::types::state::StateOverridesBuilder};
     use alloy_primitives::{Address, B256, BlockNumber, U256, address, uint};
     use anyhow::{Context, bail, ensure};
-    use op_alloy_network::Optimism;
+    use crate::optimism::Optimism;
 
     /// Address of the L2ToL1MessagePasser contract.
     const MESSAGE_PASSER_ADDRESS: Address = address!("4200000000000000000000000000000000000016");

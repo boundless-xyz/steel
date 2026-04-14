@@ -18,7 +18,7 @@ use alloy::{
     transports::TransportError,
 };
 use alloy_primitives::{Address, BlockNumber, address};
-use op_alloy_network::Optimism;
+use crate::optimism::Optimism;
 use risc0_steel::{
     BeaconInput,
     beacon::{BeaconBlockId, BeaconCommit},
