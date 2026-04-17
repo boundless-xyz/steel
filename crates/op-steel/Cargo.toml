@@ -31,11 +31,6 @@ alloy-transport-http = { version = ">=1.0, <1.8", optional = true }
 
 anyhow = { workspace = true }
 log = { workspace = true }
-# mio 1.2.0 fails to compile on the risc0 zkvm-elf guest target; alloy-provider
-# (pulled transitively by op-alloy-network) depends on tokio -> mio, so even
-# guest builds need this pin. Remove once mio ships a fix or once
-# op-alloy-network drops the transitive alloy-provider dep.
-mio = { version = ">=1.0, <1.2" }
 op-alloy-network = { workspace = true }
 op-revm = { workspace = true, features = ["serde"] }
 risc0-steel = { workspace = true }
