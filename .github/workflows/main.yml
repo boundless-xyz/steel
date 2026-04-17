@@ -54,7 +54,7 @@ jobs:
       - name: cargo check risc0-ethereum
         run: |
           cargo fmt --all --check
-          cargo sort --workspace --check
+          cargo sort --workspace --grouped --check
       - name: cargo check risc0-ethereum guests
         run: ../.github/scripts/cargo-check.sh
         working-directory: crates
