@@ -58,7 +58,8 @@ struct Response<T> {
 }
 
 /// Concrete `SignedBeaconBlock` type for the mainnet preset.
-pub type MainnetSignedBeaconBlock = SignedBeaconBlock<MainnetEthSpec, FullPayload<MainnetEthSpec>>;
+pub(crate) type MainnetSignedBeaconBlock =
+    SignedBeaconBlock<MainnetEthSpec, FullPayload<MainnetEthSpec>>;
 
 /// Fork-versioned API response wrapper that uses Lighthouse's [ContextDeserialize] to
 /// automatically dispatch to the correct fork variant based on the `version` field.

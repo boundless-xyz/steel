@@ -185,15 +185,12 @@ mod host {
                     .await
                     .context("failed to preflight beacon roots contract")?;
 
-                // 2c. Store the fetched BeaconRootsState and its beacon commitment
-                // These are inserted at the beginning as we are building the chain in reverse.
-                state_commits.insert(
-                    0,
-                    StateCommit {
-                        state: state_witness,
-                        state_commit: current_state_commit,
-                    },
-                );
+                // 2c. Append the fetched BeaconRootsState and its beacon commitment. The chain is
+                // built in reverse; the final reverse() below restores chronological order.
+                state_commits.push(StateCommit {
+                    state: state_witness,
+                    state_commit: current_state_commit,
+                });
 
                 // 2d. Check if the chain is complete. This happens if the beacon roots contract
                 // actually contained the execution commit.
@@ -231,6 +228,7 @@ mod host {
                     )
                 })?;
             }
+            state_commits.reverse();
 
             log::debug!("Generated {} state commitments", state_commits.len());
 

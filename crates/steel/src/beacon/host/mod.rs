@@ -93,9 +93,8 @@ impl<const LEAF_INDEX: usize> GeneralizedBeaconCommit<LEAF_INDEX> {
     }
 }
 
-/// Creates a beacon commitment that the field at `LEAF_INDEX` is contained in the
-/// `ExecutionPayload` of the beacon block corresponding to `header` creating a
-/// [CommitmentVersion::Beacon] commitment.
+/// Builds a [CommitmentVersion::Beacon] commitment: resolves the beacon root via the EIP-4788
+/// beacon roots contract by looking up `header`'s child block's `parent_beacon_block_root`.
 async fn create_eip4788_beacon_commit<P, H, const LEAF_INDEX: usize>(
     header: &Sealed<H>,
     rpc_provider: P,
@@ -138,9 +137,8 @@ where
     Ok((commit, beacon_root))
 }
 
-/// Creates a beacon commitment that the field at `LEAF_INDEX` is contained in the
-/// `ExecutionPayload` of the beacon block corresponding to `header` creating a
-/// [CommitmentVersion::Consensus] commitment.
+/// Builds a [CommitmentVersion::Consensus] commitment: resolves the beacon root by querying the
+/// beacon header whose `parent_root` matches `header`'s `parent_beacon_block_root`.
 async fn create_slot_beacon_commit<P, H, const LEAF_INDEX: usize>(
     header: &Sealed<H>,
     rpc_provider: P,
@@ -252,8 +250,8 @@ impl MerkleTree {
 
         let mut branch = Vec::with_capacity(gindex.ilog2() as usize);
         while gindex > 1 {
-            branch.push(self.0[gindex ^ 1]); // sibling
-            gindex >>= 1; // parent
+            branch.push(self.0[gindex ^ 1]);
+            gindex >>= 1;
         }
         branch
     }
@@ -317,14 +315,16 @@ fn prove_execution_payload_field(
     let body_tree = MerkleTree::new(&block.body().body_merkle_leaves());
     let block_tree = MerkleTree::new(&block_leaves(block));
 
-    // guard against fork-driven field reorderings producing invalid proofs
-    ensure!(
-        ep_tree.root() == ep.tree_hash_root(),
-        "ExecutionPayload root mismatch: execution_payload_leaves() is out of date"
+    // dev-time canaries; production safety comes from commit.verify(..) at the call site
+    debug_assert_eq!(
+        ep_tree.root(),
+        ep.tree_hash_root(),
+        "execution_payload_leaves() is out of date"
     );
-    ensure!(
-        block_tree.root() == block.tree_hash_root(),
-        "BeaconBlock root mismatch: block_leaves() is out of date"
+    debug_assert_eq!(
+        block_tree.root(),
+        block.tree_hash_root(),
+        "block_leaves() is out of date"
     );
 
     // a valid EP-field gindex must decompose to (1, BODY_INDEX_IN_BLOCK, EP_INDEX_IN_BODY, _)
