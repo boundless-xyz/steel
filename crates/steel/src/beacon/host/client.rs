@@ -14,9 +14,12 @@
 
 //! A simple Beacon API client.
 
-use super::consensus::{mainnet::SignedBeaconBlock, phase0::SignedBeaconBlockHeader, Fork};
 use alloy::transports::http::reqwest;
 use alloy_primitives::B256;
+use context_deserialize::ContextDeserialize;
+use lighthouse_types::{
+    ExecPayload, ForkName, FullPayload, MainnetEthSpec, SignedBeaconBlock, SignedBeaconBlockHeader,
+};
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize};
 use std::{collections::HashMap, fmt::Display, result::Result as StdResult};
 use url::Url;
@@ -54,37 +57,34 @@ struct Response<T> {
     meta: HashMap<String, serde_json::Value>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-struct RawVersionedJsonResponse<'a> {
-    version: Fork,
-    #[serde(borrow)]
-    data: &'a serde_json::value::RawValue,
-    #[serde(flatten)]
-    meta: HashMap<String, serde_json::Value>,
+/// Concrete `SignedBeaconBlock` type for the mainnet preset.
+pub type MainnetSignedBeaconBlock = SignedBeaconBlock<MainnetEthSpec, FullPayload<MainnetEthSpec>>;
+
+/// Fork-versioned API response wrapper that uses Lighthouse's [ContextDeserialize] to
+/// automatically dispatch to the correct fork variant based on the `version` field.
+#[derive(Debug)]
+struct ForkVersionedResponse<T> {
+    data: T,
 }
 
-impl<'de> serde::Deserialize<'de> for Response<SignedBeaconBlock> {
+impl<'de, T: ContextDeserialize<'de, ForkName>> Deserialize<'de> for ForkVersionedResponse<T> {
     fn deserialize<D>(deserializer: D) -> StdResult<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let RawVersionedJsonResponse {
-            version,
-            data,
-            meta,
-        } = RawVersionedJsonResponse::deserialize(deserializer)?;
-        let data = match version {
-            Fork::Phase0 => serde_json::from_str(data.get()).map(SignedBeaconBlock::Phase0),
-            Fork::Altair => serde_json::from_str(data.get()).map(SignedBeaconBlock::Altair),
-            Fork::Bellatrix => serde_json::from_str(data.get()).map(SignedBeaconBlock::Bellatrix),
-            Fork::Capella => serde_json::from_str(data.get()).map(SignedBeaconBlock::Capella),
-            Fork::Deneb => serde_json::from_str(data.get()).map(SignedBeaconBlock::Deneb),
-            Fork::Electra => serde_json::from_str(data.get()).map(SignedBeaconBlock::Electra),
-            Fork::Fulu => serde_json::from_str(data.get()).map(SignedBeaconBlock::Fulu),
+        #[derive(Deserialize)]
+        struct Helper<'a> {
+            version: ForkName,
+            #[serde(borrow)]
+            data: &'a serde_json::value::RawValue,
         }
-        .map_err(serde::de::Error::custom)?;
 
-        Ok(Self { data, meta })
+        let helper = Helper::deserialize(deserializer)?;
+        let mut de = serde_json::Deserializer::from_str(helper.data.get());
+        let data =
+            T::context_deserialize(&mut de, helper.version).map_err(serde::de::Error::custom)?;
+
+        Ok(ForkVersionedResponse { data })
     }
 }
 
@@ -122,9 +122,10 @@ impl BeaconClient {
     /// Retrieves block details for the given block ID.
     ///
     /// Block ID can be 'head', 'genesis', 'finalized', <slot>, or <root>.
-    pub async fn get_block(&self, block_id: impl Display) -> Result<SignedBeaconBlock> {
+    pub async fn get_block(&self, block_id: impl Display) -> Result<MainnetSignedBeaconBlock> {
         let path = format!("eth/v2/beacon/blocks/{block_id}");
-        let result: Response<SignedBeaconBlock> = self.get_json(&path, None::<&()>).await?;
+        let result: ForkVersionedResponse<MainnetSignedBeaconBlock> =
+            self.get_json(&path, None::<&()>).await?;
         Ok(result.data)
     }
 
@@ -140,11 +141,14 @@ impl BeaconClient {
         result.data.pop().ok_or(Error::EmptyResponse)
     }
 
-    /// Retrieves the execution bock hash for the given block id.
+    /// Retrieves the execution block hash for the given block id.
     pub async fn get_execution_payload_block_hash(&self, block_id: impl Display) -> Result<B256> {
         let block = self.get_block(block_id).await?;
-        let execution_payload = block.execution_payload().ok_or(Error::NoExecutionPayload)?;
-
-        Ok(B256::from_slice(execution_payload.block_hash()))
+        let block_hash = block
+            .message()
+            .execution_payload()
+            .map_err(|_| Error::NoExecutionPayload)?
+            .block_hash();
+        Ok(block_hash.into_root())
     }
 }
