@@ -27,9 +27,10 @@ alloy-sol-types = { workspace = true }
 alloy-trie = { workspace = true, features = ["serde"] }
 anyhow = { workspace = true }
 bincode = { workspace = true }
+context_deserialize = { workspace = true, optional = true }
 delegate = { workspace = true }
 enumn = { workspace = true }
-ethereum-consensus = { workspace = true, optional = true }
+lighthouse-types = { workspace = true, optional = true }
 log = { workspace = true, optional = true }
 reqwest = { version = "0.13", default-features = false, features = ["query"], optional = true }
 revm = { workspace = true, features = ["optional_balance_check", "optional_block_gas_limit", "optional_eip3607", "optional_no_base_fee", "serde"] }
@@ -38,6 +39,7 @@ serde_json = { workspace = true, optional = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true, features = ["default"] }
 tokio = { workspace = true, optional = true }
+tree_hash = { workspace = true, optional = true }
 url = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -51,7 +53,9 @@ test-log = { workspace = true }
 default = []
 host = [
     "dep:alloy",
-    "dep:ethereum-consensus",
+    "dep:context_deserialize",
+    "dep:lighthouse-types",
+    "dep:tree_hash",
     "dep:log",
     "dep:reqwest",
     "dep:serde_json",

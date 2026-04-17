@@ -43,7 +43,9 @@ alloy = { version = "1.0", default-features = false }
 alloy-trie = { version = "0.8" }
 
 # Beacon chain support
-ethereum-consensus = { git = "https://github.com/ralexstokes/ethereum-consensus.git", rev = "5031d31e318df12b1b0d2c3b9b4da4ecc92cf065" }
+context_deserialize = "0.2"
+lighthouse-types = { git = "https://github.com/sigp/lighthouse.git", tag = "v8.1.3", package = "types" }
+tree_hash = "0.12"
 
 anyhow = { version = "1.0" }
 bincode = { version = "1.3" }

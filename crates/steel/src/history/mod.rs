@@ -155,7 +155,6 @@ mod host {
             let mut current_state_block_hash = commitment_header.seal();
             let (mut current_state_commit, _) = create_beacon_commit(
                 commitment_header,
-                "state_root".into(), // we need to prove the state_root of the commitment_header
                 commitment_version,
                 &rpc_provider,
                 beacon_client,
@@ -220,7 +219,6 @@ mod host {
                     })?;
                 // create the beacon commitment for the next state
                 current_state_commit = GeneralizedBeaconCommit::from_beacon_root(
-                    "state_root".into(),
                     parent_beacon_root,
                     beacon_client,
                     // in the current state, timestamp can be used to look up parent_beacon_root
