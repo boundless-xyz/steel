@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.4](https://github.com/boundless-xyz/steel/releases/tag/v2.4.4)
+
+### 🛠️ Fixes
+
+- Replace yanked `ethereum-consensus` with Lighthouse `types` + `tree_hash` (pinned to v8.1.3) to restore host-side compilation.
+- Pin `alloy-network` below 1.7.4 (and sibling `alloy-*` sub-crates below 1.8) in `risc0-op-steel` to dodge the `NetworkWallet<Optimism>` coherence conflict.
+
 ## [2.4.3](https://github.com/boundless-xyz/steel/releases/tag/v2.4.3)
 
 ### ⚙️ Miscellaneous
