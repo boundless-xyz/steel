@@ -6,6 +6,7 @@ edition = "2021"
 [workspace]
 
 [dependencies]
+alloy-primitives = { version = "1.5.3", features = ["tiny-keccak"] }
 l2-to-l1-core = { path = "../../core" }
 risc0-op-steel = { path = "../../../../../crates/op-steel" }
 risc0-zkvm = { version = "3.0", default-features = false, features = ["std", "unstable"] }

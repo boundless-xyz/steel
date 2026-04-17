@@ -10,7 +10,7 @@ path = "src/bin/balance_of.rs"
 [workspace]
 
 [dependencies]
-alloy-primitives = { version = "1.0" }
+alloy-primitives = { version = "1.5.3", features = ["tiny-keccak"] }
 alloy-sol-types = { version = "1.0" }
 risc0-steel = { path = "../../../../crates/steel" }
 risc0-zkvm = { version = "3.0", default-features = false, features = ["std", "unstable"] }
