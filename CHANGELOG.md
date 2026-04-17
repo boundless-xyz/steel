@@ -34,7 +34,6 @@ All notable changes to this project will be documented in this file.
 - Bumped Rust toolchain to 1.94.
 - Updated dependencies: `alloy-evm` (to 0.30), `alloy-op-evm` (to 0.30), `revm` (to 36.0), `op-revm` (to 17.0), `op-alloy` (to 0.24).
 - Replaced `ethereum-consensus` with `lighthouse-types`, `tree_hash`, and `context_deserialize` for host-side beacon block handling. Affects crates depending on `risc0-steel` with the `host` feature.
-- Replaced the vendored `op-alloy-network` dependency with an inline `Optimism` network type, pending an upstream fix for the `NetworkWallet` conflict ([#116](https://github.com/boundless-xyz/steel/issues/116)).
 - Removed the `c-kzg` feature from `risc0-steel`'s `revm` dependency. Precompile features (`blst`, `bn`, `c-kzg`) should now be enabled by the guest crate directly.
 - Solidity: updated `forge-std` (to v1.15.0) and `openzeppelin-contracts` (to v5.6.1), moved remappings from `remappings.txt` into `contracts/foundry.toml`.
 
