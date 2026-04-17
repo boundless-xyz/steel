@@ -42,9 +42,9 @@ op-alloy-rpc-types = { version = "0.24" }
 alloy = { version = "1.0", default-features = false }
 alloy-trie = { version = "0.8" }
 
-# Beacon chain support
+# Beacon chain support (Lighthouse v8.1.3)
 context_deserialize = "0.2"
-lighthouse-types = { git = "https://github.com/sigp/lighthouse.git", tag = "v8.1.3", package = "types" }
+lighthouse-types = { git = "https://github.com/sigp/lighthouse.git", rev = "ca1624519b3ef3fcd7892c2f26d2ed9bab13bf52", package = "types" }
 tree_hash = "0.12"
 
 anyhow = { version = "1.0" }

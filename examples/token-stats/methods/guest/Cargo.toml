@@ -10,10 +10,10 @@ alloy-primitives = { version = "1.0", features = ["tiny-keccak"] }
 alloy-sol-types = { version = "1.0" }
 risc0-steel = { path = "../../../../crates/steel" }
 risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
+token-stats-core = { path = "../../core" }
 
 # Enable accelerated precompiles for the zkVM guest
 revm = { version = "*", default-features = false, features = ["bn"] }
-token-stats-core = { path = "../../core" }
 
 # Pin to match the patched version
 k256 = "=0.13.4"

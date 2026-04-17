@@ -73,8 +73,6 @@ impl<const LEAF_INDEX: usize> GeneralizedBeaconCommit<LEAF_INDEX> {
             .map_err(|e| anyhow::anyhow!("block has no execution payload: {e:?}"))?;
         let ep = full_ep.execution_payload_ref();
 
-        // derive the expected leaf from the concrete accessor so that a future fork reordering
-        // the SSZ layout (without a matching `LEAF_INDEX` update) is caught by the verify below
         let expected_leaf = match LEAF_INDEX {
             BLOCK_HASH_LEAF_INDEX => ep.block_hash().tree_hash_root(),
             STATE_ROOT_LEAF_INDEX => ep.state_root().tree_hash_root(),
@@ -319,8 +317,7 @@ fn prove_execution_payload_field(
     let body_tree = MerkleTree::new(&block.body().body_merkle_leaves());
     let block_tree = MerkleTree::new(&block_leaves(block));
 
-    // guard the hand-maintained field lists against a newer fork that added or reordered
-    // fields; `body_tree` uses Lighthouse's own `body_merkle_leaves()` and is trusted
+    // guard against fork-driven field reorderings producing invalid proofs
     ensure!(
         ep_tree.root() == ep.tree_hash_root(),
         "ExecutionPayload root mismatch: execution_payload_leaves() is out of date"

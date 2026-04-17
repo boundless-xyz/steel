@@ -73,14 +73,16 @@ impl<'de, T: ContextDeserialize<'de, ForkName>> Deserialize<'de> for ForkVersion
         D: Deserializer<'de>,
     {
         #[derive(Deserialize)]
-        struct Helper {
+        struct Helper<'a> {
             version: ForkName,
-            data: serde_json::Value,
+            #[serde(borrow)]
+            data: &'a serde_json::value::RawValue,
         }
 
         let helper = Helper::deserialize(deserializer)?;
-        let data = T::context_deserialize(helper.data, helper.version)
-            .map_err(serde::de::Error::custom)?;
+        let mut de = serde_json::Deserializer::from_str(helper.data.get());
+        let data =
+            T::context_deserialize(&mut de, helper.version).map_err(serde::de::Error::custom)?;
 
         Ok(ForkVersionedResponse { data })
     }
