@@ -6,7 +6,7 @@ edition = "2024"
 [workspace]
 
 [dependencies]
-alloy-primitives = { version = "1.0", features = ["tiny-keccak"] }
+alloy-primitives = { version = "1.5.3", features = ["tiny-keccak"] }
 erc20-counter-core = { path = "../../core" }
 risc0-steel = { path = "../../../../crates/steel" }
 risc0-zkvm = { version = "3.0", default-features = false, features = ["std"] }
