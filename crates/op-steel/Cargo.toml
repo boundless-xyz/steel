@@ -24,13 +24,18 @@ alloy-sol-types = { workspace = true }
 # with op-alloy-network 0.19; remove once op-alloy-network ships
 # https://github.com/ethereum-optimism/optimism/pull/19756
 alloy-network = { version = ">=1.0, <1.7.4" }
-alloy-provider = { version = ">=1.0, <1.8" }
-alloy-rpc-client = { version = ">=1.0, <1.8" }
-alloy-transport = { version = ">=1.0, <1.8" }
-alloy-transport-http = { version = ">=1.0, <1.8" }
+alloy-provider = { version = ">=1.0, <1.8", optional = true }
+alloy-rpc-client = { version = ">=1.0, <1.8", optional = true }
+alloy-transport = { version = ">=1.0, <1.8", optional = true }
+alloy-transport-http = { version = ">=1.0, <1.8", optional = true }
 
 anyhow = { workspace = true }
 log = { workspace = true }
+# mio 1.2.0 fails to compile on the risc0 zkvm-elf guest target; alloy-provider
+# (pulled transitively by op-alloy-network) depends on tokio -> mio, so even
+# guest builds need this pin. Remove once mio ships a fix or once
+# op-alloy-network drops the transitive alloy-provider dep.
+mio = { version = ">=1.0, <1.2" }
 op-alloy-network = { workspace = true }
 op-revm = { workspace = true, features = ["serde"] }
 risc0-steel = { workspace = true }
@@ -42,6 +47,16 @@ url = { workspace = true, optional = true }
 
 [features]
 default = []
-host = ["dep:alloy", "dep:tokio", "dep:url", "risc0-steel/host", "alloy-primitives/rand"]
+host = [
+    "dep:alloy",
+    "dep:alloy-provider",
+    "dep:alloy-rpc-client",
+    "dep:alloy-transport",
+    "dep:alloy-transport-http",
+    "dep:tokio",
+    "dep:url",
+    "risc0-steel/host",
+    "alloy-primitives/rand",
+]
 reqwest-native-tls = ["alloy?/reqwest-native-tls", "risc0-steel/reqwest-native-tls"]
 reqwest-rustls-tls = ["alloy?/reqwest-rustls-tls", "risc0-steel/reqwest-rustls-tls"]
