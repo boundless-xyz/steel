@@ -102,7 +102,22 @@ pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Cha
 /// The Base Sepolia [ChainSpec].
 pub static BASE_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 84532,
-    forks: OP_SEPOLIA_CHAIN_SPEC.forks.clone(),
+    forks: BTreeMap::from(
+        [
+            (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+            (OpSpecId::CANYON, ForkCondition::Timestamp(1_699_981_200)),
+            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_708_534_800)),
+            (OpSpecId::FJORD, ForkCondition::Timestamp(1_716_998_400)),
+            (OpSpecId::GRANITE, ForkCondition::Timestamp(1_723_478_400)),
+            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
+            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
+            (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
+            // azul
+            (OpSpecId::OSAKA, ForkCondition::Timestamp(1_776_708_000)),
+        ]
+        .map(|(id, cond)| (id.into(), cond)),
+    ),
 });
 
 /// [EvmFactory] for Optimism.
@@ -401,7 +416,7 @@ mod tests {
         fn sepolia_spec_digest() {
             assert_eq!(
                 BASE_SEPOLIA_CHAIN_SPEC.digest(),
-                b256!("0xa2e376e0229be98aed684c4c52cb9f119f1757ac9d9e5b172a713908f8a3a739")
+                b256!("0x78c34d7175768c4a9b65941be98eadcd1ed4e3c7ff084b3b8c0f1a5557932003")
             );
         }
     }
