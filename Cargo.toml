@@ -5,7 +5,7 @@ members = ["crates/*"]
 [workspace.package]
 edition = "2024"
 license = "Apache-2.0"
-homepage = "https://beboundless.xyz/"
+homepage = "https://boundless.network/"
 repository = "https://github.com/boundless-xyz/steel/"
 
 [workspace.lints.rust]
