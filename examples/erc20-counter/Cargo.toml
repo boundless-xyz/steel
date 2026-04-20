@@ -28,5 +28,5 @@ log = { version = "0.4" }
 serde = { version = "1.0", features = ["derive"] }
 test-log = { version = "0.2" }
 tracing-subscriber = { version = "0.3" }
-tokio = { version = "1.39" }
+tokio = { version = "1.39", features = ["full"] }
 url = { version = "2.5" }

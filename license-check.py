@@ -29,6 +29,7 @@ EXTENSIONS = [
 ]
 
 SKIP_DIRS = [
+    'patches/',
 ]
 
 def check_header(expected_year, lines_actual):
@@ -73,8 +74,9 @@ def main():
     for path in tracked_files():
         if path.suffix in EXTENSIONS:
             skip = False
+            rel = str(path.relative_to(root))
             for path_start in SKIP_DIRS:
-                if str(path).startswith(path_start):
+                if rel.startswith(path_start):
                     skip = True
                     break
             if skip:
