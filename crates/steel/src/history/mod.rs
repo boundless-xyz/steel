@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -155,7 +155,6 @@ mod host {
             let mut current_state_block_hash = commitment_header.seal();
             let (mut current_state_commit, _) = create_beacon_commit(
                 commitment_header,
-                "state_root".into(), // we need to prove the state_root of the commitment_header
                 commitment_version,
                 &rpc_provider,
                 beacon_client,
@@ -186,15 +185,12 @@ mod host {
                     .await
                     .context("failed to preflight beacon roots contract")?;
 
-                // 2c. Store the fetched BeaconRootsState and its beacon commitment
-                // These are inserted at the beginning as we are building the chain in reverse.
-                state_commits.insert(
-                    0,
-                    StateCommit {
-                        state: state_witness,
-                        state_commit: current_state_commit,
-                    },
-                );
+                // 2c. Append the fetched BeaconRootsState and its beacon commitment. The chain is
+                // built in reverse; the final reverse() below restores chronological order.
+                state_commits.push(StateCommit {
+                    state: state_witness,
+                    state_commit: current_state_commit,
+                });
 
                 // 2d. Check if the chain is complete. This happens if the beacon roots contract
                 // actually contained the execution commit.
@@ -220,7 +216,6 @@ mod host {
                     })?;
                 // create the beacon commitment for the next state
                 current_state_commit = GeneralizedBeaconCommit::from_beacon_root(
-                    "state_root".into(),
                     parent_beacon_root,
                     beacon_client,
                     // in the current state, timestamp can be used to look up parent_beacon_root
@@ -233,6 +228,7 @@ mod host {
                     )
                 })?;
             }
+            state_commits.reverse();
 
             log::debug!("Generated {} state commitments", state_commits.len());
 
