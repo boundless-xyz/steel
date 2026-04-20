@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -240,6 +240,8 @@ impl EvmBlockHeader for EthBlockHeader {
             difficulty: header.difficulty,
             prevrandao: (spec >= SpecId::MERGE).then_some(header.mix_hash),
             blob_excess_gas_and_price,
+            // TODO(https://github.com/boundless-xyz/steel/issues/112): populate from header once alloy supports EIP-7843
+            slot_num: 0,
         }
     }
 }
