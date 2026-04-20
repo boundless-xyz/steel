@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 use super::BlockId;
 use crate::{
-    beacon::BeaconCommit,
+    beacon::{host::client::BeaconClient, BeaconCommit},
     config::ChainSpec,
     ethereum::EthEvmFactory,
     history::HistoryCommit,
@@ -371,10 +371,12 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
             header.seal()
         );
 
-        let beacon_url = self.beacon_config.url;
+        let beacon_client = BeaconClient::new(self.beacon_config.url)
+            .map_err(|e| anyhow::anyhow!("invalid beacon URL: {e}"))?;
         let version = self.beacon_config.commitment_version;
         let commit = HostCommit {
-            inner: BeaconCommit::from_header(&header, version, &self.provider, beacon_url).await?,
+            inner: BeaconCommit::from_header(&header, version, &self.provider, &beacon_client)
+                .await?,
             config_id: self.chain_spec.digest(),
         };
         let db = ProofDb::new(ProviderDb::new(

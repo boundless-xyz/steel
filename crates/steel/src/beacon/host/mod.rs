@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,16 +18,11 @@ use alloy::{network::Ethereum, providers::Provider};
 use alloy_primitives::B256;
 use anyhow::{bail, ensure, Context};
 use client::BeaconClient;
-use consensus::{
-    mainnet::SignedBeaconBlock,
-    ssz::prelude::{proofs::Proof, *},
-    Fork,
-};
-use proofs::ProofAndWitness;
-use url::Url;
+use lighthouse_types::{BeaconBlockRef, ForkName, FullPayloadRef, MainnetEthSpec};
+use sha2::{Digest, Sha256};
+use tree_hash::TreeHash;
 
 pub(crate) mod client;
-mod consensus;
 
 impl BeaconCommit {
     /// Creates a new `BeaconCommit` for the provided header which proofs the inclusion of the
@@ -36,23 +31,13 @@ impl BeaconCommit {
         header: &Sealed<EthBlockHeader>,
         commitment_version: CommitmentVersion,
         rpc_provider: P,
-        beacon_url: Url,
+        beacon_client: &BeaconClient,
     ) -> anyhow::Result<Self>
     where
         P: Provider<Ethereum>,
     {
-        let client = BeaconClient::new(beacon_url).context("invalid URL")?;
-        let (commit, beacon_root) = create_beacon_commit(
-            header,
-            "block_hash".into(),
-            commitment_version,
-            rpc_provider,
-            &client,
-        )
-        .await?;
-        commit
-            .verify(header.seal(), beacon_root)
-            .context("proof derived from API does not verify")?;
+        let (commit, beacon_root) =
+            create_beacon_commit(header, commitment_version, rpc_provider, beacon_client).await?;
 
         log::debug!(
             "Committing to beacon block: {{ {}, root: {} }}",
@@ -65,30 +50,53 @@ impl BeaconCommit {
 }
 
 impl<const LEAF_INDEX: usize> GeneralizedBeaconCommit<LEAF_INDEX> {
+    /// Builds a `GeneralizedBeaconCommit` proving the value at `LEAF_INDEX` inside the beacon
+    /// block identified by `parent_beacon_root`.
     pub(crate) async fn from_beacon_root(
-        field: PathElement,
         parent_beacon_root: B256,
         beacon_client: &BeaconClient,
         block_id: BeaconBlockId,
     ) -> anyhow::Result<Self> {
-        let proof =
-            create_execution_payload_proof(field, parent_beacon_root, beacon_client).await?;
-        ensure!(proof.index == LEAF_INDEX, "field has the wrong leaf index");
-
-        let commit = GeneralizedBeaconCommit::new(
-            proof.branch.iter().map(|n| n.0.into()).collect(),
-            block_id,
+        let signed_beacon_block = beacon_client
+            .get_block(parent_beacon_root)
+            .await
+            .with_context(|| format!("failed to get block {parent_beacon_root}"))?;
+        let fork = signed_beacon_block.fork_name_unchecked();
+        ensure!(
+            fork >= ForkName::Deneb,
+            "invalid version of block {parent_beacon_root}: expected >= {}, got {fork}",
+            ForkName::Deneb,
         );
+        let block = signed_beacon_block.message();
+        let full_ep = block
+            .execution_payload()
+            .map_err(|e| anyhow::anyhow!("block has no execution payload: {e:?}"))?;
+        let ep = full_ep.execution_payload_ref();
+
+        let expected_leaf = match LEAF_INDEX {
+            BLOCK_HASH_LEAF_INDEX => ep.block_hash().tree_hash_root(),
+            STATE_ROOT_LEAF_INDEX => ep.state_root().tree_hash_root(),
+            _ => bail!("unsupported LEAF_INDEX {LEAF_INDEX}"),
+        };
+
+        let proof = prove_execution_payload_field(&block, full_ep, LEAF_INDEX)?;
+        let commit = GeneralizedBeaconCommit::new(proof, block_id);
+        commit
+            .verify(expected_leaf, parent_beacon_root)
+            .with_context(|| {
+                format!(
+                    "LEAF_INDEX {LEAF_INDEX} does not point to the expected ExecutionPayload field"
+                )
+            })?;
 
         Ok(commit)
     }
 }
 
-/// Creates a beacon commitment that `field` is contained in the `ExecutionPayload` of the
-/// beacon block corresponding to `header` creating a [CommitmentVersion::Beacon] commitment.
+/// Builds a [CommitmentVersion::Beacon] commitment: resolves the beacon root via the EIP-4788
+/// beacon roots contract by looking up `header`'s child block's `parent_beacon_block_root`.
 async fn create_eip4788_beacon_commit<P, H, const LEAF_INDEX: usize>(
     header: &Sealed<H>,
-    field: PathElement,
     rpc_provider: P,
     beacon_client: &BeaconClient,
 ) -> anyhow::Result<(GeneralizedBeaconCommit<LEAF_INDEX>, B256)>
@@ -120,7 +128,6 @@ where
         .parent_beacon_block_root
         .context("parent_beacon_block_root missing in execution header")?;
     let commit = GeneralizedBeaconCommit::from_beacon_root(
-        field,
         beacon_root,
         beacon_client,
         BeaconBlockId::Eip4788(child.timestamp),
@@ -130,11 +137,10 @@ where
     Ok((commit, beacon_root))
 }
 
-/// Creates a beacon commitment that `field` is contained in the `ExecutionPayload` of the
-/// beacon block corresponding to `header` creating a [CommitmentVersion::Consensus] commitment.
+/// Builds a [CommitmentVersion::Consensus] commitment: resolves the beacon root by querying the
+/// beacon header whose `parent_root` matches `header`'s `parent_beacon_block_root`.
 async fn create_slot_beacon_commit<P, H, const LEAF_INDEX: usize>(
     header: &Sealed<H>,
-    field: PathElement,
     rpc_provider: P,
     beacon_client: &BeaconClient,
 ) -> anyhow::Result<(GeneralizedBeaconCommit<LEAF_INDEX>, B256)>
@@ -160,27 +166,25 @@ where
             .await
             .with_context(|| format!("failed to get header for parent root {parent_root}"))?;
         ensure!(
-            response.header.message.parent_root.0 == parent_root.0,
+            response.header.message.parent_root == parent_root,
             "API returned invalid beacon header"
         );
-        (B256::from(response.root.0), response.header.message)
+        (response.root, response.header.message)
     };
     let commit = GeneralizedBeaconCommit::from_beacon_root(
-        field,
         beacon_root,
         beacon_client,
-        BeaconBlockId::Slot(beacon_header.slot),
+        BeaconBlockId::Slot(beacon_header.slot.as_u64()),
     )
     .await?;
 
     Ok((commit, beacon_root))
 }
 
-/// Creates a beacon commitment that `field` is contained in the `ExecutionPayload` of the
-/// beacon block corresponding to `header`.
+/// Creates a beacon commitment that the field at `LEAF_INDEX` is contained in the
+/// `ExecutionPayload` of the beacon block corresponding to `header`.
 pub(crate) async fn create_beacon_commit<P, H, const LEAF_INDEX: usize>(
     header: &Sealed<H>,
-    field: PathElement,
     commitment_version: CommitmentVersion,
     rpc_provider: P,
     beacon_client: &BeaconClient,
@@ -191,61 +195,156 @@ where
 {
     match commitment_version {
         CommitmentVersion::Beacon => {
-            create_eip4788_beacon_commit(header, field, rpc_provider, beacon_client).await
+            create_eip4788_beacon_commit(header, rpc_provider, beacon_client).await
         }
         CommitmentVersion::Consensus => {
-            create_slot_beacon_commit(header, field, rpc_provider, beacon_client).await
+            create_slot_beacon_commit(header, rpc_provider, beacon_client).await
         }
         _ => bail!("invalid commitment version"),
     }
 }
 
-/// Creates the Merkle inclusion proof of the element `field` in the `ExecutionPayload` of the
-/// beacon block with the given `beacon_root`.
-async fn create_execution_payload_proof(
-    field: PathElement,
-    beacon_root: B256,
-    client: &BeaconClient,
-) -> anyhow::Result<Proof> {
-    let signed_beacon_block = client
-        .get_block(beacon_root)
-        .await
-        .with_context(|| format!("failed to get block {beacon_root}"))?;
-    // create the inclusion proof of the execution block hash depending on the fork version
-    let (proof, _) = match signed_beacon_block {
-        SignedBeaconBlock::Phase0(_)
-        | SignedBeaconBlock::Altair(_)
-        | SignedBeaconBlock::Bellatrix(_)
-        | SignedBeaconBlock::Capella(_) => {
-            bail!(
-                "invalid version of block {}: expected >= {}; got {}",
-                beacon_root,
-                Fork::Deneb,
-                signed_beacon_block.version()
-            );
-        }
-        SignedBeaconBlock::Deneb(signed_block) => {
-            prove_execution_payload_field(signed_block.message, field)?
-        }
-        SignedBeaconBlock::Electra(signed_block) => {
-            prove_execution_payload_field(signed_block.message, field)?
-        }
-        SignedBeaconBlock::Fulu(signed_block) => {
-            prove_execution_payload_field(signed_block.message, field)?
-        }
-    };
+/// A binary Merkle tree stored as a flat array indexed by [generalized index].
+///
+/// Nodes are addressed by generalized index: position 1 is the root, and the children of
+/// node `k` are `2k` and `2k + 1`. Position 0 is unused.
+///
+/// [generalized index]: https://github.com/ethereum/consensus-specs/blob/master/ssz/merkle-proofs.md
+struct MerkleTree(Vec<B256>);
 
-    Ok(proof)
+impl MerkleTree {
+    /// Builds a Merkle tree from `leaves`, padding to the next power of two with zero hashes.
+    fn new(leaves: &[B256]) -> Self {
+        let num_leaves = leaves.len().next_power_of_two();
+        let mut tree = vec![B256::ZERO; 2 * num_leaves];
+        tree[num_leaves..num_leaves + leaves.len()].copy_from_slice(leaves);
+
+        let mut hasher = Sha256::new();
+        for i in (1..num_leaves).rev() {
+            hasher.update(tree[2 * i]);
+            hasher.update(tree[2 * i + 1]);
+            tree[i].copy_from_slice(&hasher.finalize_reset());
+        }
+        MerkleTree(tree)
+    }
+
+    /// Returns the Merkle root.
+    fn root(&self) -> B256 {
+        self.0[1]
+    }
+
+    /// Returns the number of leaves (padded to the next power of two).
+    fn num_leaves(&self) -> usize {
+        self.0.len() / 2
+    }
+
+    /// Computes the Merkle proof for the node at `gindex`.
+    ///
+    /// Returns the sibling hashes along the path from the node to the root, equivalent to
+    /// looking up [`get_branch_indices`] in the tree.
+    ///
+    /// [`get_branch_indices`]: https://github.com/ethereum/consensus-specs/blob/master/ssz/merkle-proofs.md
+    fn proof(&self, leaf_index: usize) -> Vec<B256> {
+        assert!(leaf_index < self.num_leaves());
+        let mut gindex = self.num_leaves() + leaf_index;
+
+        let mut branch = Vec::with_capacity(gindex.ilog2() as usize);
+        while gindex > 1 {
+            branch.push(self.0[gindex ^ 1]);
+            gindex >>= 1;
+        }
+        branch
+    }
 }
 
-/// Creates the Merkle inclusion proof of the element `field` in the `ExecutionPayload` in the
-/// given `BeaconBlock`.
-fn prove_execution_payload_field<T: SimpleSerialize>(
-    beacon_block: T,
-    field: PathElement,
-) -> Result<ProofAndWitness, MerkleizationError> {
-    // the field is in the ExecutionPayload in the BeaconBlockBody in the BeaconBlock
-    beacon_block.prove(&["body".into(), "execution_payload".into(), field])
+/// Collects `tree_hash_root()` of each `ExecutionPayload` field, in SSZ container order.
+///
+/// Must only be called for blocks >= Deneb (enforced by the caller).
+fn execution_payload_leaves(ep: FullPayloadRef<'_, MainnetEthSpec>) -> Vec<B256> {
+    let ep = ep.execution_payload_ref();
+    vec![
+        ep.parent_hash().tree_hash_root(),
+        ep.fee_recipient().tree_hash_root(),
+        ep.state_root().tree_hash_root(),
+        ep.receipts_root().tree_hash_root(),
+        ep.logs_bloom().tree_hash_root(),
+        ep.prev_randao().tree_hash_root(),
+        ep.block_number().tree_hash_root(),
+        ep.gas_limit().tree_hash_root(),
+        ep.gas_used().tree_hash_root(),
+        ep.timestamp().tree_hash_root(),
+        ep.extra_data().tree_hash_root(),
+        ep.base_fee_per_gas().tree_hash_root(),
+        ep.block_hash().tree_hash_root(),
+        ep.transactions().tree_hash_root(),
+        ep.withdrawals()
+            .expect("Deneb+ blocks have withdrawals")
+            .tree_hash_root(),
+        ep.blob_gas_used()
+            .expect("Deneb+ blocks have blob_gas_used")
+            .tree_hash_root(),
+        ep.excess_blob_gas()
+            .expect("Deneb+ blocks have excess_blob_gas")
+            .tree_hash_root(),
+    ]
+}
+
+/// Collects `tree_hash_root()` of each `BeaconBlock` field, in SSZ container order.
+fn block_leaves(block: &BeaconBlockRef<'_, MainnetEthSpec>) -> Vec<B256> {
+    vec![
+        block.slot().tree_hash_root(),
+        block.proposer_index().tree_hash_root(),
+        block.parent_root().tree_hash_root(),
+        block.state_root().tree_hash_root(),
+        block.body_root(),
+    ]
+}
+
+/// Generates the full 3-level Merkle inclusion proof for a field within the `ExecutionPayload`
+/// of the given `BeaconBlock`, identified by its `gindex` (generalized index) in the full
+/// beacon block tree.
+fn prove_execution_payload_field(
+    block: &BeaconBlockRef<'_, MainnetEthSpec>,
+    ep: FullPayloadRef<'_, MainnetEthSpec>,
+    gindex: usize,
+) -> anyhow::Result<Vec<B256>> {
+    const BODY_INDEX_IN_BLOCK: usize = 4;
+    const EP_INDEX_IN_BODY: usize = 9;
+
+    let ep_tree = MerkleTree::new(&execution_payload_leaves(ep));
+    let body_tree = MerkleTree::new(&block.body().body_merkle_leaves());
+    let block_tree = MerkleTree::new(&block_leaves(block));
+
+    // dev-time canaries; production safety comes from commit.verify(..) at the call site
+    debug_assert_eq!(
+        ep_tree.root(),
+        ep.tree_hash_root(),
+        "execution_payload_leaves() is out of date"
+    );
+    debug_assert_eq!(
+        block_tree.root(),
+        block.tree_hash_root(),
+        "block_leaves() is out of date"
+    );
+
+    // a valid EP-field gindex must decompose to (1, BODY_INDEX_IN_BLOCK, EP_INDEX_IN_BODY, _)
+    let leaf_index = gindex % ep_tree.num_leaves();
+    let g = gindex / ep_tree.num_leaves();
+    let body_index = g % body_tree.num_leaves();
+    let g = g / body_tree.num_leaves();
+    let block_index = g % block_tree.num_leaves();
+    let g = g / block_tree.num_leaves();
+    ensure!(
+        g == 1 && block_index == BODY_INDEX_IN_BLOCK && body_index == EP_INDEX_IN_BODY,
+        "gindex {gindex} does not point to a field inside the ExecutionPayload"
+    );
+
+    let mut proof = Vec::with_capacity(gindex.ilog2() as usize);
+    proof.extend(ep_tree.proof(leaf_index));
+    proof.extend(body_tree.proof(body_index));
+    proof.extend(block_tree.proof(block_index));
+
+    Ok(proof)
 }
 
 #[cfg(test)]
@@ -280,7 +379,7 @@ mod tests {
         let header: Sealed<EthBlockHeader> = Sealed::new(block.header.try_into().unwrap());
 
         let (commit, _): (BeaconCommit, B256) =
-            super::create_eip4788_beacon_commit(&header, "block_hash".into(), &el, &cl)
+            super::create_eip4788_beacon_commit(&header, &el, &cl)
                 .await
                 .unwrap();
 
@@ -306,14 +405,13 @@ mod tests {
             .unwrap();
         let header: Sealed<EthBlockHeader> = Sealed::new(block.header.try_into().unwrap());
 
-        let (commit, _): (BeaconCommit, B256) =
-            super::create_slot_beacon_commit(&header, "block_hash".into(), &el, &cl)
-                .await
-                .unwrap();
+        let (commit, _): (BeaconCommit, B256) = super::create_slot_beacon_commit(&header, &el, &cl)
+            .await
+            .unwrap();
 
         // verify the commitment by querying the beacon client
         let (block_id, block_root) = dbg!(commit.into_commit(header.seal()));
         let beacon_block = cl.get_block(block_id.as_id()).await.unwrap();
-        assert_eq!(block_root, beacon_block.root().unwrap());
+        assert_eq!(block_root, beacon_block.message().tree_hash_root());
     }
 }
