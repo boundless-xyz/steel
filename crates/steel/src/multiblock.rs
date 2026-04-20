@@ -99,8 +99,12 @@ impl<F: EvmFactory> MultiblockEvmInput<F> {
             };
         }
 
-        for (env_prev, env) in envs.values().zip(envs.values().skip(1)) {
-            SteelVerifier::new(env).verify(env_prev.commitment());
+        let mut prev_commit: Option<&Commitment> = None;
+        for env in envs.values() {
+            if let Some(commit) = prev_commit {
+                SteelVerifier::new(env).verify(commit);
+            }
+            prev_commit = Some(env.commitment());
         }
 
         MultiblockEvmEnv(envs)
@@ -160,10 +164,8 @@ impl<F: EvmFactory> MultiblockEvmEnv<StateDb, F, Commitment> {
     /// on-chain validates the entire sequence because each block is cryptographically linked to its
     /// predecessors.
     #[must_use]
-    pub fn into_commitment(mut self) -> Commitment {
-        // safe unwrap: MultiblockEvmEnv<StateDb, F, Commitment> cannot be constructed empty
-        let env = self.0.pop_last().unwrap().1;
-        env.into_commitment()
+    pub fn into_commitment(self) -> Commitment {
+        self.commitment().clone()
     }
 }
 

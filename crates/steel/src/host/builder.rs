@@ -704,7 +704,7 @@ fn ensure_distinct<H: EvmBlockHeader>(
 /// [HostMultiblockEvmEnv] collects environments without commitments (`()`), because the
 /// commitment for each block is determined later: intermediate blocks get automatic commitments
 /// (block hash or EIP-2935), while the final block gets the user-configured commitment from the
-/// template builder. This trait allows `into_input()` to apply the builder’s commitment type
+/// template builder. This trait allows `into_input()` to apply the builder's commitment type
 /// generically, regardless of whether it is `()`, `Beacon`, `Eip2935History`, or `History`.
 ///
 /// For non-trivial commitment types, the implementation rebuilds an empty environment from the

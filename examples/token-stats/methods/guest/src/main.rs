@@ -36,10 +36,9 @@ fn main() {
     }
 
     // Execute the view calls on each EVM state.
-    let rates = envs
+    let rates: Vec<u64> = envs
         .iter()
         .map(|env| {
-            // Execute the view calls.
             let contract = Contract::new(CONTRACT, env);
             let utilization = contract
                 .call_builder(&CometMainInterface::getUtilizationCall {})
@@ -48,16 +47,16 @@ fn main() {
                 .call_builder(&CometMainInterface::getSupplyRateCall { utilization })
                 .call()
         })
-        .collect::<Vec<_>>();
+        .collect();
 
     // The formula for APR in percentage is the following:
     // Seconds Per Year = 60 * 60 * 24 * 365
     // Utilization = getUtilization()
     // Supply Rate = getSupplyRate(Utilization)
     // Supply APR = Supply Rate / (10 ^ 18) * Seconds Per Year * 100
-    let annual_supply_rate_u128 =
-        rates.iter().map(|&r| r as u128).sum::<u128>() * SECONDS_PER_YEAR / rates.len() as u128;
-    let annual_supply_rate = u64::try_from(annual_supply_rate_u128).unwrap();
+    let sum: u128 = rates.iter().map(|&r| r as u128).sum();
+    let annual_supply_rate =
+        u64::try_from(sum * SECONDS_PER_YEAR / rates.len() as u128).unwrap();
 
     // This commits the APR at current utilization rate for this given block.
     let journal = APRCommitment {
