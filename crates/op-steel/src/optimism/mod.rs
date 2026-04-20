@@ -15,17 +15,18 @@
 use crate::game::DisputeGameInput;
 use alloy_consensus::{Eip658Value, ReceiptWithBloom, TxReceipt};
 use alloy_eips::{Encodable2718, Typed2718, eip4844, eip7691};
-use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
+use alloy_evm::{Database, EvmFactory as AlloyEvmFactory, precompiles::PrecompilesMap};
 use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
 use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, U256};
 use alloy_rlp::BufMut;
 use delegate::delegate;
 use op_alloy_consensus::OpReceipt;
-use op_revm::{OpTransaction, spec::OpSpecId};
+use op_revm::{DefaultOp, OpBuilder, OpTransaction};
 use risc0_steel::{
-    BlockInput, CallError, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId, StateDb,
+    BlockInput, CallError, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, StateDb,
     config::{ChainSpec, ForkCondition},
     revm::{
+        Context,
         context::{BlockEnv, CfgEnv, TxEnv},
         context_interface::block::BlobExcessGasAndPrice,
         inspector::NoOpInspector,
@@ -34,7 +35,11 @@ use risc0_steel::{
     serde::{Eip2718Wrapper, RlpHeader},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, error::Error, fmt, sync::LazyLock};
+use std::{collections::BTreeMap, error::Error, sync::LazyLock};
+
+mod spec;
+pub use spec::OpSpecId;
+use spec::azul_precompiles;
 
 #[cfg(feature = "host")]
 mod host;
@@ -45,79 +50,66 @@ pub use host::*;
 /// The OP Mainnet [ChainSpec].
 pub static OP_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 10,
-    forks: BTreeMap::from(
-        [
-            (OpSpecId::BEDROCK, ForkCondition::Block(105_235_063)),
-            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-            (OpSpecId::CANYON, ForkCondition::Timestamp(1_704_992_401)),
-            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_710_374_401)),
-            (OpSpecId::FJORD, ForkCondition::Timestamp(1_720_627_201)),
-            (OpSpecId::GRANITE, ForkCondition::Timestamp(1_726_070_401)),
-            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
-            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
-            (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
-        ]
-        .map(|(id, cond)| (id.into(), cond)),
-    ),
+    forks: BTreeMap::from([
+        (OpSpecId::BEDROCK, ForkCondition::Block(105_235_063)),
+        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+        (OpSpecId::CANYON, ForkCondition::Timestamp(1_704_992_401)),
+        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_710_374_401)),
+        (OpSpecId::FJORD, ForkCondition::Timestamp(1_720_627_201)),
+        (OpSpecId::GRANITE, ForkCondition::Timestamp(1_726_070_401)),
+        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
+        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
+        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
+    ]),
 });
 
 /// The OP Sepolia [ChainSpec].
 pub static OP_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 11155420,
-    forks: BTreeMap::from(
-        [
-            (OpSpecId::BEDROCK, ForkCondition::Block(0)),
-            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-            (OpSpecId::CANYON, ForkCondition::Timestamp(1_699_981_200)),
-            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_708_534_800)),
-            (OpSpecId::FJORD, ForkCondition::Timestamp(1_716_998_400)),
-            (OpSpecId::GRANITE, ForkCondition::Timestamp(1_723_478_400)),
-            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
-            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
-            (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
-        ]
-        .map(|(id, cond)| (id.into(), cond)),
-    ),
+    forks: BTreeMap::from([
+        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+        (OpSpecId::CANYON, ForkCondition::Timestamp(1_699_981_200)),
+        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_708_534_800)),
+        (OpSpecId::FJORD, ForkCondition::Timestamp(1_716_998_400)),
+        (OpSpecId::GRANITE, ForkCondition::Timestamp(1_723_478_400)),
+        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
+        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
+        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
+    ]),
 });
 
 /// The Base Mainnet [ChainSpec].
 pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 8453,
-    forks: BTreeMap::from(
-        [
-            (OpSpecId::BEDROCK, ForkCondition::Block(0)),
-            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-            (OpSpecId::CANYON, ForkCondition::Timestamp(1_704_992_401)),
-            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_710_374_401)),
-            (OpSpecId::FJORD, ForkCondition::Timestamp(1_720_627_201)),
-            (OpSpecId::GRANITE, ForkCondition::Timestamp(1_726_070_401)),
-            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
-            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
-            (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
-        ]
-        .map(|(id, cond)| (id.into(), cond)),
-    ),
+    forks: BTreeMap::from([
+        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+        (OpSpecId::CANYON, ForkCondition::Timestamp(1_704_992_401)),
+        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_710_374_401)),
+        (OpSpecId::FJORD, ForkCondition::Timestamp(1_720_627_201)),
+        (OpSpecId::GRANITE, ForkCondition::Timestamp(1_726_070_401)),
+        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
+        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
+        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
+    ]),
 });
 
 /// The Base Sepolia [ChainSpec].
 pub static BASE_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 84532,
-    forks: BTreeMap::from(
-        [
-            (OpSpecId::BEDROCK, ForkCondition::Block(0)),
-            (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-            (OpSpecId::CANYON, ForkCondition::Timestamp(1_699_981_200)),
-            (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_708_534_800)),
-            (OpSpecId::FJORD, ForkCondition::Timestamp(1_716_998_400)),
-            (OpSpecId::GRANITE, ForkCondition::Timestamp(1_723_478_400)),
-            (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
-            (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
-            (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
-            // azul
-            (OpSpecId::OSAKA, ForkCondition::Timestamp(1_776_708_000)),
-        ]
-        .map(|(id, cond)| (id.into(), cond)),
-    ),
+    forks: BTreeMap::from([
+        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+        (OpSpecId::CANYON, ForkCondition::Timestamp(1_699_981_200)),
+        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_708_534_800)),
+        (OpSpecId::FJORD, ForkCondition::Timestamp(1_716_998_400)),
+        (OpSpecId::GRANITE, ForkCondition::Timestamp(1_723_478_400)),
+        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
+        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
+        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
+        (OpSpecId::AZUL, ForkCondition::Timestamp(1_776_708_000)),
+    ]),
 });
 
 /// [EvmFactory] for Optimism.
@@ -132,7 +124,7 @@ impl EvmFactory for OpEvmFactory {
         <AlloyOpEvmFactory as AlloyEvmFactory>::Error<DBError>;
     type HaltReason = <AlloyOpEvmFactory as AlloyEvmFactory>::HaltReason;
     type Spec = <AlloyOpEvmFactory as AlloyEvmFactory>::Spec;
-    type SpecId = OpEvmSpecId;
+    type SpecId = OpSpecId;
     type Header = OpBlockHeader;
     type Receipt = OpEvmReceipt;
 
@@ -167,7 +159,17 @@ impl EvmFactory for OpEvmFactory {
 
         let block_env = header.to_block_env(spec_id);
 
-        AlloyOpEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
+        if matches!(spec_id, OpSpecId::AZUL) {
+            let inner = Context::op()
+                .with_db(db)
+                .with_block(block_env)
+                .with_cfg(cfg_env)
+                .build_op_with_inspector(NoOpInspector {})
+                .with_precompiles(PrecompilesMap::from_static(azul_precompiles()));
+            alloy_op_evm::OpEvm::new(inner, false)
+        } else {
+            AlloyOpEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
+        }
     }
 }
 
@@ -175,43 +177,7 @@ impl EvmFactory for OpEvmFactory {
 pub type OpCallError = CallError<<OpEvmFactory as EvmFactory>::HaltReason>;
 
 /// [ChainSpec] for Optimism.
-pub type OpChainSpec = ChainSpec<OpEvmSpecId>;
-
-/// [EvmFactory::SpecId] for Optimism.
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct OpEvmSpecId(OpSpecId);
-
-impl fmt::Display for OpEvmSpecId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(<&'static str>::from(self.0))
-    }
-}
-
-impl From<OpSpecId> for OpEvmSpecId {
-    fn from(spec: OpSpecId) -> Self {
-        Self(spec)
-    }
-}
-
-impl From<OpEvmSpecId> for OpSpecId {
-    fn from(spec: OpEvmSpecId) -> Self {
-        spec.0
-    }
-}
-impl EvmSpecId for OpEvmSpecId {
-    #[inline]
-    fn has_eip4788(&self) -> bool {
-        self.0 >= OpSpecId::ECOTONE
-    }
-    #[inline]
-    fn has_eip2935(&self) -> bool {
-        self.0 >= OpSpecId::ISTHMUS
-    }
-    #[inline]
-    fn to_u32(&self) -> u32 {
-        self.0 as u32
-    }
-}
+pub type OpChainSpec = ChainSpec<OpSpecId>;
 
 type OpHeader = alloy_consensus::Header;
 
@@ -227,7 +193,7 @@ impl Sealable for OpBlockHeader {
 }
 
 impl EvmBlockHeader for OpBlockHeader {
-    type SpecId = OpEvmSpecId;
+    type SpecId = OpSpecId;
 
     #[inline]
     fn parent_hash(&self) -> &B256 {
@@ -258,7 +224,7 @@ impl EvmBlockHeader for OpBlockHeader {
     fn to_block_env(&self, spec_id: Self::SpecId) -> BlockEnv {
         let header = self.0.inner();
 
-        let eth_spec_id = spec_id.0.into_eth_spec();
+        let eth_spec_id = spec_id.into_eth_spec();
         let blob_excess_gas_and_price =
             header
                 .excess_blob_gas
@@ -275,10 +241,7 @@ impl EvmBlockHeader for OpBlockHeader {
                         excess_blob_gas,
                         eip7691::BLOB_GASPRICE_UPDATE_FRACTION_PECTRA as u64,
                     ),
-                    _ => unimplemented!(
-                        "unsupported spec with `excess_blob_gas`: {}",
-                        <&'static str>::from(spec_id.0)
-                    ),
+                    _ => unimplemented!("unsupported spec with `excess_blob_gas`: {spec_id}"),
                 });
 
         BlockEnv {
@@ -288,7 +251,7 @@ impl EvmBlockHeader for OpBlockHeader {
             gas_limit: header.gas_limit,
             basefee: header.base_fee_per_gas.unwrap_or_default(),
             difficulty: header.difficulty,
-            prevrandao: (spec_id.0 >= OpSpecId::BEDROCK).then_some(header.mix_hash),
+            prevrandao: (spec_id >= OpSpecId::BEDROCK).then_some(header.mix_hash),
             blob_excess_gas_and_price,
             // TODO(https://github.com/boundless-xyz/steel/issues/112): populate from header once alloy supports EIP-7843
             slot_num: 0,
@@ -416,7 +379,7 @@ mod tests {
         fn sepolia_spec_digest() {
             assert_eq!(
                 BASE_SEPOLIA_CHAIN_SPEC.digest(),
-                b256!("0x78c34d7175768c4a9b65941be98eadcd1ed4e3c7ff084b3b8c0f1a5557932003")
+                b256!("0x15e7caa578cb16bd9ec9dc9a01cfb62e5572140dc95d9dec7671346f404f1c22")
             );
         }
     }

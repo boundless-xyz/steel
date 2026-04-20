@@ -22,8 +22,7 @@ use alloy_primitives::{Address, U256, address};
 use risc0_op_steel::{
     Contract,
     config::ChainSpec,
-    op_revm::OpSpecId,
-    optimism::{OpCallError, OpChainSpec, OpEvmEnv, Optimism},
+    optimism::{OpCallError, OpChainSpec, OpEvmEnv, OpSpecId, Optimism},
 };
 use std::{fmt::Debug, sync::LazyLock};
 use test_log::test;
@@ -56,7 +55,7 @@ alloy::sol!(
 );
 
 static OP_ANVIL_CHAIN_SPEC: LazyLock<OpChainSpec> =
-    LazyLock::new(|| ChainSpec::new_single(31337, OpSpecId::ISTHMUS.into()));
+    LazyLock::new(|| ChainSpec::new_single(31337, OpSpecId::ISTHMUS));
 
 /// Returns an Anvil provider with the deployed [Test] contract.
 async fn test_provider() -> impl Provider<Optimism> + Clone {
