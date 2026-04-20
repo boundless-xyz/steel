@@ -16,8 +16,8 @@ permissions:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  RISC0_TOOLCHAIN_VERSION: "1.91.1"
-  RISC0_CRATE_VERSION: "3.0.4"
+  RISC0_TOOLCHAIN_VERSION: "1.94.1"
+  RISC0_CRATE_VERSION: "3.0.5"
   FOUNDRY_VERSION: "v1.5.1"
   RUST_LOG: "info"
 
@@ -54,7 +54,7 @@ jobs:
       - name: cargo check risc0-ethereum
         run: |
           cargo fmt --all --check
-          cargo sort --workspace --check
+          cargo sort --workspace --grouped --check
       - name: cargo check risc0-ethereum guests
         run: ../.github/scripts/cargo-check.sh
         working-directory: crates

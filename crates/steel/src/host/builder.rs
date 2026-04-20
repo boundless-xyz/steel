@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -664,7 +664,9 @@ mod tests {
         test_utils::{get_cl_url, get_el_url},
     };
     use alloy_consensus::BlockHeader;
+    use lighthouse_types::ExecPayload;
     use test_log::test;
+    use tree_hash::TreeHash;
 
     #[test(tokio::test)]
     #[cfg_attr(
@@ -731,7 +733,12 @@ mod tests {
         let beacon_client = BeaconClient::new(cl_url.clone()).unwrap();
         let beacon_head = beacon_client.get_block("head").await.unwrap();
 
-        let block_hash = B256::from_slice(beacon_head.execution_payload().unwrap().block_hash());
+        let block_hash = beacon_head
+            .message()
+            .execution_payload()
+            .unwrap()
+            .block_hash()
+            .into_root();
         let builder = EthEvmEnv::builder()
             .rpc(get_el_url())
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
@@ -745,8 +752,8 @@ mod tests {
             env.commitment(),
             Commitment::new(
                 CommitmentVersion::Consensus as u16,
-                beacon_head.slot(),
-                beacon_head.root().unwrap(),
+                beacon_head.slot().as_u64(),
+                beacon_head.message().tree_hash_root(),
                 ETH_MAINNET_CHAIN_SPEC.digest(),
             )
         );
@@ -801,7 +808,7 @@ mod tests {
             .provider(&provider)
             .block_number_or_tag(BlockNumberOrTag::Number(latest - 10_000))
             .beacon_api(cl_url)
-            .consensus_commitment_slot(beacon_head.slot())
+            .consensus_commitment_slot(beacon_head.slot().as_u64())
             .chain_spec(&ETH_MAINNET_CHAIN_SPEC);
         let env = builder.clone().build().await.unwrap();
 
@@ -810,8 +817,8 @@ mod tests {
             env.commitment(),
             Commitment::new(
                 CommitmentVersion::Consensus as u16,
-                beacon_head.slot(),
-                beacon_head.root().unwrap(),
+                beacon_head.slot().as_u64(),
+                beacon_head.message().tree_hash_root(),
                 ETH_MAINNET_CHAIN_SPEC.digest(),
             )
         );
