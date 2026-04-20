@@ -55,8 +55,7 @@ fn main() {
     // Supply Rate = getSupplyRate(Utilization)
     // Supply APR = Supply Rate / (10 ^ 18) * Seconds Per Year * 100
     let sum: u128 = rates.iter().map(|&r| r as u128).sum();
-    let annual_supply_rate =
-        u64::try_from(sum * SECONDS_PER_YEAR / rates.len() as u128).unwrap();
+    let annual_supply_rate = u64::try_from(sum * SECONDS_PER_YEAR / rates.len() as u128).unwrap();
 
     // This commits the APR at current utilization rate for this given block.
     let journal = APRCommitment {
