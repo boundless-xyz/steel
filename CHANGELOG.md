@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### ⚡️ Features
 
 - Add Fusaka support.
+- Add Base Sepolia Azul fork support (activation 2026-04-20 18:00 UTC, timestamp `1_776_708_000`). A new `OpSpecId::AZUL` variant installs the Osaka MODEXP (EIP-7823/7883) and P256VERIFY (EIP-7951) precompile upgrades on top of op-revm's Jovian set, since `op_revm::OpSpecId::OSAKA` in 17.0 is still a placeholder.
 - Introduce `EthChainSpec::from_chain_id` and the `define_chain_specs!` macro for efficient, dynamic chain specification lookup. Added `ETH_HOODI_CHAIN_SPEC`.
 - Introduce `Eip2935HistoryCommit` to enable historical state proofs using the EIP-2935 history storage contract. This provides a more direct and efficient alternative to the existing beacon-based `HistoryCommit`.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
@@ -18,6 +19,7 @@ All notable changes to this project will be documented in this file.
 ### 🚨 Breaking Changes
 
 - **Solidity**: Renamed `CommitmentTooOld` error to `InvalidCommitmentBlockNumber` in `Steel.sol` to better reflect validity checks beyond just age.
+- **`risc0-op-steel`**: Renamed `OpEvmSpecId` → `OpSpecId` (re-exported from `optimism`). The upstream-mirroring `OSAKA` variant has been retired — no chain in the registry activates it. Downstream code should use `OpSpecId::AZUL` for Base chains at or after the Azul fork.
 
 ### 🛠️ Fixes
 
