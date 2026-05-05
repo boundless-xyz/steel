@@ -21,12 +21,11 @@ use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, ChainId, Sealab
 use alloy_rlp::BufMut;
 use delegate::delegate;
 use op_alloy_consensus::OpReceipt;
-use op_revm::{L1BlockInfo, OpBuilder, OpTransaction};
+use op_revm::OpTransaction;
 use risc0_steel::{
     BlockInput, CallError, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, StateDb,
     config::{ChainSpec, ForkCondition},
     revm::{
-        Context, MainContext,
         context::{BlockEnv, CfgEnv, TxEnv},
         context_interface::block::BlobExcessGasAndPrice,
         inspector::NoOpInspector,
@@ -159,19 +158,14 @@ impl EvmFactory for OpEvmFactory {
 
         let block_env = header.to_block_env(spec_id);
 
+        let evm = AlloyOpEvmFactory::default().create_evm(db, (cfg_env, block_env).into());
         if matches!(spec_id, OpSpecId::AZUL) {
-            let inner = Context::mainnet()
-                .with_tx(OpTx(OpTransaction::builder().build_fill()))
-                .with_cfg(CfgEnv::new_with_spec(op_revm::OpSpecId::BEDROCK))
-                .with_chain(L1BlockInfo::default())
-                .with_db(db)
-                .with_block(block_env)
-                .with_cfg(cfg_env)
-                .build_op_with_inspector(NoOpInspector {})
+            let inner = evm
+                .into_inner()
                 .with_precompiles(PrecompilesMap::from_static(azul_precompiles()));
             alloy_op_evm::OpEvm::new(inner, false)
         } else {
-            AlloyOpEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
+            evm
         }
     }
 }
