@@ -15,7 +15,7 @@
 use crate::game::DisputeGameInput;
 use alloy_consensus::{Eip658Value, ReceiptWithBloom, TxReceipt};
 use alloy_eips::{Encodable2718, Typed2718, eip4844, eip7691};
-use alloy_evm::{Database, EvmFactory as AlloyEvmFactory, precompiles::PrecompilesMap};
+use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
 use alloy_op_evm::{OpEvmFactory as AlloyOpEvmFactory, OpTx};
 use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, U256};
 use alloy_rlp::BufMut;
@@ -37,8 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, error::Error, sync::LazyLock};
 
 mod spec;
-pub use spec::OpSpecId;
-use spec::azul_precompiles;
+pub use spec::{OpSpecId, base};
 
 #[cfg(feature = "host")]
 mod host;
@@ -107,7 +106,9 @@ pub static BASE_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Cha
         (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
         (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
         (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
-        (OpSpecId::AZUL, ForkCondition::Timestamp(1_776_708_000)),
+        // Base names this fork "Azul"; EVM-level it's the Karst-equivalent
+        // (Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY).
+        (base::AZUL, ForkCondition::Timestamp(1_776_708_000)),
     ]),
 });
 
@@ -158,15 +159,7 @@ impl EvmFactory for OpEvmFactory {
 
         let block_env = header.to_block_env(spec_id);
 
-        let evm = AlloyOpEvmFactory::default().create_evm(db, (cfg_env, block_env).into());
-        if matches!(spec_id, OpSpecId::AZUL) {
-            let inner = evm
-                .into_inner()
-                .with_precompiles(PrecompilesMap::from_static(azul_precompiles()));
-            alloy_op_evm::OpEvm::new(inner, false)
-        } else {
-            evm
-        }
+        AlloyOpEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
     }
 }
 
@@ -375,7 +368,7 @@ mod tests {
         fn sepolia_spec_digest() {
             assert_eq!(
                 BASE_SEPOLIA_CHAIN_SPEC.digest(),
-                b256!("0x15e7caa578cb16bd9ec9dc9a01cfb62e5572140dc95d9dec7671346f404f1c22")
+                b256!("0x3519660d6ecbd34367740f5ca18449cba8b389594f69f177bbf21c46e505c61e")
             );
         }
     }

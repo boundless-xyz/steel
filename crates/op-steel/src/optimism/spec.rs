@@ -14,41 +14,24 @@
 
 //! Spec-id plumbing for Optimism-family chains.
 //!
-//! Defines [`OpSpecId`], the Optimism/Base hardfork spec used by Steel, along with its
-//! conversion into [`OpRevmSpecId`] (op-revm) and [`SpecId`] (revm), and the Azul
-//! precompile overlay applied by the factory when `AZUL` is active.
+//! Defines [`OpSpecId`], the Optimism/Base hardfork spec used by Steel. The enum mirrors
+//! op-revm's [`OpRevmSpecId`] one-to-one — it exists locally only so [`EvmSpecId`] can be
+//! implemented on it (orphan rule blocks the impl on `op_revm::OpSpecId` from this crate).
 
-use op_revm::{
-    precompiles as op_precompiles,
-    spec::{OpSpecId as OpRevmSpecId, name},
-};
-use risc0_steel::{
-    EvmSpecId,
-    revm::{
-        precompile::{Precompiles, modexp, secp256r1},
-        primitives::hardfork::SpecId,
-    },
-};
-use std::{fmt, sync::OnceLock};
+use op_revm::spec::{OpSpecId as OpRevmSpecId, name};
+use risc0_steel::{EvmSpecId, revm::primitives::hardfork::SpecId};
+use std::fmt;
 
 /// [EvmFactory::SpecId](risc0_steel::EvmFactory::SpecId) for Optimism-family chains.
 ///
-/// Mirrors op-revm's [`OpRevmSpecId`] with one extra variant: [`OpSpecId::AZUL`], a
-/// Base-specific fork that activates Osaka EVM semantics plus the MODEXP (EIP-7823/7883) and
-/// P256VERIFY (EIP-7951) precompile upgrades. Base treats Azul as a distinct hardfork name
-/// rather than reusing `Karst`, and Steel follows suit so chain-spec declarations read
-/// naturally and the factory dispatches precompiles off the spec itself rather than chain-id
-/// heuristics.
+/// Mirrors [`OpRevmSpecId`] from op-revm 20: variants and discriminants are identical, and
+/// [`From<OpSpecId>`] for both [`OpRevmSpecId`] and [`SpecId`] are pure passthroughs to the
+/// upstream conversions. Steel maintains its own copy only because [`EvmSpecId`] is defined
+/// here and the orphan rule blocks implementing it directly on [`OpRevmSpecId`].
 ///
-/// The upstream `KARST` spec (op-revm's Osaka-equivalent fork name) is intentionally omitted:
-/// OP Stack hasn't ratified Karst for any chain Steel runs against, so the upstream variant
-/// has no well-defined semantics here. Base ships Osaka's EL changes as `AZUL` (with extra
-/// precompile rules); OP chains have not declared one yet.
-///
-/// Discriminant values match [`OpRevmSpecId`] for every shared variant up to `JOVIAN` (108).
-/// `INTEROP` keeps Steel's original 109 (op-revm 20 shifted it to 110 when it inserted KARST
-/// at 109), and `AZUL` is pinned at 111 so [`ChainSpec`](risc0_steel::config::ChainSpec)
-/// digests for OP and Base chains are unchanged across the op-revm 17→20 bump.
+/// Base's "Azul" hardfork is the same as upstream `Karst` at the EVM/precompile level
+/// (Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY); see [`base::AZUL`] for a
+/// chain-spec-friendly alias.
 #[repr(u8)]
 #[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]
@@ -72,48 +55,42 @@ pub enum OpSpecId {
     /// Jovian.
     #[default]
     JOVIAN,
+    /// Karst (Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY). Base names this
+    /// hardfork "Azul"; see [`base::AZUL`] for that alias.
+    KARST,
     /// Interop.
     INTEROP,
-    /// Azul (Base). Osaka EVM + Base-specific MODEXP / P256VERIFY precompile overlay.
-    /// Discriminant skips 110 (which would be upstream `OSAKA`) so Base Sepolia digests are
-    /// stable if an `OSAKA` variant is ever reintroduced.
-    AZUL = 111,
 }
 
 impl OpSpecId {
-    /// Converts into the corresponding revm [`SpecId`]. `AZUL` maps to `OSAKA` since Azul's
-    /// opcode-level semantics are identical to Osaka.
+    /// Converts into the corresponding revm [`SpecId`].
     #[inline]
     pub const fn into_eth_spec(self) -> SpecId {
-        match self {
-            Self::AZUL => SpecId::OSAKA,
-            Self::ISTHMUS | Self::JOVIAN | Self::INTEROP => SpecId::PRAGUE,
-            Self::ECOTONE | Self::FJORD | Self::GRANITE | Self::HOLOCENE => SpecId::CANCUN,
-            Self::CANYON => SpecId::SHANGHAI,
-            Self::BEDROCK | Self::REGOLITH => SpecId::MERGE,
-        }
+        to_op_revm(self).into_eth_spec()
     }
 }
 
-/// Conversion into op-revm's [`OpRevmSpecId`] for revm-level dispatch. `AZUL` maps to
-/// [`OpRevmSpecId::KARST`] — Azul's opcode-level semantics match Karst (op-revm 20's rename
-/// of the former `OSAKA` variant); the Base-specific precompile overlay is applied separately
-/// by the factory, which branches on `OpSpecId::AZUL` before the conversion happens.
+#[inline]
+const fn to_op_revm(spec: OpSpecId) -> OpRevmSpecId {
+    match spec {
+        OpSpecId::INTEROP => OpRevmSpecId::INTEROP,
+        OpSpecId::KARST => OpRevmSpecId::KARST,
+        OpSpecId::JOVIAN => OpRevmSpecId::JOVIAN,
+        OpSpecId::ISTHMUS => OpRevmSpecId::ISTHMUS,
+        OpSpecId::HOLOCENE => OpRevmSpecId::HOLOCENE,
+        OpSpecId::GRANITE => OpRevmSpecId::GRANITE,
+        OpSpecId::FJORD => OpRevmSpecId::FJORD,
+        OpSpecId::ECOTONE => OpRevmSpecId::ECOTONE,
+        OpSpecId::CANYON => OpRevmSpecId::CANYON,
+        OpSpecId::REGOLITH => OpRevmSpecId::REGOLITH,
+        OpSpecId::BEDROCK => OpRevmSpecId::BEDROCK,
+    }
+}
+
 impl From<OpSpecId> for OpRevmSpecId {
+    #[inline]
     fn from(spec: OpSpecId) -> Self {
-        match spec {
-            OpSpecId::AZUL => Self::KARST,
-            OpSpecId::INTEROP => Self::INTEROP,
-            OpSpecId::JOVIAN => Self::JOVIAN,
-            OpSpecId::ISTHMUS => Self::ISTHMUS,
-            OpSpecId::HOLOCENE => Self::HOLOCENE,
-            OpSpecId::GRANITE => Self::GRANITE,
-            OpSpecId::FJORD => Self::FJORD,
-            OpSpecId::ECOTONE => Self::ECOTONE,
-            OpSpecId::CANYON => Self::CANYON,
-            OpSpecId::REGOLITH => Self::REGOLITH,
-            OpSpecId::BEDROCK => Self::BEDROCK,
-        }
+        to_op_revm(spec)
     }
 }
 
@@ -129,8 +106,8 @@ impl fmt::Display for OpSpecId {
             Self::HOLOCENE => name::HOLOCENE,
             Self::ISTHMUS => name::ISTHMUS,
             Self::JOVIAN => name::JOVIAN,
+            Self::KARST => name::KARST,
             Self::INTEROP => name::INTEROP,
-            Self::AZUL => "Azul",
         })
     }
 }
@@ -150,73 +127,41 @@ impl EvmSpecId for OpSpecId {
     }
 }
 
-/// Precompile set for the Base Azul hardfork.
-///
-/// Mirrors `BasePrecompiles::azul()` from `base/base`: op-revm's `jovian()` set plus the
-/// upstream `modexp::OSAKA` (EIP-7823 input cap + EIP-7883 gas) and `secp256r1::P256VERIFY_OSAKA`
-/// (EIP-7951, 6,900 gas) precompiles. op-revm's own `OpRevmSpecId::KARST` still resolves to the
-/// `jovian()` set as a placeholder, so Steel applies this overlay itself when `AZUL` is active.
-pub(super) fn azul_precompiles() -> &'static Precompiles {
-    static INSTANCE: OnceLock<Precompiles> = OnceLock::new();
-    INSTANCE.get_or_init(|| {
-        let mut precompiles = op_precompiles::jovian().clone();
-        precompiles.extend([modexp::OSAKA, secp256r1::P256VERIFY_OSAKA]);
-        precompiles
-    })
+/// Base-specific aliases. Base names its Karst-equivalent hardfork "Azul"; this module
+/// exposes that name as a constant so chain-spec literals read naturally without
+/// introducing a parallel `BaseSpecId` enum.
+pub mod base {
+    use super::OpSpecId;
+
+    /// Base's name for the Karst-equivalent EVM/precompile fork. EVM-level behavior is
+    /// identical to [`OpSpecId::KARST`]: Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951
+    /// P256VERIFY. Used by Base Sepolia / Base Mainnet chain specs.
+    pub const AZUL: OpSpecId = OpSpecId::KARST;
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use risc0_steel::revm::precompile::{PrecompileHalt, bn254};
 
-    fn encode_length(len: usize) -> [u8; 32] {
-        let mut encoded = [0u8; 32];
-        encoded[24..].copy_from_slice(&(len as u64).to_be_bytes());
-        encoded
-    }
-
-    fn modexp_input(base_len: usize, exp_len: usize, mod_len: usize) -> Vec<u8> {
-        let mut input = Vec::new();
-        input.extend_from_slice(&encode_length(base_len));
-        input.extend_from_slice(&encode_length(exp_len));
-        input.extend_from_slice(&encode_length(mod_len));
-        input.extend(vec![1u8; base_len + exp_len + mod_len]);
-        input
+    #[test]
+    fn karst_maps_to_osaka() {
+        assert_eq!(OpSpecId::KARST.into_eth_spec(), SpecId::OSAKA);
+        assert_eq!(OpRevmSpecId::from(OpSpecId::KARST), OpRevmSpecId::KARST);
     }
 
     #[test]
-    fn azul_spec_conversion() {
-        assert_eq!(OpSpecId::AZUL.into_eth_spec(), SpecId::OSAKA);
-        assert_eq!(OpRevmSpecId::from(OpSpecId::AZUL), OpRevmSpecId::KARST);
+    fn base_azul_aliases_karst() {
+        assert_eq!(base::AZUL, OpSpecId::KARST);
     }
 
     #[test]
-    fn overlay_installs_osaka_precompiles() {
-        let p = azul_precompiles();
-
-        // modexp at 0x05 is the Osaka variant (EIP-7823 rejects fields > 1024 bytes).
-        let modexp = p.get(modexp::OSAKA.address()).unwrap();
-        let out = modexp
-            .execute(&modexp_input(1025, 0, 1), u64::MAX, 0)
-            .unwrap();
-        assert_eq!(
-            out.halt_reason(),
-            Some(&PrecompileHalt::ModexpEip7823LimitSize)
-        );
-
-        // p256verify at 0x100 is the Osaka variant (6,900 gas, not Fjord's 3,450).
-        let p256 = p.get(secp256r1::P256VERIFY_OSAKA.address()).unwrap();
-        let out = p256.execute(&[], 3_450, 0).unwrap();
-        assert_eq!(out.halt_reason(), Some(&PrecompileHalt::OutOfGas));
-    }
-
-    #[test]
-    fn overlay_preserves_jovian_bn254_pair_limit() {
-        // The `extend()` in `azul_precompiles` must not clobber Jovian's bn254-pair override.
-        let pair = azul_precompiles().get(&bn254::pair::ADDRESS).unwrap();
-        let oversized = vec![0u8; op_precompiles::bn254_pair::JOVIAN_MAX_INPUT_SIZE + 1];
-        let out = pair.execute(&oversized, u64::MAX, 0).unwrap();
-        assert_eq!(out.halt_reason(), Some(&PrecompileHalt::Bn254PairLength));
+    fn discriminants_match_op_revm() {
+        // Steel's enum exists only because of the orphan rule; its discriminants must
+        // stay aligned with op-revm so chain-spec digests aren't tied to a Steel-local
+        // numbering that could drift.
+        assert_eq!(OpSpecId::BEDROCK as u8, OpRevmSpecId::BEDROCK as u8);
+        assert_eq!(OpSpecId::JOVIAN as u8, OpRevmSpecId::JOVIAN as u8);
+        assert_eq!(OpSpecId::KARST as u8, OpRevmSpecId::KARST as u8);
+        assert_eq!(OpSpecId::INTEROP as u8, OpRevmSpecId::INTEROP as u8);
     }
 }
