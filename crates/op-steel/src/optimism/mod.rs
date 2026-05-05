@@ -90,6 +90,9 @@ pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Cha
         (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
         (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
         (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
+        // Base names this fork "Azul"; EVM-level it's the Karst-equivalent
+        // (Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY).
+        (base::AZUL, ForkCondition::Timestamp(1_779_386_400)),
     ]),
 });
 
@@ -360,7 +363,7 @@ mod tests {
         fn mainnet_spec_digest() {
             assert_eq!(
                 BASE_MAINNET_CHAIN_SPEC.digest(),
-                b256!("0xde0027ffd04b70b50fb52de9d6738b0dc66c1d84654ca3889b57f790979f6905")
+                b256!("0xd16332d74ced8e4fa1cc0810be6d01ea607018745cba80c230a4b79498c513ef")
             );
         }
 

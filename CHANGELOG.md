@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### ⚡️ Features
 
 - Add Fusaka support.
-- Add Base Sepolia Azul fork support (activation 2026-04-20 18:00 UTC, timestamp `1_776_708_000`). Mapped to `OpSpecId::KARST` (op-revm 20's Osaka-equivalent OP-Stack fork — same EVM semantics + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY precompile upgrades that Base ships under the Azul name). Available as `optimism::base::AZUL` for chain-spec readability.
+- Add Base Mainnet (activation 2026-05-21 18:00 UTC, timestamp `1_779_386_400`) and Base Sepolia (activation 2026-04-20 18:00 UTC, timestamp `1_776_708_000`) Azul fork support. Mapped to `OpSpecId::KARST` (op-revm 20's Osaka-equivalent OP-Stack fork — same EVM semantics + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY precompile upgrades that Base ships under the Azul name). Available as `optimism::base::AZUL` for chain-spec readability.
 - Introduce `EthChainSpec::from_chain_id` and the `define_chain_specs!` macro for efficient, dynamic chain specification lookup. Added `ETH_HOODI_CHAIN_SPEC`.
 - Introduce `Eip2935HistoryCommit` to enable historical state proofs using the EIP-2935 history storage contract. This provides a more direct and efficient alternative to the existing beacon-based `HistoryCommit`.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
