@@ -19,7 +19,7 @@ All notable changes to this project will be documented in this file.
 ### 🚨 Breaking Changes
 
 - **Solidity**: Renamed `CommitmentTooOld` error to `InvalidCommitmentBlockNumber` in `Steel.sol` to better reflect validity checks beyond just age.
-- **`risc0-op-steel`**: Renamed `OpEvmSpecId` → `OpSpecId` (re-exported from `optimism`). The upstream-mirroring `OSAKA` variant has been retired — no chain in the registry activates it. Downstream code should use `OpSpecId::AZUL` for Base chains at or after the Azul fork.
+- **`risc0-op-steel`**: Renamed `OpEvmSpecId` → `OpSpecId` (re-exported from `optimism`). The upstream-mirroring `OSAKA` variant has been retired (op-revm 20 has since renamed it to `KARST`) — no chain in the registry activates it. Downstream code should use `OpSpecId::AZUL` for Base chains at or after the Azul fork.
 
 ### 🛠️ Fixes
 
@@ -34,7 +34,9 @@ All notable changes to this project will be documented in this file.
 - Improved error messages when the execution block incorrectly matches the commitment block for historical commitments.
 - Re-export `op_revm` from `risc0-op-steel`, so users can access OP-specific revm types (e.g. `OpSpecId`) without adding `op-revm` as a direct dependency.
 - Bumped Rust toolchain to 1.94.
-- Updated dependencies: `alloy-evm` (to 0.30), `alloy-op-evm` (to 0.30), `revm` (to 36.0), `op-revm` (to 17.0), `op-alloy` (to 0.24).
+- Updated dependencies: `alloy` (to 2.0), `alloy-evm` (to 0.33), `alloy-op-evm` (to 0.32), `revm` (to 38.0), `op-revm` (to 20.0), `op-alloy` (to 2.0).
+- Drop the vendored `Optimism` network type in `risc0-op-steel` in favor of `op_alloy_network::Optimism`, now that `op-alloy-network 2.0.0` ships with the upstream `NetworkWallet<Optimism>` conflict fix (closes #116).
+- Populate `BlockEnv::slot_num` from the header's new `slot_number` field (alloy 2.0, EIP-7843) in both `crates/steel/src/ethereum.rs` and `crates/op-steel/src/optimism/mod.rs` (closes #112).
 - Replaced `ethereum-consensus` with `lighthouse-types`, `tree_hash`, and `context_deserialize` for host-side beacon block handling. Affects crates depending on `risc0-steel` with the `host` feature.
 - Removed the `c-kzg` feature from `risc0-steel`'s `revm` dependency. Precompile features (`blst`, `bn`, `c-kzg`) should now be enabled by the guest crate directly.
 - Solidity: updated `forge-std` (to v1.15.0) and `openzeppelin-contracts` (to v5.6.1), moved remappings from `remappings.txt` into `contracts/foundry.toml`.

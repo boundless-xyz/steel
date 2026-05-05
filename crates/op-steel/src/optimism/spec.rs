@@ -36,18 +36,19 @@ use std::{fmt, sync::OnceLock};
 /// Mirrors op-revm's [`OpRevmSpecId`] with one extra variant: [`OpSpecId::AZUL`], a
 /// Base-specific fork that activates Osaka EVM semantics plus the MODEXP (EIP-7823/7883) and
 /// P256VERIFY (EIP-7951) precompile upgrades. Base treats Azul as a distinct hardfork name
-/// rather than reusing `Osaka`, and Steel follows suit so chain-spec declarations read
+/// rather than reusing `Karst`, and Steel follows suit so chain-spec declarations read
 /// naturally and the factory dispatches precompiles off the spec itself rather than chain-id
 /// heuristics.
 ///
-/// The upstream `OSAKA` spec is intentionally omitted: OP Stack hasn't ratified an
-/// Osaka-equivalent fork, so the upstream variant has no well-defined semantics for any chain
-/// Steel runs against. Base ships Osaka's EL changes as `AZUL` (with extra precompile rules);
-/// OP chains have not declared one yet.
+/// The upstream `KARST` spec (op-revm's Osaka-equivalent fork name) is intentionally omitted:
+/// OP Stack hasn't ratified Karst for any chain Steel runs against, so the upstream variant
+/// has no well-defined semantics here. Base ships Osaka's EL changes as `AZUL` (with extra
+/// precompile rules); OP chains have not declared one yet.
 ///
-/// Discriminant values match [`OpRevmSpecId`] for every shared variant (BEDROCK = 100, …,
-/// INTEROP = 109), so [`ChainSpec`](risc0_steel::config::ChainSpec) digests for OP chains are
-/// unaffected by this rename.
+/// Discriminant values match [`OpRevmSpecId`] for every shared variant up to `JOVIAN` (108).
+/// `INTEROP` keeps Steel's original 109 (op-revm 20 shifted it to 110 when it inserted KARST
+/// at 109), and `AZUL` is pinned at 111 so [`ChainSpec`](risc0_steel::config::ChainSpec)
+/// digests for OP and Base chains are unchanged across the op-revm 17→20 bump.
 #[repr(u8)]
 #[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 #[allow(non_camel_case_types)]
@@ -95,13 +96,13 @@ impl OpSpecId {
 }
 
 /// Conversion into op-revm's [`OpRevmSpecId`] for revm-level dispatch. `AZUL` maps to
-/// [`OpRevmSpecId::OSAKA`] — Azul's opcode-level semantics match Osaka; the Base-specific
-/// precompile overlay is applied separately by the factory, which branches on `OpSpecId::AZUL`
-/// before the conversion happens.
+/// [`OpRevmSpecId::KARST`] — Azul's opcode-level semantics match Karst (op-revm 20's rename
+/// of the former `OSAKA` variant); the Base-specific precompile overlay is applied separately
+/// by the factory, which branches on `OpSpecId::AZUL` before the conversion happens.
 impl From<OpSpecId> for OpRevmSpecId {
     fn from(spec: OpSpecId) -> Self {
         match spec {
-            OpSpecId::AZUL => Self::OSAKA,
+            OpSpecId::AZUL => Self::KARST,
             OpSpecId::INTEROP => Self::INTEROP,
             OpSpecId::JOVIAN => Self::JOVIAN,
             OpSpecId::ISTHMUS => Self::ISTHMUS,
@@ -153,7 +154,7 @@ impl EvmSpecId for OpSpecId {
 ///
 /// Mirrors `BasePrecompiles::azul()` from `base/base`: op-revm's `jovian()` set plus the
 /// upstream `modexp::OSAKA` (EIP-7823 input cap + EIP-7883 gas) and `secp256r1::P256VERIFY_OSAKA`
-/// (EIP-7951, 6,900 gas) precompiles. op-revm's own `OpRevmSpecId::OSAKA` still resolves to the
+/// (EIP-7951, 6,900 gas) precompiles. op-revm's own `OpRevmSpecId::KARST` still resolves to the
 /// `jovian()` set as a placeholder, so Steel applies this overlay itself when `AZUL` is active.
 pub(super) fn azul_precompiles() -> &'static Precompiles {
     static INSTANCE: OnceLock<Precompiles> = OnceLock::new();
@@ -167,7 +168,7 @@ pub(super) fn azul_precompiles() -> &'static Precompiles {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use risc0_steel::revm::precompile::{PrecompileError, bn254};
+    use risc0_steel::revm::precompile::{PrecompileHalt, bn254};
 
     fn encode_length(len: usize) -> [u8; 32] {
         let mut encoded = [0u8; 32];
@@ -187,7 +188,7 @@ mod tests {
     #[test]
     fn azul_spec_conversion() {
         assert_eq!(OpSpecId::AZUL.into_eth_spec(), SpecId::OSAKA);
-        assert_eq!(OpRevmSpecId::from(OpSpecId::AZUL), OpRevmSpecId::OSAKA);
+        assert_eq!(OpRevmSpecId::from(OpSpecId::AZUL), OpRevmSpecId::KARST);
     }
 
     #[test]
@@ -196,17 +197,18 @@ mod tests {
 
         // modexp at 0x05 is the Osaka variant (EIP-7823 rejects fields > 1024 bytes).
         let modexp = p.get(modexp::OSAKA.address()).unwrap();
-        assert!(matches!(
-            modexp.execute(&modexp_input(1025, 0, 1), u64::MAX),
-            Err(PrecompileError::ModexpEip7823LimitSize)
-        ));
+        let out = modexp
+            .execute(&modexp_input(1025, 0, 1), u64::MAX, 0)
+            .unwrap();
+        assert_eq!(
+            out.halt_reason(),
+            Some(&PrecompileHalt::ModexpEip7823LimitSize)
+        );
 
         // p256verify at 0x100 is the Osaka variant (6,900 gas, not Fjord's 3,450).
         let p256 = p.get(secp256r1::P256VERIFY_OSAKA.address()).unwrap();
-        assert!(matches!(
-            p256.execute(&[], 3_450),
-            Err(PrecompileError::OutOfGas)
-        ));
+        let out = p256.execute(&[], 3_450, 0).unwrap();
+        assert_eq!(out.halt_reason(), Some(&PrecompileHalt::OutOfGas));
     }
 
     #[test]
@@ -214,9 +216,7 @@ mod tests {
         // The `extend()` in `azul_precompiles` must not clobber Jovian's bn254-pair override.
         let pair = azul_precompiles().get(&bn254::pair::ADDRESS).unwrap();
         let oversized = vec![0u8; op_precompiles::bn254_pair::JOVIAN_MAX_INPUT_SIZE + 1];
-        assert!(matches!(
-            pair.execute(&oversized, u64::MAX),
-            Err(PrecompileError::Bn254PairLength)
-        ));
+        let out = pair.execute(&oversized, u64::MAX, 0).unwrap();
+        assert_eq!(out.halt_reason(), Some(&PrecompileHalt::Bn254PairLength));
     }
 }

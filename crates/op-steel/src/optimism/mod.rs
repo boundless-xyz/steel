@@ -16,17 +16,17 @@ use crate::game::DisputeGameInput;
 use alloy_consensus::{Eip658Value, ReceiptWithBloom, TxReceipt};
 use alloy_eips::{Encodable2718, Typed2718, eip4844, eip7691};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory, precompiles::PrecompilesMap};
-use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
+use alloy_op_evm::{OpEvmFactory as AlloyOpEvmFactory, OpTx};
 use alloy_primitives::{Address, B256, BlockNumber, Bloom, Bytes, ChainId, Sealable, TxKind, U256};
 use alloy_rlp::BufMut;
 use delegate::delegate;
 use op_alloy_consensus::OpReceipt;
-use op_revm::{DefaultOp, OpBuilder, OpTransaction};
+use op_revm::{L1BlockInfo, OpBuilder, OpTransaction};
 use risc0_steel::{
     BlockInput, CallError, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, StateDb,
     config::{ChainSpec, ForkCondition},
     revm::{
-        Context,
+        Context, MainContext,
         context::{BlockEnv, CfgEnv, TxEnv},
         context_interface::block::BlobExcessGasAndPrice,
         inspector::NoOpInspector,
@@ -129,7 +129,7 @@ impl EvmFactory for OpEvmFactory {
     type Receipt = OpEvmReceipt;
 
     fn new_tx(address: Address, data: Bytes) -> Self::Tx {
-        alloy_op_evm::OpTx(OpTransaction {
+        OpTx(OpTransaction {
             base: TxEnv {
                 caller: address,
                 kind: TxKind::Call(address),
@@ -160,7 +160,10 @@ impl EvmFactory for OpEvmFactory {
         let block_env = header.to_block_env(spec_id);
 
         if matches!(spec_id, OpSpecId::AZUL) {
-            let inner = Context::op()
+            let inner = Context::mainnet()
+                .with_tx(OpTx(OpTransaction::builder().build_fill()))
+                .with_cfg(CfgEnv::new_with_spec(op_revm::OpSpecId::BEDROCK))
+                .with_chain(L1BlockInfo::default())
                 .with_db(db)
                 .with_block(block_env)
                 .with_cfg(cfg_env)
@@ -253,8 +256,7 @@ impl EvmBlockHeader for OpBlockHeader {
             difficulty: header.difficulty,
             prevrandao: (spec_id >= OpSpecId::BEDROCK).then_some(header.mix_hash),
             blob_excess_gas_and_price,
-            // TODO(https://github.com/boundless-xyz/steel/issues/112): populate from header once alloy supports EIP-7843
-            slot_num: 0,
+            slot_num: header.slot_number.unwrap_or_default(),
         }
     }
 }
