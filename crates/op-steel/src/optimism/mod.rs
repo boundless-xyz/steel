@@ -45,11 +45,9 @@ mod host;
 #[cfg(feature = "host")]
 pub use host::*;
 
-/// Lifts an array of `(OpRevmSpecId, FC)` chain-spec entries into the `(OpSpecId, FC)`
-/// form `ChainSpec` expects. Lets chain-spec literals stay one line per fork without
-/// scattering `.into()` calls across each entry.
+/// Lifts an array of `OpRevmSpecId` entries into the `OpSpecId` form `ChainSpec` expects.
 fn forks<const N: usize>(entries: [(OpRevmSpecId, FC); N]) -> [(OpSpecId, FC); N] {
-    entries.map(|(spec, cond)| (spec.into(), cond))
+    entries.map(|(spec, cond)| (OpSpecId::new(spec), cond))
 }
 
 /// The OP Mainnet [ChainSpec].

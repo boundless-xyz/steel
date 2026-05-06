@@ -30,6 +30,12 @@ use std::fmt;
 pub struct OpSpecId(OpRevmSpecId);
 
 impl OpSpecId {
+    /// Wraps an [`OpRevmSpecId`]. `const`-friendly counterpart to [`From::from`].
+    #[inline]
+    pub const fn new(spec: OpRevmSpecId) -> Self {
+        Self(spec)
+    }
+
     /// Returns the underlying [`OpRevmSpecId`].
     #[inline]
     pub const fn into_inner(self) -> OpRevmSpecId {
