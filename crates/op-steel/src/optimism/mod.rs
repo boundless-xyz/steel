@@ -37,7 +37,7 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, error::Error, sync::LazyLock};
 
 mod spec;
-pub use spec::{OpSpecId, base};
+pub use spec::{OpRevmSpecId, OpSpecId, base};
 
 #[cfg(feature = "host")]
 mod host;
