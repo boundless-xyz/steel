@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### ⚡️ Features
 
 - Add Fusaka support.
-- Add Base Mainnet (activation 2026-05-21 18:00 UTC, timestamp `1_779_386_400`) and Base Sepolia (activation 2026-04-20 18:00 UTC, timestamp `1_776_708_000`) Azul fork support. Mapped to `OpSpecId::KARST` (op-revm 20's Osaka-equivalent OP-Stack fork — same EVM semantics + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY precompile upgrades that Base ships under the Azul name). Available as `optimism::base::AZUL` for chain-spec readability.
+- Add Base Mainnet (activation 2026-05-21 18:00 UTC, timestamp `1_779_386_400`) and Base Sepolia (activation 2026-04-20 18:00 UTC, timestamp `1_776_708_000`) Azul fork support. Mapped to op-revm 20's `KARST` hardfork (the Osaka-equivalent OP-Stack fork — same EVM semantics + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY precompile upgrades that Base ships under the Azul name). Available as `optimism::base::AZUL` for chain-spec readability.
 - Introduce `EthChainSpec::from_chain_id` and the `define_chain_specs!` macro for efficient, dynamic chain specification lookup. Added `ETH_HOODI_CHAIN_SPEC`.
 - Introduce `Eip2935HistoryCommit` to enable historical state proofs using the EIP-2935 history storage contract. This provides a more direct and efficient alternative to the existing beacon-based `HistoryCommit`.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
@@ -19,7 +19,7 @@ All notable changes to this project will be documented in this file.
 ### 🚨 Breaking Changes
 
 - **Solidity**: Renamed `CommitmentTooOld` error to `InvalidCommitmentBlockNumber` in `Steel.sol` to better reflect validity checks beyond just age.
-- **`risc0-op-steel`**: Renamed `OpEvmSpecId` → `OpSpecId`. The enum now mirrors `op_revm::OpSpecId` from op-revm 20 one-to-one (BEDROCK..JOVIAN, KARST, INTEROP); Steel keeps a local copy only because the orphan rule blocks implementing `EvmSpecId` on the foreign type. Downstream code should use `OpSpecId::KARST` (or the `optimism::base::AZUL` alias) for Base chains at or after the Azul fork.
+- **`risc0-op-steel`**: Renamed `OpEvmSpecId` → `OpSpecId`. `OpSpecId` is now a thin newtype around `op_revm::OpSpecId` (re-exported as `OpRevmSpecId`); Steel keeps a local wrapper only because the orphan rule blocks implementing `EvmSpecId` on the foreign type. Downstream code constructs `OpSpecId` values from upstream variants via `OpRevmSpecId::KARST.into()` (or `OpSpecId::new(OpRevmSpecId::KARST)` for const contexts). The `optimism::base::AZUL` alias points at `OpRevmSpecId::KARST` for Base chain specs.
 
 ### 🛠️ Fixes
 
