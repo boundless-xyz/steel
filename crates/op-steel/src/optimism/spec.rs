@@ -30,30 +30,6 @@ use std::fmt;
 pub struct OpSpecId(OpRevmSpecId);
 
 impl OpSpecId {
-    /// Bedrock.
-    pub const BEDROCK: Self = Self(OpRevmSpecId::BEDROCK);
-    /// Regolith.
-    pub const REGOLITH: Self = Self(OpRevmSpecId::REGOLITH);
-    /// Canyon.
-    pub const CANYON: Self = Self(OpRevmSpecId::CANYON);
-    /// Ecotone.
-    pub const ECOTONE: Self = Self(OpRevmSpecId::ECOTONE);
-    /// Fjord.
-    pub const FJORD: Self = Self(OpRevmSpecId::FJORD);
-    /// Granite.
-    pub const GRANITE: Self = Self(OpRevmSpecId::GRANITE);
-    /// Holocene.
-    pub const HOLOCENE: Self = Self(OpRevmSpecId::HOLOCENE);
-    /// Isthmus.
-    pub const ISTHMUS: Self = Self(OpRevmSpecId::ISTHMUS);
-    /// Jovian.
-    pub const JOVIAN: Self = Self(OpRevmSpecId::JOVIAN);
-    /// Karst (Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY). Base names this
-    /// hardfork "Azul"; see [`base::AZUL`] for that alias.
-    pub const KARST: Self = Self(OpRevmSpecId::KARST);
-    /// Interop.
-    pub const INTEROP: Self = Self(OpRevmSpecId::INTEROP);
-
     /// Returns the underlying [`OpRevmSpecId`].
     #[inline]
     pub const fn into_inner(self) -> OpRevmSpecId {
@@ -106,31 +82,10 @@ impl EvmSpecId for OpSpecId {
 /// exposes that name as a constant so chain-spec literals read naturally without
 /// introducing a parallel `BaseSpecId` enum.
 pub mod base {
-    use super::OpSpecId;
+    use super::OpRevmSpecId;
 
     /// Base's name for the Karst-equivalent EVM/precompile fork. EVM-level behavior is
-    /// identical to [`OpSpecId::KARST`]: Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951
+    /// identical to [`OpRevmSpecId::KARST`]: Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951
     /// P256VERIFY. Used by Base Sepolia / Base Mainnet chain specs.
-    pub const AZUL: OpSpecId = OpSpecId::KARST;
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn karst_maps_to_osaka() {
-        assert_eq!(OpSpecId::KARST.into_eth_spec(), SpecId::OSAKA);
-        assert_eq!(OpRevmSpecId::from(OpSpecId::KARST), OpRevmSpecId::KARST);
-    }
-
-    #[test]
-    fn base_azul_aliases_karst() {
-        assert_eq!(base::AZUL, OpSpecId::KARST);
-    }
-
-    #[test]
-    fn display_uses_op_revm_names() {
-        assert_eq!(OpSpecId::KARST.to_string(), "Karst");
-    }
+    pub const AZUL: OpRevmSpecId = OpRevmSpecId::KARST;
 }

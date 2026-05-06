@@ -24,7 +24,7 @@ use op_alloy_consensus::OpReceipt;
 use op_revm::OpTransaction;
 use risc0_steel::{
     BlockInput, CallError, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, StateDb,
-    config::{ChainSpec, ForkCondition},
+    config::{ChainSpec, ForkCondition as FC},
     revm::{
         context::{BlockEnv, CfgEnv, TxEnv},
         context_interface::block::BlobExcessGasAndPrice,
@@ -45,74 +45,81 @@ mod host;
 #[cfg(feature = "host")]
 pub use host::*;
 
+/// Lifts an array of `(OpRevmSpecId, FC)` chain-spec entries into the `(OpSpecId, FC)`
+/// form `ChainSpec` expects. Lets chain-spec literals stay one line per fork without
+/// scattering `.into()` calls across each entry.
+fn forks<const N: usize>(entries: [(OpRevmSpecId, FC); N]) -> [(OpSpecId, FC); N] {
+    entries.map(|(spec, cond)| (spec.into(), cond))
+}
+
 /// The OP Mainnet [ChainSpec].
 pub static OP_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 10,
-    forks: BTreeMap::from([
-        (OpSpecId::BEDROCK, ForkCondition::Block(105_235_063)),
-        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-        (OpSpecId::CANYON, ForkCondition::Timestamp(1_704_992_401)),
-        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_710_374_401)),
-        (OpSpecId::FJORD, ForkCondition::Timestamp(1_720_627_201)),
-        (OpSpecId::GRANITE, ForkCondition::Timestamp(1_726_070_401)),
-        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
-        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
-        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
-    ]),
+    forks: BTreeMap::from(forks([
+        (OpRevmSpecId::BEDROCK, FC::Block(105_235_063)),
+        (OpRevmSpecId::REGOLITH, FC::Timestamp(0)),
+        (OpRevmSpecId::CANYON, FC::Timestamp(1_704_992_401)),
+        (OpRevmSpecId::ECOTONE, FC::Timestamp(1_710_374_401)),
+        (OpRevmSpecId::FJORD, FC::Timestamp(1_720_627_201)),
+        (OpRevmSpecId::GRANITE, FC::Timestamp(1_726_070_401)),
+        (OpRevmSpecId::HOLOCENE, FC::Timestamp(1_736_445_601)),
+        (OpRevmSpecId::ISTHMUS, FC::Timestamp(1_746_806_401)),
+        (OpRevmSpecId::JOVIAN, FC::Timestamp(1_764_691_201)),
+    ])),
 });
 
 /// The OP Sepolia [ChainSpec].
 pub static OP_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 11155420,
-    forks: BTreeMap::from([
-        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
-        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-        (OpSpecId::CANYON, ForkCondition::Timestamp(1_699_981_200)),
-        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_708_534_800)),
-        (OpSpecId::FJORD, ForkCondition::Timestamp(1_716_998_400)),
-        (OpSpecId::GRANITE, ForkCondition::Timestamp(1_723_478_400)),
-        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
-        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
-        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
-    ]),
+    forks: BTreeMap::from(forks([
+        (OpRevmSpecId::BEDROCK, FC::Block(0)),
+        (OpRevmSpecId::REGOLITH, FC::Timestamp(0)),
+        (OpRevmSpecId::CANYON, FC::Timestamp(1_699_981_200)),
+        (OpRevmSpecId::ECOTONE, FC::Timestamp(1_708_534_800)),
+        (OpRevmSpecId::FJORD, FC::Timestamp(1_716_998_400)),
+        (OpRevmSpecId::GRANITE, FC::Timestamp(1_723_478_400)),
+        (OpRevmSpecId::HOLOCENE, FC::Timestamp(1_732_633_200)),
+        (OpRevmSpecId::ISTHMUS, FC::Timestamp(1_744_905_600)),
+        (OpRevmSpecId::JOVIAN, FC::Timestamp(1_763_568_001)),
+    ])),
 });
 
 /// The Base Mainnet [ChainSpec].
 pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 8453,
-    forks: BTreeMap::from([
-        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
-        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-        (OpSpecId::CANYON, ForkCondition::Timestamp(1_704_992_401)),
-        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_710_374_401)),
-        (OpSpecId::FJORD, ForkCondition::Timestamp(1_720_627_201)),
-        (OpSpecId::GRANITE, ForkCondition::Timestamp(1_726_070_401)),
-        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_736_445_601)),
-        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_746_806_401)),
-        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_764_691_201)),
+    forks: BTreeMap::from(forks([
+        (OpRevmSpecId::BEDROCK, FC::Block(0)),
+        (OpRevmSpecId::REGOLITH, FC::Timestamp(0)),
+        (OpRevmSpecId::CANYON, FC::Timestamp(1_704_992_401)),
+        (OpRevmSpecId::ECOTONE, FC::Timestamp(1_710_374_401)),
+        (OpRevmSpecId::FJORD, FC::Timestamp(1_720_627_201)),
+        (OpRevmSpecId::GRANITE, FC::Timestamp(1_726_070_401)),
+        (OpRevmSpecId::HOLOCENE, FC::Timestamp(1_736_445_601)),
+        (OpRevmSpecId::ISTHMUS, FC::Timestamp(1_746_806_401)),
+        (OpRevmSpecId::JOVIAN, FC::Timestamp(1_764_691_201)),
         // Base names this fork "Azul"; EVM-level it's the Karst-equivalent
         // (Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY).
-        (base::AZUL, ForkCondition::Timestamp(1_779_386_400)),
-    ]),
+        (base::AZUL, FC::Timestamp(1_779_386_400)),
+    ])),
 });
 
 /// The Base Sepolia [ChainSpec].
 pub static BASE_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
     chain_id: 84532,
-    forks: BTreeMap::from([
-        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
-        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
-        (OpSpecId::CANYON, ForkCondition::Timestamp(1_699_981_200)),
-        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1_708_534_800)),
-        (OpSpecId::FJORD, ForkCondition::Timestamp(1_716_998_400)),
-        (OpSpecId::GRANITE, ForkCondition::Timestamp(1_723_478_400)),
-        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1_732_633_200)),
-        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1_744_905_600)),
-        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1_763_568_001)),
+    forks: BTreeMap::from(forks([
+        (OpRevmSpecId::BEDROCK, FC::Block(0)),
+        (OpRevmSpecId::REGOLITH, FC::Timestamp(0)),
+        (OpRevmSpecId::CANYON, FC::Timestamp(1_699_981_200)),
+        (OpRevmSpecId::ECOTONE, FC::Timestamp(1_708_534_800)),
+        (OpRevmSpecId::FJORD, FC::Timestamp(1_716_998_400)),
+        (OpRevmSpecId::GRANITE, FC::Timestamp(1_723_478_400)),
+        (OpRevmSpecId::HOLOCENE, FC::Timestamp(1_732_633_200)),
+        (OpRevmSpecId::ISTHMUS, FC::Timestamp(1_744_905_600)),
+        (OpRevmSpecId::JOVIAN, FC::Timestamp(1_763_568_001)),
         // Base names this fork "Azul"; EVM-level it's the Karst-equivalent
         // (Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY).
-        (base::AZUL, ForkCondition::Timestamp(1_776_708_000)),
-    ]),
+        (base::AZUL, FC::Timestamp(1_776_708_000)),
+    ])),
 });
 
 /// [EvmFactory] for Optimism.
@@ -244,7 +251,7 @@ impl EvmBlockHeader for OpBlockHeader {
             gas_limit: header.gas_limit,
             basefee: header.base_fee_per_gas.unwrap_or_default(),
             difficulty: header.difficulty,
-            prevrandao: (spec_id >= OpSpecId::BEDROCK).then_some(header.mix_hash),
+            prevrandao: (spec_id.into_inner() >= OpRevmSpecId::BEDROCK).then_some(header.mix_hash),
             blob_excess_gas_and_price,
             slot_num: header.slot_number.unwrap_or_default(),
         }
