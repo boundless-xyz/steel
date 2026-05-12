@@ -16,9 +16,9 @@ risc0-zkvm = { version = "3.0" }
 risc0-ethereum-contracts = { version = "3.0" }
 risc0-build-ethereum = { version = "3.0" }
 
-alloy = { version = "1.0" }
-alloy-primitives = { version = "1.0", features = ["serde"] }
-alloy-sol-types = { version = "1.0" }
+alloy = { version = "2.0" }
+alloy-primitives = { version = "1.5", features = ["serde"] }
+alloy-sol-types = { version = "1.5" }
 anyhow = { version = "1.0.75" }
 clap = { version = "4.5" }
 dotenvy = { version = "0.15" }
