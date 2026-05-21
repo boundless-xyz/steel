@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### ⚡️ Features
 
 - Add Fusaka support.
+- Add Base Mainnet (activation 2026-05-21 18:00 UTC, timestamp `1_779_386_400`) and Base Sepolia (activation 2026-04-20 18:00 UTC, timestamp `1_776_708_000`) Azul fork support. Mapped to op-revm 20's `KARST` hardfork (the Osaka-equivalent OP-Stack fork — same EVM semantics + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY precompile upgrades that Base ships under the Azul name). Available as `optimism::base::AZUL` for chain-spec readability.
 - Introduce `EthChainSpec::from_chain_id` and the `define_chain_specs!` macro for efficient, dynamic chain specification lookup. Added `ETH_HOODI_CHAIN_SPEC`.
 - Introduce `Eip2935HistoryCommit` to enable historical state proofs using the EIP-2935 history storage contract. This provides a more direct and efficient alternative to the existing beacon-based `HistoryCommit`.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
@@ -18,6 +19,7 @@ All notable changes to this project will be documented in this file.
 ### 🚨 Breaking Changes
 
 - **Solidity**: Renamed `CommitmentTooOld` error to `InvalidCommitmentBlockNumber` in `Steel.sol` to better reflect validity checks beyond just age.
+- **`risc0-op-steel`**: Renamed `OpEvmSpecId` → `OpSpecId`. `OpSpecId` is now a thin newtype around `op_revm::OpSpecId` (re-exported as `OpRevmSpecId`); Steel keeps a local wrapper only because the orphan rule blocks implementing `EvmSpecId` on the foreign type. Downstream code constructs `OpSpecId` values from upstream variants via `OpRevmSpecId::KARST.into()` (or `OpSpecId::new(OpRevmSpecId::KARST)` for const contexts). The `optimism::base::AZUL` alias points at `OpRevmSpecId::KARST` for Base chain specs.
 
 ### 🛠️ Fixes
 
@@ -32,7 +34,9 @@ All notable changes to this project will be documented in this file.
 - Improved error messages when the execution block incorrectly matches the commitment block for historical commitments.
 - Re-export `op_revm` from `risc0-op-steel`, so users can access OP-specific revm types (e.g. `OpSpecId`) without adding `op-revm` as a direct dependency.
 - Bumped Rust toolchain to 1.94.
-- Updated dependencies: `alloy-evm` (to 0.30), `alloy-op-evm` (to 0.30), `revm` (to 36.0), `op-revm` (to 17.0), `op-alloy` (to 0.24).
+- Updated dependencies: `alloy` (to 2.0), `alloy-evm` (to 0.33), `alloy-op-evm` (to 0.32), `revm` (to 38.0), `op-revm` (to 20.0), `op-alloy` (to 2.0).
+- Drop the vendored `Optimism` network type in `risc0-op-steel` in favor of `op_alloy_network::Optimism`, now that `op-alloy-network 2.0.0` ships with the upstream `NetworkWallet<Optimism>` conflict fix (closes #116).
+- Populate `BlockEnv::slot_num` from the header's new `slot_number` field (alloy 2.0, EIP-7843) in both `crates/steel/src/ethereum.rs` and `crates/op-steel/src/optimism/mod.rs` (closes #112).
 - Replaced `ethereum-consensus` with `lighthouse-types`, `tree_hash`, and `context_deserialize` for host-side beacon block handling. Affects crates depending on `risc0-steel` with the `host` feature.
 - Removed the `c-kzg` feature from `risc0-steel`'s `revm` dependency. Precompile features (`blst`, `bn`, `c-kzg`) should now be enabled by the guest crate directly.
 - Solidity: updated `forge-std` (to v1.15.0) and `openzeppelin-contracts` (to v5.6.1), moved remappings from `remappings.txt` into `contracts/foundry.toml`.

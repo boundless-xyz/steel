@@ -35,11 +35,11 @@ The RISC Zero [dev docs] are a great place to start to understand the zkVM in de
 [ERC20 Counter]: examples/erc20-counter/
 [crate documentation]: https://boundless-xyz.github.io/steel/risc0_steel/
 [Introducing Steel 1.0]: https://risczero.com/blog/introducing-steel-1.0]
-[Boundless Docs]: https://docs.beboundless.xyz/developers/steel/what-is-steel
-[What is Steel?]: https://docs.beboundless.xyz/developers/steel/what-is-steel
-[How does Steel work?]: https://docs.beboundless.xyz/developers/steel/how-it-works
-[Steel Commitments]: https://docs.beboundless.xyz/developers/steel/commitments
-[Steel History]: https://docs.beboundless.xyz/developers/steel/history
-[Steel Events]: https://docs.beboundless.xyz/developers/steel/events
+[Boundless Docs]: https://docs.boundless.network/developers/steel/what-is-steel
+[What is Steel?]: https://docs.boundless.network/developers/steel/what-is-steel
+[How does Steel work?]: https://docs.boundless.network/developers/steel/how-it-works
+[Steel Commitments]: https://docs.boundless.network/developers/steel/commitments
+[Steel History]: https://docs.boundless.network/developers/steel/history
+[Steel Events]: https://docs.boundless.network/developers/steel/events
 [dev docs]: https://dev.risczero.com/api/
 [risczero-discord]: https://discord.com/invite/risczero
