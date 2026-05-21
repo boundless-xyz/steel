@@ -87,7 +87,7 @@ pub trait SyncEnv {
 
 /// Guest implementation: always available.
 ///
-/// Uses [`Contract::new`] and synchronous [`CallBuilder::try_call`] to execute calls
+/// Uses [`Contract::new`] and synchronous [`crate::CallBuilder::try_call`] to execute calls
 /// against the proven state database.
 impl<F: EvmFactory> SyncEnv for GuestEvmEnv<F> {
     type Header = Sealed<F::Header>;
@@ -108,7 +108,7 @@ impl<F: EvmFactory> SyncEnv for GuestEvmEnv<F> {
 
 /// Host implementation: behind the `host` feature gate.
 ///
-/// Uses [`Contract::preflight`] and bridges the async [`CallBuilder::call`] to synchronous
+/// Uses [`Contract::preflight`] and bridges the async [`crate::CallBuilder::call`] to synchronous
 /// execution via [`tokio::task::block_in_place`] + [`tokio::runtime::Handle::block_on`].
 ///
 /// `block_in_place` is used (rather than `spawn_blocking`) because `&mut self` is not `Send`.
