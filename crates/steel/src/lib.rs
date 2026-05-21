@@ -53,6 +53,7 @@ mod mpt;
 pub mod precompiles;
 pub mod serde;
 mod state;
+mod sync;
 #[cfg(test)]
 mod test_utils;
 mod verifier;
@@ -65,6 +66,7 @@ pub use event::Event;
 pub use history::{Eip2935HistoryInput, HistoryInput};
 pub use mpt::MerkleTrie;
 pub use state::{StateAccount, StateDb};
+pub use sync::SyncEnv;
 pub use verifier::SteelVerifier;
 
 /// The serializable input to derive and validate an [EvmEnv] from.
