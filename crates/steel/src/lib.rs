@@ -59,6 +59,7 @@ mod multiblock;
 pub mod precompiles;
 pub mod serde;
 mod state;
+mod sync;
 #[cfg(test)]
 mod test_utils;
 mod verifier;
@@ -72,6 +73,7 @@ pub use history::{Eip2935HistoryInput, HistoryInput};
 pub use mpt::MerkleTrie;
 pub use multiblock::{MultiblockEvmEnv, MultiblockEvmInput};
 pub use state::{StateAccount, StateDb};
+pub use sync::SyncEnv;
 pub use verifier::{EIP2935_HISTORY_LIMIT, HISTORY_LIMIT, SteelVerifier};
 
 /// The serializable input to derive and validate an [EvmEnv] from.

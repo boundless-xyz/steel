@@ -240,8 +240,7 @@ impl EvmBlockHeader for EthBlockHeader {
             difficulty: header.difficulty,
             prevrandao: (spec >= SpecId::MERGE).then_some(header.mix_hash),
             blob_excess_gas_and_price,
-            // TODO(https://github.com/boundless-xyz/steel/issues/112): populate from header once alloy supports EIP-7843
-            slot_num: 0,
+            slot_num: header.slot_number.unwrap_or_default(),
         }
     }
 }
