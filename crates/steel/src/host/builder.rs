@@ -729,9 +729,7 @@ macro_rules! build_input {
             let builder = self.block_hash(env.header().seal());
             let empty_env = builder.build().await.context("builder failed")?;
             // merge execution state and verify compatibility
-            let env = empty_env
-                .merge(env)
-                .context("environment not compatible with builder")?;
+            let env = empty_env.merge(env)?;
 
             env.into_input().await
         }

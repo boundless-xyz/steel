@@ -18,7 +18,7 @@ use risc0_steel::{
     ethereum::{ETH_MAINNET_CHAIN_SPEC, EthMultiblockEvmInput},
 };
 use risc0_zkvm::guest::env;
-use token_stats_core::{APRCommitment, CONTRACT, CometMainInterface};
+use token_stats_core::{APRCommitment, BLOCK_INTERVAL, CONTRACT, CometMainInterface};
 
 const SECONDS_PER_YEAR: u128 = 60 * 60 * 24 * 365;
 
@@ -29,10 +29,10 @@ fn main() {
     // Converts the input into a `EvmEnv` for execution.
     let envs = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
 
-    // Check that the EVM states are exactly 7200 blocks apart.
+    // Check that the EVM states are exactly BLOCK_INTERVAL blocks apart.
     let numbers: Vec<_> = envs.block_numbers().collect();
     for window in numbers.windows(2) {
-        assert_eq!(window[1] - window[0], 7200);
+        assert_eq!(window[1] - window[0], BLOCK_INTERVAL);
     }
 
     // Execute the view calls on each EVM state.
@@ -55,7 +55,8 @@ fn main() {
     // Supply Rate = getSupplyRate(Utilization)
     // Supply APR = Supply Rate / (10 ^ 18) * Seconds Per Year * 100
     let sum: u128 = rates.iter().map(|&r| r as u128).sum();
-    let annual_supply_rate = u64::try_from(sum * SECONDS_PER_YEAR / rates.len() as u128).unwrap();
+    let annual_supply_rate = u64::try_from(sum * SECONDS_PER_YEAR / rates.len() as u128)
+        .expect("annual supply rate fits in u64");
 
     // This commits the APR at current utilization rate for this given block.
     let journal = APRCommitment {

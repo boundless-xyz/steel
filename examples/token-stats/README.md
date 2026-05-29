@@ -38,7 +38,7 @@ Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 924030850
 Running the guest with the constructed input:
 2025-10-07T11:35:44.777284Z  INFO risc0_zkvm::host::server::exec::executor: execution time: 79.718292ms
 Commitment { version: "Block", id: 23525616, digest: 0x3728e8f5dcf4d42b68d5cd424c9c7fcb0582d552f14129f94411aab8e7527746, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
-Proven APR over 2 days is: 3.339721064844
+Proven APR over 1 days is: 3.339721064844%
 ```
 
 [install-rust]: https://doc.rust-lang.org/cargo/getting-started/installation.html

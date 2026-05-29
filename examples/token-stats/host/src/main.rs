@@ -21,7 +21,7 @@ use risc0_steel::{
     ethereum::{ETH_MAINNET_CHAIN_SPEC, EthEvmEnv},
 };
 use risc0_zkvm::{ExecutorEnv, default_executor};
-use token_stats_core::{APRCommitment, CONTRACT, CometMainInterface};
+use token_stats_core::{APRCommitment, BLOCK_INTERVAL, CONTRACT, CometMainInterface};
 use token_stats_methods::TOKEN_STATS_ELF;
 use tracing_subscriber::EnvFilter;
 use url::Url;
@@ -53,8 +53,8 @@ async fn main() -> Result<()> {
         .chain_spec(&ETH_MAINNET_CHAIN_SPEC)
         .build_multi();
 
-    // Execute the call for the latest block and about 24h (7200 blocks) ago.
-    for block in [latest - 7200, latest] {
+    // Execute the call for the latest block and about 24h (BLOCK_INTERVAL blocks) ago.
+    for block in [latest - BLOCK_INTERVAL, latest] {
         // Preflight the call to prepare the input that is required to execute the function in
         // the guest without RPC access. It also returns the result of the call.
         let mut contract = Contract::preflight(CONTRACT, envs.get_or_build(block).await?);

@@ -19,6 +19,9 @@ use risc0_steel::Commitment;
 /// Address of Compound USDC (cUSDCv3) token.
 pub const CONTRACT: Address = address!("c3d688B66703497DAA19211EEdff47f25384cdc3");
 
+/// Block spacing between sampled states (~24h at 12s/block).
+pub const BLOCK_INTERVAL: u64 = 7200;
+
 sol! {
     /// Simplified interface of the Compound Finance Comet contract
     interface CometMainInterface {

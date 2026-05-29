@@ -205,6 +205,15 @@ impl<N: Network, P: Provider<N>> ProofDb<ProviderDb<N, P>> {
         // if no accounts were accessed, use the state root of the corresponding block as is
         if self.accounts.is_empty() {
             let hash = self.inner.block();
+
+            // nothing was accessed at all: likely a forgotten Contract::preflight
+            if self.block_hash_numbers.is_empty() && self.log_filters.is_empty() {
+                log::warn!(
+                    "building input for block {hash} with no recorded state access; \
+                    did you forget to call Contract::preflight?"
+                );
+            }
+
             let block = self
                 .inner
                 .provider()

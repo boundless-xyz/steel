@@ -303,6 +303,8 @@ pub(crate) mod host {
                 let next_block = next_env.header().number();
                 let dist = next_block - current_block;
 
+                // check current_env, not next_env: EIP-2935 storage is not backfilled at
+                // activation, so a pre-fork block's hash is never retrievable from it
                 let input = if dist > verifier::HISTORY_LIMIT && !current_env.spec_id.has_eip2935()
                 {
                     bail!(
