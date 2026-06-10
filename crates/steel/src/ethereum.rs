@@ -181,6 +181,7 @@ impl EvmBlockHeader for EthBlockHeader {
             difficulty: header.difficulty,
             prevrandao: (spec >= SpecId::MERGE).then_some(header.mix_hash),
             blob_excess_gas_and_price,
+            slot_num: header.slot_number.unwrap_or_default(),
         }
     }
 }

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### 🚨 Breaking Changes
+
+- Update the EVM dependency stack to a consistent set: `alloy` 1.0 → 2.0 (incl. `alloy-consensus`, `alloy-eips`, `alloy-rpc-types`), `alloy-primitives` 1.3 → 1.5.6, `alloy-sol-types` 1.3 → 1.5, `alloy-evm` 0.20 → 0.33, `alloy-op-evm` 0.20 → 0.32, `op-alloy-network` 0.19 → 2.0, `revm` 29 → 38, `op-revm` 10 → 20. `alloy-trie` stays on 0.8. As these crates are part of the public API, downstream consumers must upgrade alongside. Requires `rust` 1.94.
+
+### ⚙️ Miscellaneous
+
+- Remove the `alloy-network` < 1.7.4 pin in `risc0-op-steel`; `op-alloy-network` 2.0 ships the upstream `NetworkWallet<Optimism>` conflict fix.
+
 ## [2.4.4](https://github.com/boundless-xyz/steel/releases/tag/v2.4.4)
 
 ### 🛠️ Fixes

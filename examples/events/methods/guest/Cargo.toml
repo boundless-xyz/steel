@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 alloy-primitives = { version = "1.5.3", features = ["tiny-keccak"] }
-alloy-sol-types = { version = "1.0" }
+alloy-sol-types = { version = "1.5" }
 risc0-steel = { path = "../../../../crates/steel" }
 risc0-zkvm = { version = "3.0", default-features = false, features = ["std", "unstable"] }
 

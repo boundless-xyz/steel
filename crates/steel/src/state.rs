@@ -164,6 +164,7 @@ impl<H> RevmDatabase for WrapStateDb<'_, H> {
                     nonce: account.nonce,
                     code_hash: account.code_hash,
                     code: None, // we don't need the code here, `code_by_hash` will be used instead
+                    account_id: None,
                 }))
             }
             None => {

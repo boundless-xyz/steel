@@ -15,7 +15,7 @@
 use crate::game::DisputeGameInput;
 use alloy_eips::{eip4844, eip7691};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
-use alloy_op_evm::OpEvmFactory as AlloyOpEvmFactory;
+use alloy_op_evm::{OpEvmFactory as AlloyOpEvmFactory, OpTx};
 use alloy_primitives::{Address, BlockNumber, Bytes, ChainId, Sealable, TxKind, B256, U256};
 use op_alloy_network::{Network, Optimism};
 use op_revm::{spec::OpSpecId, OpTransaction};
@@ -84,7 +84,7 @@ impl EvmFactory for OpEvmFactory {
     type Header = OpBlockHeader;
 
     fn new_tx(address: Address, data: Bytes) -> Self::Tx {
-        OpTransaction {
+        OpTx(OpTransaction {
             base: TxEnv {
                 caller: address,
                 kind: TxKind::Call(address),
@@ -94,7 +94,7 @@ impl EvmFactory for OpEvmFactory {
             },
             enveloped_tx: Some(Bytes::new()),
             ..Default::default()
-        }
+        })
     }
 
     fn create_evm<DB: Database>(
@@ -204,6 +204,7 @@ impl EvmBlockHeader for OpBlockHeader {
             difficulty: header.difficulty,
             prevrandao: (spec >= OpSpecId::BEDROCK).then_some(header.mix_hash),
             blob_excess_gas_and_price,
+            slot_num: header.slot_number.unwrap_or_default(),
         }
     }
 }
