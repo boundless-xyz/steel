@@ -18,7 +18,7 @@ use crate::{
     optimism::{OpBlockHeader, OpChainSpec, OpEvmFactory, OpEvmInput},
 };
 use alloy::{
-    network::Ethereum,
+    network::{Ethereum, Network},
     providers::{Provider, ProviderBuilder, RootProvider},
 };
 use alloy_primitives::{Address, Sealable};
@@ -36,6 +36,13 @@ use std::{
     ops::{Deref, DerefMut},
 };
 use url::Url;
+
+// compile-time check: the guest-side OpHeader avoids the op-alloy-network dependency, so it must
+// stay the exact type that the upstream Optimism network declares as its header
+#[allow(dead_code)]
+fn assert_op_header_type(header: <Optimism as Network>::Header) -> super::OpHeader {
+    header
+}
 
 /// Wrapped [EvmEnv] for Optimism.
 pub struct OpEvmEnv<D, C> {
