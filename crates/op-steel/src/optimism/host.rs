@@ -37,6 +37,13 @@ use std::{
 };
 use url::Url;
 
+// compile-time check: the guest-side OpHeader avoids the op-alloy-network dependency, so it must
+// stay the exact type that the upstream Optimism network declares as its header
+#[allow(dead_code)]
+fn assert_op_header_type(header: <Optimism as alloy::network::Network>::Header) -> super::OpHeader {
+    header
+}
+
 /// Wrapped [EvmEnv] for Optimism.
 pub struct OpEvmEnv<D, C> {
     /// Underlying generic environment without a specific commitment.
