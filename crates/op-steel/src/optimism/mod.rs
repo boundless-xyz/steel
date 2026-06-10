@@ -30,7 +30,7 @@ use risc0_steel::{
     BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, StateDb,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::Into, error::Error, sync::LazyLock};
+use std::{collections::BTreeMap, error::Error, sync::LazyLock};
 
 mod spec;
 pub use spec::{base, OpRevmSpecId, OpSpecId};
