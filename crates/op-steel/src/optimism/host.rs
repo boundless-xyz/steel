@@ -23,7 +23,7 @@ use alloy::{
 };
 use alloy_primitives::{Address, Sealable};
 use anyhow::{Context, Result};
-use op_alloy_network::Optimism;
+pub use op_alloy_network::Optimism;
 use risc0_steel::{
     host::{
         db::{ProofDb, ProviderDb},
