@@ -2,7 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [3.0.0](https://github.com/boundless-xyz/steel/releases/tag/v3.0.0)
+
+### 🔒 Security note
+
+This release deliberately keeps the audit-relevant surface minimal: it introduces no new proof mechanisms, and the Solidity validation logic in `Steel.sol` is unchanged from v2.4.4 (config-ID constants only). The changes are limited to the EVM dependency stack, updated chain specifications, and the `ChainSpec::digest()` computation described below. This release has not been covered by a dedicated security audit. Its changes are a subset of the upcoming feature release, which is planned to undergo a full audit; any findings affecting this release will be addressed in a 3.0.x patch.
 
 ### ⚡️ Features
 

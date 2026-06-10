@@ -1,8 +1,8 @@
 [package]
 name = "risc0-steel"
 description = "Query Ethereum state, or any other EVM-based blockchain state within the RISC Zero zkVM."
-version = "2.4.4"
-rust-version = "1.88"
+version = "3.0.0"
+rust-version = "1.94"
 edition = { workspace = true }
 license = { workspace = true }
 homepage = { workspace = true }
