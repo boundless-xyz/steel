@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file.
 
 ### 🚨 Breaking Changes
 
+- Introduce the `EvmSpecId` trait and compute `ChainSpec::digest()` from the spec ID's stable numeric value (`EvmSpecId::to_u32`, the enum discriminant) instead of its bincode serialization (the serde variant index). This matches the digest scheme on main, so config IDs stay identical across Steel versions. Ethereum config IDs are unaffected (discriminant equals variant index for `SpecId`); OP-family config IDs change compared to steel 2.4.x (`op_revm::OpSpecId` discriminants start at `BEDROCK = 100`).
+- **`risc0-op-steel`**: `OpSpecId` is now a thin newtype around `op_revm::OpSpecId` (re-exported as `OpRevmSpecId`); Steel keeps a local wrapper only because the orphan rule blocks implementing `EvmSpecId` on the foreign type. Downstream code constructs `OpSpecId` values from upstream variants via `OpRevmSpecId::KARST.into()` (or `OpSpecId::new(OpRevmSpecId::KARST)` for const contexts).
+- `EvmFactory` gains a `SpecId` associated type (Steel's chain-spec key, distinct from the EVM-internal `Spec`), `EvmBlockHeader::Spec` is renamed to `SpecId`, and `EvmFactory::create_evm` now takes the `SpecId`.
 - Remove `ETH_HOLESKY_CHAIN_SPEC`; the Holesky testnet has been shut down. Use Hoodi instead.
 - Update the EVM dependency stack to a consistent set: `alloy` 1.0 → 2.0 (incl. `alloy-consensus`, `alloy-eips`, `alloy-rpc-types`), `alloy-primitives` 1.3 → 1.5.6, `alloy-sol-types` 1.3 → 1.5, `alloy-evm` 0.20 → 0.33, `alloy-op-evm` 0.20 → 0.32, `op-alloy-network` 0.19 → 2.0, `revm` 29 → 38, `op-revm` 10 → 20. `alloy-trie` stays on 0.8. As these crates are part of the public API, downstream consumers must upgrade alongside. Requires `rust` 1.94.
 

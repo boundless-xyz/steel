@@ -81,7 +81,7 @@ impl<F: EvmFactory> EvmInput<F> {
     ///
     /// This method verifies that the state matches the state root in the header and panics if not.
     #[inline]
-    pub fn into_env(self, chain_spec: &ChainSpec<F::Spec>) -> GuestEvmEnv<F> {
+    pub fn into_env(self, chain_spec: &ChainSpec<F::SpecId>) -> GuestEvmEnv<F> {
         match self {
             EvmInput::Block(input) => input.into_env(chain_spec),
             EvmInput::Beacon(input) => input.into_env(chain_spec),
@@ -118,7 +118,7 @@ impl<F: EvmFactory, C: BlockHeaderCommit<F::Header>> ComposeInput<F, C> {
     }
 
     /// Converts the input into a [EvmEnv] for verifiable state access in the guest.
-    pub fn into_env(self, chain_spec: &ChainSpec<F::Spec>) -> GuestEvmEnv<F> {
+    pub fn into_env(self, chain_spec: &ChainSpec<F::SpecId>) -> GuestEvmEnv<F> {
         let mut env = self.input.into_env(chain_spec);
         env.commit = self.commit.commit(&env.header, env.commit.configID);
 
@@ -161,8 +161,10 @@ pub trait EvmFactory {
     type HaltReason: HaltReasonTr + Send + Sync + 'static;
     /// The EVM specification identifier (e.g., Shanghai, Cancun) used by `Self::Evm`.
     type Spec: Ord + Serialize + Debug + Copy + Send + Sync + 'static;
+    /// The specification identifier (e.g., Shanghai, Cancun).
+    type SpecId: EvmSpecId + Into<Self::Spec> + Copy + Send + Sync + 'static;
     /// The block header type providing execution context (e.g., timestamp, number, basefee).
-    type Header: EvmBlockHeader<Spec = Self::Spec>
+    type Header: EvmBlockHeader<SpecId = Self::SpecId>
         + Clone
         + Serialize
         + DeserializeOwned
@@ -182,7 +184,7 @@ pub trait EvmFactory {
     fn create_evm<DB: Database>(
         db: DB,
         chain_id: ChainId,
-        spec: Self::Spec,
+        spec_id: Self::SpecId,
         header: &Self::Header,
     ) -> Self::Evm<DB>;
 }
@@ -204,7 +206,7 @@ pub struct EvmEnv<D, F: EvmFactory, C> {
     chain_id: ChainId,
     /// The EVM specification identifier, representing the active hardfork (e.g., Shanghai,
     /// Cancun).
-    spec: F::Spec,
+    spec_id: F::SpecId,
     /// The sealed block header providing context for the current transaction execution.
     header: Sealed<F::Header>,
     /// Auxiliary context or commitment handler.
@@ -215,17 +217,17 @@ impl<D, F: EvmFactory, C> EvmEnv<D, F, C> {
     /// Creates a new environment.
     pub(crate) fn new(
         db: D,
-        chain_spec: &ChainSpec<F::Spec>,
+        chain_spec: &ChainSpec<F::SpecId>,
         header: Sealed<F::Header>,
         commit: C,
     ) -> Self {
-        let spec = *chain_spec
+        let spec_id = *chain_spec
             .active_fork(header.number(), header.timestamp())
             .unwrap();
         Self {
             db: Some(db),
             chain_id: chain_spec.chain_id,
-            spec,
+            spec_id,
             header,
             commit,
         }
@@ -263,10 +265,23 @@ impl<D, F: EvmFactory> EvmEnv<D, F, Commitment> {
     }
 }
 
+/// Steel abstraction of the EVM specification identifier (e.g., London, Shanghai).
+pub trait EvmSpecId: Ord {
+    /// Whether EIP-4788 has been activated.
+    fn has_eip4788(&self) -> bool;
+    /// Whether EIP-2935 has been activated.
+    fn has_eip2935(&self) -> bool;
+    /// Converts the specification ID into an `u32`. This is used to compute [ChainSpec::digest()].
+    ///
+    /// This must return a unique integer for each distinct specification. Different chains can have
+    /// clashing specifications as long as their chain IDs are different.
+    fn to_u32(&self) -> u32;
+}
+
 /// An EVM abstraction of a block header.
 pub trait EvmBlockHeader: Sealable {
-    /// Associated type for the EVM specification (e.g., London, Shanghai)
-    type Spec: Copy;
+    /// Associated type for the EVM specification identifier (e.g., London, Shanghai).
+    type SpecId: Copy;
 
     /// Returns the hash of the parent block's header.
     fn parent_hash(&self) -> &B256;
@@ -282,7 +297,7 @@ pub trait EvmBlockHeader: Sealable {
     fn logs_bloom(&self) -> &Bloom;
 
     /// Returns the EVM block environment equivalent to this block header.
-    fn to_block_env(&self, spec: Self::Spec) -> BlockEnv;
+    fn to_block_env(&self, spec_id: Self::SpecId) -> BlockEnv;
 }
 
 // Keep everything in the Steel library private except the commitment.

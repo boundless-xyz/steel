@@ -110,8 +110,8 @@ impl<P, F: EvmFactory, B> EvmEnvBuilder<P, F, (), B> {
     /// Sets the [ChainSpec] that will be used by the [EvmEnv].
     pub fn chain_spec(
         self,
-        chain_spec: &ChainSpec<F::Spec>,
-    ) -> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, B> {
+        chain_spec: &ChainSpec<F::SpecId>,
+    ) -> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, B> {
         EvmEnvBuilder {
             provider: self.provider,
             provider_config: self.provider_config,
@@ -214,7 +214,7 @@ impl<P, F, S, B> EvmEnvBuilder<P, F, S, B> {
     }
 }
 
-impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::Spec>, ()> {
+impl<P, F: EvmFactory> EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()> {
     /// Builds and returns an [EvmEnv] with the configured settings that commits to a block hash.
     pub async fn build<N>(self) -> Result<HostEvmEnv<ProviderDb<N, P>, F, ()>>
     where
@@ -358,7 +358,7 @@ impl<P, S> EvmEnvBuilder<P, EthEvmFactory, S, Beacon> {
     }
 }
 
-impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::Spec>, Beacon> {
+impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::SpecId>, Beacon> {
     /// Builds and returns an [EvmEnv] with the configured settings that commits to a beacon root.
     pub async fn build(self) -> Result<EthHostEvmEnv<ProviderDb<Ethereum, P>, BeaconCommit>>
     where
@@ -389,7 +389,9 @@ impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>
     }
 }
 
-impl<P> EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::Spec>, History> {
+impl<P>
+    EvmEnvBuilder<P, EthEvmFactory, &ChainSpec<<EthEvmFactory as EvmFactory>::SpecId>, History>
+{
     /// Configures the environment builder to generate consensus commitments.
     ///
     /// See [EvmEnvBuilder<P, EthBlockHeader, Beacon>::consensus_commitment] for more info.

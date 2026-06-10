@@ -16,7 +16,7 @@
 use crate::{
     config::{ChainSpec, ForkCondition},
     serde::RlpHeader,
-    EvmBlockHeader, EvmEnv, EvmFactory, EvmInput,
+    EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
 };
 use alloy_eips::{eip4844, eip7691};
 use alloy_evm::{Database, EthEvmFactory as AlloyEthEvmFactory, EvmFactory as AlloyEvmFactory};
@@ -80,6 +80,7 @@ impl EvmFactory for EthEvmFactory {
         <AlloyEthEvmFactory as AlloyEvmFactory>::Error<DBError>;
     type HaltReason = <AlloyEthEvmFactory as AlloyEvmFactory>::HaltReason;
     type Spec = <AlloyEthEvmFactory as AlloyEvmFactory>::Spec;
+    type SpecId = SpecId;
     type Header = EthBlockHeader;
 
     fn new_tx(address: Address, data: Bytes) -> Self::Tx {
@@ -95,10 +96,10 @@ impl EvmFactory for EthEvmFactory {
     fn create_evm<DB: Database>(
         db: DB,
         chain_id: u64,
-        spec: Self::Spec,
+        spec_id: Self::SpecId,
         header: &Self::Header,
     ) -> Self::Evm<DB> {
-        let mut cfg_env = CfgEnv::new_with_spec(spec).with_chain_id(chain_id);
+        let mut cfg_env = CfgEnv::new_with_spec(spec_id).with_chain_id(chain_id);
         cfg_env.disable_nonce_check = true;
         cfg_env.disable_balance_check = true;
         cfg_env.disable_block_gas_limit = true;
@@ -107,7 +108,7 @@ impl EvmFactory for EthEvmFactory {
         // The basefee should be ignored for eth_call
         cfg_env.disable_base_fee = true;
 
-        let block_env = header.to_block_env(spec);
+        let block_env = header.to_block_env(spec_id);
 
         AlloyEthEvmFactory::default().create_evm(db, (cfg_env, block_env).into())
     }
@@ -125,8 +126,23 @@ pub type EthEvmInput = EvmInput<EthEvmFactory>;
 /// [EvmBlockHeader] for Ethereum.
 pub type EthBlockHeader = RlpHeader<alloy_consensus::Header>;
 
+impl EvmSpecId for SpecId {
+    #[inline]
+    fn has_eip4788(&self) -> bool {
+        self >= &SpecId::CANCUN
+    }
+    #[inline]
+    fn has_eip2935(&self) -> bool {
+        self >= &SpecId::PRAGUE
+    }
+    #[inline]
+    fn to_u32(&self) -> u32 {
+        *self as u32
+    }
+}
+
 impl EvmBlockHeader for EthBlockHeader {
-    type Spec = SpecId;
+    type SpecId = SpecId;
 
     #[inline]
     fn parent_hash(&self) -> &B256 {

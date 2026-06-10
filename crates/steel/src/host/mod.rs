@@ -206,9 +206,9 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
     /// Sets the chain ID and specification ID from the given chain spec.
     ///
     /// This will panic when there is no valid specification ID for the current block.
-    pub fn with_chain_spec(mut self, chain_spec: &ChainSpec<F::Spec>) -> Self {
+    pub fn with_chain_spec(mut self, chain_spec: &ChainSpec<F::SpecId>) -> Self {
         self.chain_id = chain_spec.chain_id;
-        self.spec = *chain_spec
+        self.spec_id = *chain_spec
             .active_fork(self.header.number(), self.header.timestamp())
             .unwrap();
         self.commit.config_id = chain_spec.digest();
@@ -273,13 +273,13 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
         let Self {
             mut db,
             chain_id,
-            spec,
+            spec_id,
             header,
             commit,
         } = self;
 
         ensure!(chain_id == other.chain_id, "configuration mismatch");
-        ensure!(spec == other.spec, "configuration mismatch");
+        ensure!(spec_id == other.spec_id, "configuration mismatch");
         ensure!(
             header.seal() == other.header.seal(),
             "execution header mismatch"
@@ -293,7 +293,7 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
         Ok(Self {
             db: Some(db.merge(db_other)),
             chain_id,
-            spec,
+            spec_id,
             header,
             commit,
         })
