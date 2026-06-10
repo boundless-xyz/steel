@@ -24,6 +24,7 @@ This release deliberately keeps the audit-relevant surface minimal: it introduce
 ### ⚙️ Miscellaneous
 
 - Remove the `alloy-network` < 1.7.4 pin in `risc0-op-steel`; `op-alloy-network` 2.0 ships the upstream `NetworkWallet<Optimism>` conflict fix.
+- Gate `op-alloy-network` behind the `host` feature of `risc0-op-steel`: version 2.0 depends on `alloy-provider`, which would otherwise pull host networking crates into guest builds. The guest-side OP header type is `alloy_consensus::Header` directly (the identical type); `op_alloy_network::Optimism` is still re-exported with the `host` feature.
 
 ## [2.4.4](https://github.com/boundless-xyz/steel/releases/tag/v2.4.4)
 

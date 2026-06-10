@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ use crate::{
     DisputeGameCommit,
 };
 use alloy::{
-    network::Ethereum,
+    network::{Ethereum, Network},
     providers::{Provider, ProviderBuilder, RootProvider},
 };
 use alloy_primitives::{Address, Sealable};
 use anyhow::{Context, Result};
-use op_alloy_network::Optimism;
+pub use op_alloy_network::Optimism;
 use risc0_steel::{
     host::{
         db::{ProofDb, ProviderDb},
@@ -36,6 +36,13 @@ use std::{
     ops::{Deref, DerefMut},
 };
 use url::Url;
+
+// compile-time check: the guest-side OpHeader avoids the op-alloy-network dependency, so it must
+// stay the exact type that the upstream Optimism network declares as its header
+#[allow(dead_code)]
+fn assert_op_header_type(header: <Optimism as Network>::Header) -> super::OpHeader {
+    header
+}
 
 /// Wrapped [EvmEnv] for Optimism.
 pub struct OpEvmEnv<D, C> {

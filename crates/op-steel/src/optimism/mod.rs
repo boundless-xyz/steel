@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ use alloy_eips::{eip4844, eip7691};
 use alloy_evm::{Database, EvmFactory as AlloyEvmFactory};
 use alloy_op_evm::{OpEvmFactory as AlloyOpEvmFactory, OpTx};
 use alloy_primitives::{Address, BlockNumber, Bytes, ChainId, Sealable, TxKind, B256, U256};
-use op_alloy_network::{Network, Optimism};
 use op_revm::OpTransaction;
 use risc0_steel::{
     config::{ChainSpec, ForkCondition as FC},
@@ -31,7 +30,7 @@ use risc0_steel::{
     BlockInput, Commitment, EvmBlockHeader, EvmEnv, EvmFactory, StateDb,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, convert::Into, error::Error, sync::LazyLock};
+use std::{collections::BTreeMap, error::Error, sync::LazyLock};
 
 mod spec;
 pub use spec::{base, OpRevmSpecId, OpSpecId};
@@ -170,7 +169,7 @@ impl EvmFactory for OpEvmFactory {
 /// [ChainSpec] for Optimism.
 pub type OpChainSpec = ChainSpec<OpSpecId>;
 
-type OpHeader = <Optimism as Network>::Header;
+type OpHeader = alloy_consensus::Header;
 
 /// [EvmBlockHeader] for Optimism.
 #[derive(Clone, Debug, Serialize, Deserialize)]
