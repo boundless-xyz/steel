@@ -38,17 +38,17 @@ pub static ETH_SEPOLIA_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| Cha
         (SpecId::SHANGHAI, ForkCondition::Timestamp(1677557088)),
         (SpecId::CANCUN, ForkCondition::Timestamp(1706655072)),
         (SpecId::PRAGUE, ForkCondition::Timestamp(1741159776)),
+        (SpecId::OSAKA, ForkCondition::Timestamp(1760427360)),
     ]),
 });
 
-/// The Ethereum Holešky [ChainSpec].
-pub static ETH_HOLESKY_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| ChainSpec {
-    chain_id: 17000,
+/// The Ethereum Hoodi [ChainSpec].
+pub static ETH_HOODI_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| ChainSpec {
+    chain_id: 560048,
     forks: BTreeMap::from([
-        (SpecId::MERGE, ForkCondition::Block(0)),
-        (SpecId::SHANGHAI, ForkCondition::Timestamp(1696000704)),
-        (SpecId::CANCUN, ForkCondition::Timestamp(1707305664)),
-        (SpecId::PRAGUE, ForkCondition::Timestamp(1740434112)),
+        (SpecId::CANCUN, ForkCondition::Block(0)),
+        (SpecId::PRAGUE, ForkCondition::Timestamp(1742999832)),
+        (SpecId::OSAKA, ForkCondition::Timestamp(1761677592)),
     ]),
 });
 
@@ -60,6 +60,7 @@ pub static ETH_MAINNET_CHAIN_SPEC: LazyLock<EthChainSpec> = LazyLock::new(|| Cha
         (SpecId::SHANGHAI, ForkCondition::Timestamp(1681338455)),
         (SpecId::CANCUN, ForkCondition::Timestamp(1710338135)),
         (SpecId::PRAGUE, ForkCondition::Timestamp(1746612311)),
+        (SpecId::OSAKA, ForkCondition::Timestamp(1764798551)),
     ]),
 });
 
@@ -191,7 +192,7 @@ mod tests {
     use alloy::primitives::b256;
 
     use super::{
-        ETH_HOLESKY_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
+        ETH_HOODI_CHAIN_SPEC, ETH_MAINNET_CHAIN_SPEC, ETH_SEPOLIA_CHAIN_SPEC,
         STEEL_TEST_PRAGUE_CHAIN_SPEC,
     };
 
@@ -201,7 +202,7 @@ mod tests {
     fn mainnet_spec_digest() {
         assert_eq!(
             ETH_MAINNET_CHAIN_SPEC.digest(),
-            b256!("0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839")
+            b256!("0x47dc59f84afd2e9e7a48c4012004ab7c77fbd9acf822bf1143b8442c6c8851d4")
         );
     }
 
@@ -209,15 +210,15 @@ mod tests {
     fn sepolia_spec_digest() {
         assert_eq!(
             ETH_SEPOLIA_CHAIN_SPEC.digest(),
-            b256!("0x5c9552dc9bfad8572ded4f818bb35b0f4260660c1554236986b768ae999b4b60")
+            b256!("0x90c1e882b1f0fda4dc7f1c66c07ed3d2a74e443834905faa9f32f583b71f459d")
         );
     }
 
     #[test]
-    fn holesky_spec_digest() {
+    fn hoodi_spec_digest() {
         assert_eq!(
-            ETH_HOLESKY_CHAIN_SPEC.digest(),
-            b256!("0x8eae1ba5f877e6ad7007bf6985f5245be7d758457fb4eb7e6a72d47f49bea389")
+            ETH_HOODI_CHAIN_SPEC.digest(),
+            b256!("0x34cb1defd939572b00439d2c13f93c033b82227067371c910ad104d527c78860")
         );
     }
 

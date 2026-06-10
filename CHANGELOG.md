@@ -4,8 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### ⚡️ Features
+
+- Update chain specs to the latest forks: Osaka (Fusaka) for Ethereum Mainnet and Sepolia, Jovian for OP Mainnet and OP Sepolia.
+- Add the Ethereum Hoodi (`ETH_HOODI_CHAIN_SPEC`), Base Mainnet (`BASE_MAINNET_CHAIN_SPEC`) and Base Sepolia (`BASE_SEPOLIA_CHAIN_SPEC`) chain specs. Base's Azul fork is mapped to op-revm 20's `KARST` hardfork (the Osaka-equivalent OP-Stack fork — same EVM semantics + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY precompile upgrades that Base ships under the Azul name), available as `optimism::base::AZUL` for chain-spec readability.
+
 ### 🚨 Breaking Changes
 
+- Remove `ETH_HOLESKY_CHAIN_SPEC`; the Holesky testnet has been shut down. Use Hoodi instead.
 - Update the EVM dependency stack to a consistent set: `alloy` 1.0 → 2.0 (incl. `alloy-consensus`, `alloy-eips`, `alloy-rpc-types`), `alloy-primitives` 1.3 → 1.5.6, `alloy-sol-types` 1.3 → 1.5, `alloy-evm` 0.20 → 0.33, `alloy-op-evm` 0.20 → 0.32, `op-alloy-network` 0.19 → 2.0, `revm` 29 → 38, `op-revm` 10 → 20. `alloy-trie` stays on 0.8. As these crates are part of the public API, downstream consumers must upgrade alongside. Requires `rust` 1.94.
 
 ### ⚙️ Miscellaneous

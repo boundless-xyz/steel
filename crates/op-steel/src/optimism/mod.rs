@@ -51,6 +51,7 @@ pub static OP_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Chain
         (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
         (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
         (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
+        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1764691201)),
     ]),
 });
 
@@ -66,6 +67,50 @@ pub static OP_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| Chain
         (OpSpecId::GRANITE, ForkCondition::Timestamp(1723478400)),
         (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1732633200)),
         (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1744905600)),
+        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1763568001)),
+    ]),
+});
+
+/// Base-specific [OpSpecId] aliases.
+pub mod base {
+    use super::OpSpecId;
+
+    /// Base names this fork "Azul"; EVM-level it's the Karst-equivalent
+    /// (Osaka EVM + EIP-7823/7883 MODEXP + EIP-7951 P256VERIFY).
+    pub const AZUL: OpSpecId = OpSpecId::KARST;
+}
+
+/// The Base Mainnet [ChainSpec].
+pub static BASE_MAINNET_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
+    chain_id: 8453,
+    forks: BTreeMap::from([
+        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+        (OpSpecId::CANYON, ForkCondition::Timestamp(1704992401)),
+        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1710374401)),
+        (OpSpecId::FJORD, ForkCondition::Timestamp(1720627201)),
+        (OpSpecId::GRANITE, ForkCondition::Timestamp(1726070401)),
+        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1736445601)),
+        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1746806401)),
+        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1764691201)),
+        (base::AZUL, ForkCondition::Timestamp(1779386400)),
+    ]),
+});
+
+/// The Base Sepolia [ChainSpec].
+pub static BASE_SEPOLIA_CHAIN_SPEC: LazyLock<OpChainSpec> = LazyLock::new(|| ChainSpec {
+    chain_id: 84532,
+    forks: BTreeMap::from([
+        (OpSpecId::BEDROCK, ForkCondition::Block(0)),
+        (OpSpecId::REGOLITH, ForkCondition::Timestamp(0)),
+        (OpSpecId::CANYON, ForkCondition::Timestamp(1699981200)),
+        (OpSpecId::ECOTONE, ForkCondition::Timestamp(1708534800)),
+        (OpSpecId::FJORD, ForkCondition::Timestamp(1716998400)),
+        (OpSpecId::GRANITE, ForkCondition::Timestamp(1723478400)),
+        (OpSpecId::HOLOCENE, ForkCondition::Timestamp(1732633200)),
+        (OpSpecId::ISTHMUS, ForkCondition::Timestamp(1744905600)),
+        (OpSpecId::JOVIAN, ForkCondition::Timestamp(1763568001)),
+        (base::AZUL, ForkCondition::Timestamp(1776708000)),
     ]),
 });
 
@@ -236,6 +281,55 @@ impl OpEvmInput {
         match self {
             OpEvmInput::Block(input) => input.into_env(chain_spec),
             OpEvmInput::DisputeGame(input) => input.into_env(chain_spec),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy_primitives::b256;
+
+    // NOTE: These digests differ from main: here the spec ID is hashed via its serde
+    // variant index, while main hashes the discriminant via EvmSpecId::to_u32.
+
+    mod op {
+        use super::*;
+
+        #[test]
+        fn mainnet_spec_digest() {
+            assert_eq!(
+                OP_MAINNET_CHAIN_SPEC.digest(),
+                b256!("0x2c1757a24303a1394f1fd6ce661bcc003289d391fa2e6c29b4aec0e4038c505c")
+            );
+        }
+
+        #[test]
+        fn sepolia_spec_digest() {
+            assert_eq!(
+                OP_SEPOLIA_CHAIN_SPEC.digest(),
+                b256!("0xc17303b165225b4c2a6a7312122710e8437eb01341c9de444131ebb7d82265cb")
+            );
+        }
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn mainnet_spec_digest() {
+            assert_eq!(
+                BASE_MAINNET_CHAIN_SPEC.digest(),
+                b256!("0x4ace47d8e20bc7a96d310ba6f2cf913412595a6142fe5cb7038ea3febd9137c7")
+            );
+        }
+
+        #[test]
+        fn sepolia_spec_digest() {
+            assert_eq!(
+                BASE_SEPOLIA_CHAIN_SPEC.digest(),
+                b256!("0x982cea243ca26f70dc0bf05c3f1fd6cad14cd7090a62f1cb66485990138dbac5")
+            );
         }
     }
 }
