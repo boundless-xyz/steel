@@ -33,7 +33,7 @@ All notable changes to this project will be documented in this file.
 - Add a warning log when the provider's chain ID does not match the chain spec configuration.
 - Improved error messages when the execution block incorrectly matches the commitment block for historical commitments.
 - Re-export `op_revm` from `risc0-op-steel`, so users can access OP-specific revm types (e.g. `OpSpecId`) without adding `op-revm` as a direct dependency.
-- Bumped Rust toolchain to 1.94.
+- Bumped Rust toolchain to 1.94 and declared it as the crates' MSRV (`rust-version`).
 - Updated dependencies: `alloy` (to 2.0), `alloy-evm` (to 0.33), `alloy-op-evm` (to 0.32), `revm` (to 38.0), `op-revm` (to 20.0), `op-alloy` (to 2.0).
 - Drop the vendored `Optimism` network type in `risc0-op-steel` in favor of `op_alloy_network::Optimism`, now that `op-alloy-network 2.0.0` ships with the upstream `NetworkWallet<Optimism>` conflict fix (closes #116).
 - Populate `BlockEnv::slot_num` from the header's new `slot_number` field (alloy 2.0, EIP-7843) in both `crates/steel/src/ethereum.rs` and `crates/op-steel/src/optimism/mod.rs` (closes #112).

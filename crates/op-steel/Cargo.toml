@@ -2,7 +2,7 @@
 name = "risc0-op-steel"
 description = "Optimism abstraction for Steel."
 version = "0.8.0"
-rust-version = "1.88"
+rust-version = "1.94"
 edition = { workspace = true }
 license = { workspace = true }
 homepage = { workspace = true }
