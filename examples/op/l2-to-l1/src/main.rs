@@ -22,15 +22,15 @@ use l2_to_l1_core::{CALL, CALLER, CONTRACT, IERC20};
 use l2_to_l1_methods::{L2_TO_L1_GUEST_ELF, L2_TO_L1_GUEST_ID};
 use risc0_op_steel::{
     Contract, DisputeGameIndex,
-    optimism::{BASE_MAINNET_CHAIN_SPEC, OpEvmEnv},
+    optimism::{OP_MAINNET_CHAIN_SPEC, OpEvmEnv},
 };
 use risc0_zkvm::{Digest, ExecutorEnv, ProverOpts, VerifierContext, default_prover};
 use tokio::task;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
-/// Address of the OptimismPortal on L1 for Base Mainnet.
-const BASE_MAINNET_PORTAL: Address = address!("0x49048044D57e1C92A77f79988d21Fa8fAF74E97e");
+/// Address of the OptimismPortal on L1 for OP Mainnet.
+const OP_MAINNET_PORTAL: Address = address!("0xbEb5Fc579115071764c7423A4f12eDde41f106Ed");
 
 /// Simple program to show the use of Ethereum contract data inside the guest.
 #[derive(Parser, Debug)]
@@ -54,11 +54,11 @@ async fn main() -> Result<()> {
 
     // Build an environment based on the state of the latest finalized fault dispute game
     let builder = OpEvmEnv::builder()
-        .dispute_game_from_rpc(BASE_MAINNET_PORTAL, args.l1_rpc_url.clone())
+        .dispute_game_from_rpc(OP_MAINNET_PORTAL, args.l1_rpc_url.clone())
         .game_index(DisputeGameIndex::Finalized);
     let mut env = builder
         .rpc(args.l2_rpc_url)
-        .chain_spec(&BASE_MAINNET_CHAIN_SPEC)
+        .chain_spec(&OP_MAINNET_CHAIN_SPEC)
         .build()
         .await?;
 
@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
     #[cfg(feature = "verify")]
     examples_common::verify_on_chain(
         prove_info.receipt,
-        &BASE_MAINNET_CHAIN_SPEC,
+        &OP_MAINNET_CHAIN_SPEC,
         image_id,
         args.l1_rpc_url,
     )
