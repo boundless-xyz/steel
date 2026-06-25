@@ -23,10 +23,10 @@ sol! {
 
 /// Function to call, implements the `SolCall` trait.
 pub const CALL: IERC20::balanceOfCall = IERC20::balanceOfCall {
-    account: address!("0x8da91A6298eA5d1A8Bc985e99798fd0A0f05701a"),
+    account: address!("0x38d693cE1dF5AaDF7bC62595A37D667aD57922e5"),
 };
 
-/// Address of the deployed contract to call the function on (USDC contract on Base Mainnet).
-pub const CONTRACT: Address = address!("0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913");
+/// Address of the deployed contract to call the function on (USDC contract on OP Mainnet).
+pub const CONTRACT: Address = address!("0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85");
 
 pub const CALLER: Address = Address::ZERO;

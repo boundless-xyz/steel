@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Add a new `precompiles` module with type-safe wrappers for the EIP-2935 `HistoryStorage` and EIP-4788 `BeaconRoots` contracts.
 - The `Contract` API now includes a `raw` method to allow for direct calls with raw calldata. This provides greater flexibility when interacting with non-standard interfaces, such as precompiles.
 - Add `Event` support for chains other than Ethereum.
+- Added `MultiblockEvmEnv` and `MultiblockEvmInput` to enable verifiable computation across multiple blocks within a single proof. The guest environment now securely validates the integrity of the block sequence by verifying commitments between each consecutive block.
 - Improve EVM error handling to support calls without return data.
 - Add `EvmEnvBuilder::consensus_commitment_slot` to specify a beacon chain slot directly as the commitment target. This is useful for light client verification scenarios where the verifier has direct access to beacon chain state.
 
@@ -23,13 +24,16 @@ All notable changes to this project will be documented in this file.
 
 ### 🛠️ Fixes
 
+- `SteelVerifier` no longer accepts the zero value returned by the EIP-2935 history storage and EIP-4788 beacon roots contracts for ring buffer slots that were never written (the buffers are not backfilled at fork activation). Block commitments whose slot is unset now fall back to BLOCKHASH-style verification, so blocks within the 256-block window remain verifiable on chains that activated EIP-2935 recently.
 - Use `alloy_consensus::TrieAccount` instead of deprecated `alloy_consensus::Account`.
 - Normalize `BeaconClient` endpoint URL to ensure correct path joining. URLs without a trailing slash (e.g., from Quicknode) now work correctly.
 
 ### ⚙️ Miscellaneous
 
 - The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
-- Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`.
+- Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`. It now includes optimizations for directly verifying adjacent blocks via the parent hash field.
+- `EvmEnv::merge` now also verifies that the chain configuration IDs of the merged environments match.
+- `EvmEnv::into_input` no longer fails when no state access was recorded; it logs a warning instead. This allows commitment-only environments, e.g. in a `MultiblockEvmEnv`, where verification via the parent hash does not access any state. A forgotten `Contract::preflight` now surfaces as a guest panic pointing to the missing preflight.
 - Add a warning log when the provider's chain ID does not match the chain spec configuration.
 - Improved error messages when the execution block incorrectly matches the commitment block for historical commitments.
 - Re-export `op_revm` from `risc0-op-steel`, so users can access OP-specific revm types (e.g. `OpSpecId`) without adding `op-revm` as a direct dependency.
@@ -39,6 +43,10 @@ All notable changes to this project will be documented in this file.
 - Populate `BlockEnv::slot_num` from the header's new `slot_number` field (alloy 2.0, EIP-7843) in both `crates/steel/src/ethereum.rs` and `crates/op-steel/src/optimism/mod.rs` (closes #112).
 - Replaced `ethereum-consensus` with `lighthouse-types`, `tree_hash`, and `context_deserialize` for host-side beacon block handling. Affects crates depending on `risc0-steel` with the `host` feature.
 - Removed the `c-kzg` feature from `risc0-steel`'s `revm` dependency. Precompile features (`blst`, `bn`, `c-kzg`) should now be enabled by the guest crate directly.
+- Guest examples now enable all accelerated revm precompiles (`blst`, `bn`, `c-kzg`) and pin patched dependency versions (`blst`, `c-kzg`, `k256`, `substrate-bn`, `tiny-keccak`) to match their risc0 forks.
+- Removed the upstream `revm` point evaluation precompile test from the steel integration tests.
+- `Commitment` now implements `Display`.
+- Rewritten the `token-stats` example to use the new `MultiblockEvmEnv` API.
 - Solidity: updated `forge-std` (to v1.15.0) and `openzeppelin-contracts` (to v5.6.1), moved remappings from `remappings.txt` into `contracts/foundry.toml`.
 
 ## [2.4.0](https://github.com/boundless-xyz/steel/releases/tag/v2.4.0)

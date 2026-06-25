@@ -23,11 +23,11 @@ import {Steel} from "steel/Steel.sol";
 import {OpCommitmentValidator} from "steel/OpSteel.sol";
 
 contract Verifier is OpCommitmentValidator {
-    address internal constant BASE_MAINNET_PORTAL = address(0x49048044D57e1C92A77f79988d21Fa8fAF74E97e);
+    address internal constant OP_MAINNET_PORTAL = address(0xbEb5Fc579115071764c7423A4f12eDde41f106Ed);
 
     IRiscZeroVerifier public immutable riscZeroVerifier;
 
-    constructor() OpCommitmentValidator(BASE_MAINNET_PORTAL) {
+    constructor() OpCommitmentValidator(OP_MAINNET_PORTAL) {
         RiscZeroVerifierRouter router = new RiscZeroVerifierRouter(address(this));
 
         RiscZeroGroth16Verifier verifier =

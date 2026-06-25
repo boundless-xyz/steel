@@ -15,24 +15,30 @@ You'll also need access to an Ethereum Mainnet RPC endpoint. You can for example
 To run the example, which computes the current APR of the Compound USDC Token [`0xc3d688B66703497DAA19211EEdff47f25384cdc3`](https://etherscan.io/token/0xc3d688B66703497DAA19211EEdff47f25384cdc3) on Ethereum, execute the following command:
 
 ```bash
-RPC_URL=https://ethereum-rpc.publicnode.com RUST_LOG=info cargo run --release
+RPC_URL=https://ethereum-rpc.publicnode.com RUST_LOG=info,risc0_steel=debug cargo run --release
 ```
 
 The output should resemble the following:
 
 ```text
-2024-08-05T17:58:28.709271Z  INFO risc0_steel::host: Environment initialized for block 20464007    
-2024-08-05T17:58:28.709406Z  INFO risc0_steel: Commitment to block 0xba19f4d5d1aabd1e4ddca7263f1307cfdec1252041395edfc1d8507eaf142cf8    
-2024-08-05T17:58:28.709502Z  INFO risc0_steel::contract: Executing preflight calling 'getUtilization()' on 0xc3d688B66703497DAA19211EEdff47f25384cdc3    
-Call getUtilization() Function on 0xc3d6…cdc3 returns: 715303307067353898
-2024-08-05T17:58:29.974428Z  INFO risc0_steel::contract: Executing preflight calling 'getSupplyRate(uint256)' on 0xc3d688B66703497DAA19211EEdff47f25384cdc3    
-Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 1179470191
+2025-10-07T11:35:38.730992Z DEBUG risc0_steel::host::builder: Environment initialized with block 23518416 (0xf3b179a5030338d6d3b6477843ac14027c7e6f25ab4c8d42e61c2fbec616d598)
+2025-10-07T11:35:38.731380Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getUtilization()'
+Call getUtilization() Function on 0xc3d6…cdc3 returns: 901643987632970446
+2025-10-07T11:35:39.566357Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getSupplyRate(uint256)'
+Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 1194006355
+2025-10-07T11:35:40.350225Z DEBUG risc0_steel::host::builder: Environment initialized with block 23525616 (0x3728e8f5dcf4d42b68d5cd424c9c7fcb0582d552f14129f94411aab8e7527746)
+2025-10-07T11:35:40.350296Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getUtilization()'
+Call getUtilization() Function on 0xc3d6…cdc3 returns: 809451025252486797
+2025-10-07T11:35:41.266703Z DEBUG risc0_steel::contract::host: Executing preflight calling 'getSupplyRate(uint256)'
+Call getSupplyRate(uint256) Function on 0xc3d6…cdc3 returns: 924030850
+2025-10-07T11:35:41.937053Z DEBUG risc0_steel::verifier::host: Executing preflight verifying Commitment { version: "Block", id: 23518416, digest: 0xf3b179a5030338d6d3b6477843ac14027c7e6f25ab4c8d42e61c2fbec616d598, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
+2025-10-07T11:35:41.937113Z DEBUG risc0_steel::contract::host: Executing preflight calling 'raw'
+2025-10-07T11:35:43.367732Z DEBUG risc0_steel::block::host: Preparing input for block 23518416:
+2025-10-07T11:35:44.295123Z DEBUG risc0_steel::block::host: Preparing input for block 23525616:
 Running the guest with the constructed input:
-2024-08-05T17:58:31.587359Z  INFO executor: risc0_zkvm::host::server::exec::executor: execution time: 196.721584ms
-2024-08-05T17:58:31.587385Z  INFO executor: risc0_zkvm::host::server::session: number of segments: 11
-2024-08-05T17:58:31.587388Z  INFO executor: risc0_zkvm::host::server::session: total cycles: 11534336
-2024-08-05T17:58:31.587390Z  INFO executor: risc0_zkvm::host::server::session: user cycles: 8885255
-Proven APR calculated is: 3.7195771943376%
+2025-10-07T11:35:44.777284Z  INFO risc0_zkvm::host::server::exec::executor: execution time: 79.718292ms
+Commitment { version: "Block", id: 23525616, digest: 0x3728e8f5dcf4d42b68d5cd424c9c7fcb0582d552f14129f94411aab8e7527746, configID: 0x9a223c7ca04c969f1cacbe5b8db44c308b2c53390505d3d48c834ed4469fc839 }
+Proven APR over 1 days is: 3.339721064844%
 ```
 
 [install-rust]: https://doc.rust-lang.org/cargo/getting-started/installation.html

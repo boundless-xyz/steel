@@ -18,7 +18,7 @@
 use l2_to_l1_core::{CALL, CALLER, CONTRACT};
 use risc0_op_steel::{
     Contract,
-    optimism::{BASE_MAINNET_CHAIN_SPEC, OpEvmInput},
+    optimism::{OP_MAINNET_CHAIN_SPEC, OpEvmInput},
 };
 use risc0_zkvm::guest::env;
 
@@ -29,7 +29,7 @@ fn main() {
     let input: OpEvmInput = env::read();
 
     // Create the environment and add the commitment.
-    let env = input.into_env(&BASE_MAINNET_CHAIN_SPEC);
+    let env = input.into_env(&OP_MAINNET_CHAIN_SPEC);
     env::commit_slice(&env.commitment().abi_encode());
 
     // Execute the call.

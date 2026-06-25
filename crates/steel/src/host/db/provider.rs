@@ -49,7 +49,7 @@ impl DBErrorMarker for Error {}
 /// must *not* be executed inside an async runtime, or it will panic when trying to block. If the
 /// immediate context is only synchronous, but a transitive caller is async, use
 /// [tokio::task::spawn_blocking] around the calls that need to be blocked.
-pub struct ProviderDb<N: Network, P: Provider<N>> {
+pub struct ProviderDb<N, P> {
     /// Provider to fetch the data from.
     provider: P,
     /// Configuration of the provider.
@@ -61,7 +61,7 @@ pub struct ProviderDb<N: Network, P: Provider<N>> {
     /// Bytecode cache to allow querying bytecode by hash instead of address.
     contracts: B256HashMap<Bytecode>,
 
-    phantom: PhantomData<N>,
+    phantom: PhantomData<fn() -> N>,
 }
 
 /// Additional configuration for a [Provider].

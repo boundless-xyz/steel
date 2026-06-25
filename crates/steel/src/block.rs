@@ -19,7 +19,6 @@ use crate::{
 use ::serde::{Deserialize, Serialize};
 use alloy_consensus::TxReceipt;
 use alloy_primitives::{B256, Bytes, Sealable, Sealed, map::HashMap};
-use std::marker::PhantomData;
 
 /// Input committing to the corresponding execution block hash.
 #[derive(Clone, Serialize, Deserialize)]
@@ -30,8 +29,6 @@ pub struct BlockInput<F: EvmFactory> {
     contracts: Vec<Bytes>,
     ancestors: Vec<F::Header>,
     receipts: Option<Vec<F::Receipt>>,
-    #[serde(skip)]
-    phantom: PhantomData<F>,
 }
 
 /// Implement [BlockHeaderCommit] for the unit type.
@@ -50,6 +47,8 @@ impl<H: EvmBlockHeader> BlockHeaderCommit<H> for () {
 
 impl<F: EvmFactory> BlockInput<F> {
     /// Converts the input into a [EvmEnv] for verifiable state access in the guest.
+    ///
+    /// This method verifies that the state matches the state root in the header and panics if not.
     pub fn into_env(self, chain_spec: &ChainSpec<F::SpecId>) -> GuestEvmEnv<F> {
         // verify that the state root matches the state trie
         let state_root = self.state_trie.hash_slow();
@@ -119,7 +118,7 @@ pub mod host {
     use alloy_primitives::Sealed;
     use anyhow::{anyhow, ensure};
     use log::debug;
-    use std::{fmt::Display, marker::PhantomData};
+    use std::fmt::Display;
 
     impl<F: EvmFactory> BlockInput<F> {
         /// Creates the `BlockInput` containing the necessary EVM state that can be verified against
@@ -162,6 +161,7 @@ pub mod host {
                 .transpose()
                 .map_err(|err| anyhow!("invalid receipt: {err}"))?;
 
+            debug!("Preparing input for block {}:", header.number());
             debug!("state size: {}", state_trie.size());
             debug!("storage tries: {}", storage_tries.len());
             debug!(
@@ -179,7 +179,6 @@ pub mod host {
                 contracts,
                 ancestors,
                 receipts,
-                phantom: PhantomData,
             };
 
             Ok(input)

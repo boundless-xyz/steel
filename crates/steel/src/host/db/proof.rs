@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -202,16 +202,18 @@ impl<N: Network, P: Provider<N>> ProofDb<ProviderDb<N, P>> {
     /// Returns the merkle proofs (sparse [MerkleTrie]) for the state and all storage queries
     /// recorded by the [RevmDatabase].
     pub(crate) async fn state_proof(&mut self) -> Result<(MerkleTrie, Vec<MerkleTrie>)> {
-        ensure!(
-            !self.accounts.is_empty()
-                || !self.block_hash_numbers.is_empty()
-                || !self.log_filters.is_empty(),
-            "no accounts accessed: use Contract::preflight"
-        );
-
         // if no accounts were accessed, use the state root of the corresponding block as is
         if self.accounts.is_empty() {
             let hash = self.inner.block();
+
+            // nothing was accessed at all: likely a forgotten Contract::preflight
+            if self.block_hash_numbers.is_empty() && self.log_filters.is_empty() {
+                log::warn!(
+                    "building input for block {hash} with no recorded state access; \
+                    did you forget to call Contract::preflight?"
+                );
+            }
+
             let block = self
                 .inner
                 .provider()

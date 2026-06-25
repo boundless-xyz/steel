@@ -86,7 +86,7 @@ mod host {
     impl<'a, N, P, F, C> BeaconRootsContract<&'a mut HostEvmEnv<ProviderDb<N, P>, F, C>>
     where
         N: Network,
-        P: Provider<N> + Send + Sync + 'static,
+        P: Provider<N> + 'static,
         F: EvmFactory,
     {
         pub fn preflight(env: &'a mut HostEvmEnv<ProviderDb<N, P>, F, C>) -> Self {
@@ -103,7 +103,7 @@ mod host {
     impl<'a, N, P, F, C> HistoryStorageContract<&'a mut HostEvmEnv<ProviderDb<N, P>, F, C>>
     where
         N: Network,
-        P: Provider<N> + Send + Sync + 'static,
+        P: Provider<N> + 'static,
         F: EvmFactory,
     {
         /// Creates a new `HistoryStorageContract` instance for use on the host for preflighting.

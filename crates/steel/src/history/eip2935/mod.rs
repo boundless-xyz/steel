@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ mod history_storage;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct HistoryInput<F: EvmFactory> {
     input: BlockInput<F>,
-    commit: HistoryCommit<<F as EvmFactory>::Header>,
+    commit: HistoryCommit<F::Header>,
 }
 
 /// Commitment that an execution block is an ancestor of a specific other execution block.
@@ -107,6 +107,8 @@ impl<H: EvmBlockHeader> BlockHeaderCommit<H> for HistoryCommit<H> {
             let execution_hash = HistoryStorageContract::new(&mut state_commit.state)
                 .and_then(|mut c| c.get_unchecked(block_number))
                 .expect("History storage contract failed");
+            // an unset slot reads as zero and must never link the chain
+            assert!(!execution_hash.is_zero(), "Invalid execution hash");
             assert_eq!(execution_hash, header.seal(), "Execution hash mismatch");
 
             header = state_header;

@@ -245,7 +245,7 @@ jobs:
           RUST_LOG: "info,risc0_steel=debug,risc0_op_steel=debug"
           RISC0_DEV_MODE: true
           L1_RPC_URL: https://eth-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
-          L2_RPC_URL: https://base-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
+          L2_RPC_URL: https://opt-mainnet.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}
           BEACON_API_URL: https://eth-mainnetbeacon.g.alchemy.com/v2/${{ secrets.ALCHEMY_RISC0_ETH_API_KEY }}/
 
   doc:

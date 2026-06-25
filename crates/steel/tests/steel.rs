@@ -546,13 +546,12 @@ async fn no_preflight() {
         .build()
         .await
         .unwrap();
-    match env.into_input().await {
-        Ok(_) => panic!("calling into_input without a preflight should fail"),
-        Err(err) => assert_eq!(
-            err.to_string(),
-            "no accounts accessed: use Contract::preflight"
-        ),
-    }
+    let block_hash = env.header().seal();
+
+    // an env without any recorded state access is valid and commits only to the block hash
+    let input = env.into_input().await.unwrap();
+    let env = input.into_env(&STEEL_TEST_PRAGUE_CHAIN_SPEC);
+    assert_eq!(env.commitment().digest, block_hash, "invalid commitment");
 }
 
 alloy::sol!(

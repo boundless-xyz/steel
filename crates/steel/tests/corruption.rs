@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -550,7 +550,7 @@ mod history {
     }
 
     #[test(tokio::test)]
-    #[should_panic(expected = "Unresolved node access")]
+    #[should_panic(expected = "unresolved node access")]
     async fn corrupt_history_evm_commit_timestamp() {
         let input = load_or_create("testdata/history_input.json", || {
             Box::pin(rpc_usdt_history_input())

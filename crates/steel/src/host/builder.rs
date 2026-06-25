@@ -13,15 +13,16 @@
 // limitations under the License.
 
 use crate::{
-    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory, EvmSpecId,
+    CommitmentVersion, EvmBlockHeader, EvmEnv, EvmFactory, EvmInput, EvmSpecId,
     beacon::{BeaconCommit, host::client::BeaconClient},
     config::ChainSpec,
-    ethereum::EthEvmFactory,
+    ethereum::{EthChainSpec, EthEvmFactory},
     history::{Eip2935HistoryCommit, HistoryCommit},
     host::{
         BlockId, BlockNumberOrTag, EthHostEvmEnv, HostCommit, HostEvmEnv,
         db::{ProofDb, ProviderConfig, ProviderDb},
     },
+    multiblock::host::HostMultiblockEvmEnv,
 };
 use alloy::{
     network::{BlockResponse, Ethereum, Network, primitives::HeaderResponse},
@@ -29,7 +30,7 @@ use alloy::{
 };
 use alloy_primitives::{B256, BlockHash, BlockNumber, Sealable, Sealed};
 use anyhow::{Context, Result, anyhow, ensure};
-use std::{fmt::Display, marker::PhantomData};
+use std::{fmt::Display, future::Future, marker::PhantomData};
 use url::Url;
 
 impl<F: EvmFactory> EvmEnv<(), F, ()> {
@@ -47,14 +48,7 @@ impl<F: EvmFactory> EvmEnv<(), F, ()> {
     /// # }
     /// ```
     pub fn builder() -> EvmEnvBuilder<(), F, (), ()> {
-        EvmEnvBuilder {
-            provider: (),
-            provider_config: ProviderConfig::default(),
-            block: BlockId::default(),
-            chain_spec: (),
-            commitment_config: (),
-            phantom: PhantomData,
-        }
+        EvmEnvBuilder::new()
     }
 }
 
@@ -75,7 +69,20 @@ pub struct EvmEnvBuilder<P, F, S, C> {
     block: BlockId,
     chain_spec: S,
     commitment_config: C,
-    phantom: PhantomData<F>,
+    phantom: PhantomData<fn() -> F>,
+}
+
+impl<F: EvmFactory> EvmEnvBuilder<(), F, (), ()> {
+    pub(crate) fn new() -> Self {
+        EvmEnvBuilder {
+            provider: (),
+            provider_config: ProviderConfig::default(),
+            block: BlockId::default(),
+            chain_spec: (),
+            commitment_config: (),
+            phantom: PhantomData,
+        }
+    }
 }
 
 impl<S> EvmEnvBuilder<(), EthEvmFactory, S, ()> {
@@ -254,6 +261,31 @@ impl<P, F, S, C> EvmEnvBuilder<P, F, S, C> {
         self
     }
 
+    /// Creates a clone of this builder configured for the given EVM execution block with elided
+    /// commitment config.
+    pub(crate) fn clone_with_block(&self, block: impl Into<BlockId>) -> EvmEnvBuilder<P, F, S, ()>
+    where
+        P: Clone,
+        S: Clone,
+    {
+        EvmEnvBuilder {
+            provider: self.provider.clone(),
+            provider_config: self.provider_config.clone(),
+            block: block.into(),
+            chain_spec: self.chain_spec.clone(),
+            commitment_config: (),
+            phantom: PhantomData,
+        }
+    }
+
+    /// Returns `true` if an explicit execution block (other than the builder default) was set.
+    pub(crate) fn has_explicit_block(&self) -> bool
+    where
+        F: EvmFactory,
+    {
+        self.block != EvmEnvBuilder::<(), F, (), ()>::new().block
+    }
+
     /// Returns the [EvmBlockHeader] of the specified block.
     ///
     /// If `block` is `None`, the block based on the current builder configuration is used instead.
@@ -286,6 +318,30 @@ impl<P, F, S, C> EvmEnvBuilder<P, F, S, C> {
         );
 
         Ok(header)
+    }
+}
+
+impl<'a, P, F: EvmFactory, C> EvmEnvBuilder<P, F, &'a ChainSpec<F::SpecId>, C> {
+    /// Creates a [HostMultiblockEvmEnv] using this builder as a template.
+    ///
+    /// This is a convenience method equivalent to [HostMultiblockEvmEnv::from_builder].
+    /// See [MultiblockEvmEnv](crate::MultiblockEvmEnv) for usage examples.
+    ///
+    /// Any execution block configured on this builder (e.g. via [EvmEnvBuilder::block_number]) is
+    /// ignored; the blocks are instead selected via [HostMultiblockEvmEnv::get_or_build]. If an
+    /// explicit commitment target is set, every added block must be strictly before it. With a
+    /// default beacon commitment, the largest added block must not be the chain head.
+    pub fn build_multi<N>(self) -> HostMultiblockEvmEnv<'a, N, P, F, C>
+    where
+        N: Network,
+        P: Provider<N> + Clone + 'static,
+        F::Header: TryFrom<<N as Network>::HeaderResponse>,
+        <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+        F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+        <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
+        Self: InputBuilder<N, P, F>,
+    {
+        HostMultiblockEvmEnv::from_builder(self)
     }
 }
 
@@ -655,6 +711,108 @@ fn ensure_distinct<H: EvmBlockHeader>(
     Ok(())
 }
 
+/// Extension trait used by [HostMultiblockEvmEnv] to convert a commitment-less
+/// `HostEvmEnv<..., ()>` into an [EvmInput] with the commitment type determined by the builder.
+///
+/// [HostMultiblockEvmEnv] collects environments without commitments (`()`), because the
+/// commitment for each block is determined later: intermediate blocks get automatic commitments
+/// (block hash or EIP-2935), while the final block gets the user-configured commitment from the
+/// template builder. This trait allows `into_input()` to apply the builder's commitment type
+/// generically, regardless of whether it is `()`, `Beacon`, `Eip2935History`, or `History`.
+///
+/// For non-trivial commitment types, the implementation rebuilds an empty environment from the
+/// builder (which constructs the commitment via RPC) and then merges in the EVM data from the
+/// given environment. For the simple `()` case, no rebuild is needed.
+///
+/// [HostMultiblockEvmEnv]: crate::multiblock::host::HostMultiblockEvmEnv
+pub trait InputBuilder<N: Network, P: Provider<N>, F: EvmFactory>: Send {
+    /// Converts the given commitment-less [EvmEnv] into an [EvmInput], applying the commitment
+    /// configuration from this builder.
+    fn build_input(
+        self,
+        env: HostEvmEnv<ProviderDb<N, P>, F, ()>,
+    ) -> impl Future<Output = Result<EvmInput<F>>> + Send;
+
+    /// Returns the commitment target block number when it is statically known to be an explicit
+    /// number.
+    ///
+    /// Every execution block must precede the commitment block, so [HostMultiblockEvmEnv] uses
+    /// this to reject out-of-range blocks early. Returns `None` when there is no explicit target
+    /// (`()`), or when the target is a hash, tag, or beacon slot that cannot be compared without
+    /// resolving it via RPC.
+    ///
+    /// [HostMultiblockEvmEnv]: crate::multiblock::host::HostMultiblockEvmEnv
+    fn commitment_target_number(&self) -> Option<BlockNumber> {
+        None
+    }
+}
+
+/// Default implementation for non-trivial commitment types: rebuild an empty env from the builder
+/// to construct the commitment, then merge in the EVM data from the provided env.
+macro_rules! build_input {
+    ($D:ty, $F:ty) => {
+        async fn build_input(self, env: HostEvmEnv<$D, $F, ()>) -> Result<EvmInput<$F>> {
+            let builder = self.block_hash(env.header().seal());
+            let empty_env = builder.build().await.context("builder failed")?;
+            // merge execution state and verify compatibility
+            let env = empty_env.merge_state(env)?;
+
+            env.into_input().await
+        }
+    };
+}
+
+impl<N, P, F> InputBuilder<N, P, F> for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, Eip2935History>
+where
+    N: Network,
+    P: Provider<N>,
+    F: EvmFactory,
+    F::Header: TryFrom<<N as Network>::HeaderResponse>,
+    <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
+{
+    build_input!(ProviderDb<N, P>, F);
+
+    fn commitment_target_number(&self) -> Option<BlockNumber> {
+        self.commitment_config.target.as_number()
+    }
+}
+
+impl<P: Provider<Ethereum>> InputBuilder<Ethereum, P, EthEvmFactory>
+    for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, Beacon>
+{
+    build_input!(ProviderDb<Ethereum, P>, EthEvmFactory);
+}
+
+impl<P: Provider<Ethereum>> InputBuilder<Ethereum, P, EthEvmFactory>
+    for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, History>
+{
+    build_input!(ProviderDb<Ethereum, P>, EthEvmFactory);
+
+    fn commitment_target_number(&self) -> Option<BlockNumber> {
+        match &self.commitment_config.target {
+            CommitmentTarget::Block(block) => block.as_number(),
+            CommitmentTarget::Slot(_) => None,
+        }
+    }
+}
+
+impl<N, P, F> InputBuilder<N, P, F> for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()>
+where
+    N: Network,
+    P: Provider<N>,
+    F: EvmFactory,
+    F::Header: TryFrom<<N as Network>::HeaderResponse>,
+    <F::Header as TryFrom<<N as Network>::HeaderResponse>>::Error: Display,
+    F::Receipt: TryFrom<<N as Network>::ReceiptResponse>,
+    <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
+{
+    async fn build_input(self, env: HostEvmEnv<ProviderDb<N, P>, F, ()>) -> Result<EvmInput<F>> {
+        env.into_input().await
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -667,6 +825,21 @@ mod tests {
     use lighthouse_types::ExecPayload;
     use test_log::test;
     use tree_hash::TreeHash;
+
+    #[test]
+    fn has_explicit_block() {
+        let builder = EthEvmEnv::builder();
+        // an untouched builder uses the default block, which is not considered explicit
+        assert!(!builder.has_explicit_block());
+        // an explicit number, hash, or tag is
+        assert!(builder.clone().block_number(1_000_000).has_explicit_block());
+        assert!(builder.clone().block_hash(B256::ZERO).has_explicit_block());
+        assert!(
+            builder
+                .block_number_or_tag(BlockNumberOrTag::Finalized)
+                .has_explicit_block()
+        );
+    }
 
     #[test(tokio::test)]
     #[cfg_attr(

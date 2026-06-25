@@ -112,8 +112,8 @@ where
             .context("eth_getBlockByNumber failed")?;
         let block = block_res.with_context(|| {
             format!(
-                "beacon block commitment cannot be created for the most recent block; \
-                    use `parent` tag instead: block {} does not have a child",
+                "beacon block commitment cannot be created for block {} as it has no child block \
+                    yet; commit to an earlier block instead (e.g. via the `parent` tag)",
                 header.number()
             )
         })?;

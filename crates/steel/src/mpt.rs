@@ -1,4 +1,4 @@
-// Copyright 2025 RISC Zero, Inc.
+// Copyright 2026 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -154,7 +154,10 @@ impl Node {
                     .and_then(|node| node.get(remaining)),
                 None => None, // branch nodes don't have values in our MPT version
             },
-            Node::Digest(_) => panic!("MPT: Unresolved node access"),
+            Node::Digest(_) => panic!(
+                "MPT: unresolved node access; \
+                the state was not recorded during preflight (forgotten Contract::preflight?)"
+            ),
         }
     }
 

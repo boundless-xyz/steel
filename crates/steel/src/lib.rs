@@ -36,7 +36,12 @@ use revm::{
     Database as RevmDatabase,
     context::{BlockEnv, result::HaltReasonTr},
 };
-use std::{error::Error, fmt, fmt::Debug, hash::Hash};
+use std::{
+    error::Error,
+    fmt,
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 pub mod account;
 pub mod beacon;
@@ -50,6 +55,7 @@ pub mod history;
 pub mod host;
 mod merkle;
 mod mpt;
+mod multiblock;
 pub mod precompiles;
 pub mod serde;
 mod state;
@@ -65,9 +71,10 @@ pub use contract::{CallBuilder, CallError, Contract, RawCall};
 pub use event::Event;
 pub use history::{Eip2935HistoryInput, HistoryInput};
 pub use mpt::MerkleTrie;
+pub use multiblock::{MultiblockEvmEnv, MultiblockEvmInput};
 pub use state::{StateAccount, StateDb};
 pub use sync::SyncEnv;
-pub use verifier::SteelVerifier;
+pub use verifier::{EIP2935_HISTORY_LIMIT, HISTORY_LIMIT, SteelVerifier};
 
 /// The serializable input to derive and validate an [EvmEnv] from.
 #[non_exhaustive]
@@ -84,9 +91,7 @@ pub enum EvmInput<F: EvmFactory> {
 }
 
 impl<F: EvmFactory> EvmInput<F> {
-    /// Converts the input into a [EvmEnv] for execution.
-    ///
-    /// This method verifies that the state matches the state root in the header and panics if not.
+    /// Converts the input into a [EvmEnv] for verifiable state access in the guest.
     #[inline]
     pub fn into_env(self, chain_spec: &ChainSpec<F::SpecId>) -> GuestEvmEnv<F> {
         match self {
@@ -437,16 +442,34 @@ impl Commitment {
     }
 }
 
+impl Commitment {
+    /// Renders a commitment version code as a human-readable string.
+    pub(crate) fn version_name(version_code: u16) -> String {
+        CommitmentVersion::n(version_code).map_or_else(
+            || format!("Unknown({version_code:#x})"),
+            |v| format!("{v:?}"),
+        )
+    }
+
+    /// Returns the decoded ID and a human-readable version string.
+    fn decoded_id_version(&self) -> (U256, String) {
+        let (id, version_code) = self.decode_id();
+        (id, Self::version_name(version_code))
+    }
+}
+
+impl Display for Commitment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (id, version_str) = self.decoded_id_version();
+        write!(f, "{version_str}({id})={:#}", &self.digest)
+    }
+}
+
 impl Debug for Commitment {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (id, version_code) = self.decode_id();
-        let version = match CommitmentVersion::n(version_code) {
-            Some(v) => format!("{v:?}"),
-            None => format!("Unknown({version_code:x})"),
-        };
-
+        let (id, version_str) = self.decoded_id_version();
         f.debug_struct("Commitment")
-            .field("version", &version)
+            .field("version", &version_str)
             .field("id", &id)
             .field("digest", &self.digest)
             .field("configID", &self.configID)
