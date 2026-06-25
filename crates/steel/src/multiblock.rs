@@ -212,7 +212,16 @@ pub(crate) mod host {
         /// Creates a new [HostMultiblockEvmEnv] using the given [EvmEnvBuilder] as a template.
         ///
         /// Prefer using [EvmEnvBuilder::build_multi()] for a more fluent API.
+        ///
+        /// Any execution block configured on the template (e.g. via [EvmEnvBuilder::block_number])
+        /// is ignored; blocks are selected via [HostMultiblockEvmEnv::get_or_build].
         pub fn from_builder(template: EvmEnvBuilder<P, F, &'a ChainSpec<F::SpecId>, C>) -> Self {
+            if template.has_explicit_block() {
+                log::warn!(
+                    "the execution block configured on the builder is ignored by build_multi; \
+                    select blocks via get_or_build()"
+                );
+            }
             Self {
                 template,
                 env: MultiblockEvmEnv(BTreeMap::new()),
@@ -235,10 +244,27 @@ pub(crate) mod host {
         ///
         /// Blocks can be added in any order, they will be properly ordered when
         /// [HostMultiblockEvmEnv::into_input] is called.
+        ///
+        /// When the template is configured with an explicit commitment target (e.g. via
+        /// [EvmEnvBuilder::commitment_block_number]), every added block must be strictly before
+        /// that target; passing a block at or after it returns an error.
+        ///
+        /// With a default beacon commitment (from [EvmEnvBuilder::beacon_api]), the largest added
+        /// block must not be the chain head, as the commitment requires the subsequent block; use
+        /// `latest - 1` or a safe/finalized block. This is only detected when
+        /// [HostMultiblockEvmEnv::into_input] is called.
         pub async fn get_or_build(
             &mut self,
             num: BlockNumber,
         ) -> anyhow::Result<&mut HostEvmEnv<ProviderDb<N, P>, F, ()>> {
+            // reject blocks that cannot precede the commitment target before any RPC work; targets
+            // given as a hash, tag, or slot are only checked when building the final input
+            if let Some(target) = self.template.commitment_target_number() {
+                ensure!(
+                    num < target,
+                    "block {num} is not before the commitment target block {target}"
+                );
+            }
             match self.env.0.entry(num) {
                 Entry::Occupied(entry) => Ok(entry.into_mut()),
                 Entry::Vacant(entry) => {
@@ -328,11 +354,11 @@ pub(crate) mod host {
                         .template
                         .clone_with_block(current_env.header().seal())
                         .commitment_block_number(target_block);
-                    // Build a new env with the desired commitment, then merge in the EVM data
-                    // from current_env. The merge keeps the new env's commitment and absorbs the data.
+                    // build a new env carrying the history commitment, then merge in current_env's
+                    // data; merge_state keeps the new commitment and absorbs the state
                     let history_env = builder.build().await.with_context(|| {
                         format!("block {current_block}: failed to build EIP-2935 history commitment to {target_block}")
-                    })?.merge(current_env)?;
+                    })?.merge_state(current_env)?;
 
                     let commit = history_env.commitment();
                     SteelVerifier::preflight(&mut next_env)
@@ -428,6 +454,33 @@ mod tests {
         assert_eq!(commitment.decode_id().1, CommitmentVersion::Block as u16);
         assert_eq!(commitment.digest, block_hash);
         assert_eq!(commitment.configID, chain_spec.digest());
+
+        Ok(())
+    }
+
+    #[test(tokio::test)]
+    async fn get_or_build_rejects_block_at_or_after_commitment_target() -> anyhow::Result<()> {
+        let chain_spec = ChainSpec::new_single(31337, SpecId::PRAGUE);
+        let provider = ProviderBuilder::new().connect_anvil_with_config(Anvil::cancun);
+
+        let builder = EthEvmEnv::builder()
+            .provider(provider)
+            .chain_spec(&chain_spec)
+            .commitment_block_number(100);
+        let mut host_env = HostMultiblockEvmEnv::from_builder(builder);
+
+        // a block at or after the target is rejected before any RPC work
+        for block in [100, 101] {
+            let err = host_env
+                .get_or_build(block)
+                .await
+                .err()
+                .expect("expected an error");
+            assert!(
+                err.to_string().contains("is not before the commitment target"),
+                "{err:#}"
+            );
+        }
 
         Ok(())
     }

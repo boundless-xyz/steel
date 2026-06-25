@@ -29,8 +29,11 @@ fn main() {
     // Converts the input into a `EvmEnv` for execution.
     let envs = input.into_env(&ETH_MAINNET_CHAIN_SPEC);
 
-    // Check that the EVM states are exactly BLOCK_INTERVAL blocks apart.
+    // Require at least two samples so the committed APR is a genuine average over a positive
+    // number of days, rather than a single instantaneous rate.
     let numbers: Vec<_> = envs.block_numbers().collect();
+    assert!(numbers.len() >= 2, "at least two sampled blocks are required");
+    // Check that the EVM states are exactly BLOCK_INTERVAL blocks apart.
     for window in numbers.windows(2) {
         assert_eq!(window[1] - window[0], BLOCK_INTERVAL);
     }
@@ -60,7 +63,7 @@ fn main() {
 
     // This commits the APR at current utilization rate for this given block.
     let journal = APRCommitment {
-        days: (rates.len() - 1) as u64,
+        numDays: (rates.len() - 1) as u64,
         finalBlockNumber: envs.last().header().number,
         annualSupplyRate: annual_supply_rate,
         commitment: envs.into_commitment(),

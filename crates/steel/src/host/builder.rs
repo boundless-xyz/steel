@@ -278,6 +278,14 @@ impl<P, F, S, C> EvmEnvBuilder<P, F, S, C> {
         }
     }
 
+    /// Returns `true` if an explicit execution block (other than the builder default) was set.
+    pub(crate) fn has_explicit_block(&self) -> bool
+    where
+        F: EvmFactory,
+    {
+        self.block != EvmEnvBuilder::<(), F, (), ()>::new().block
+    }
+
     /// Returns the [EvmBlockHeader] of the specified block.
     ///
     /// If `block` is `None`, the block based on the current builder configuration is used instead.
@@ -318,6 +326,11 @@ impl<'a, P, F: EvmFactory, C> EvmEnvBuilder<P, F, &'a ChainSpec<F::SpecId>, C> {
     ///
     /// This is a convenience method equivalent to [HostMultiblockEvmEnv::from_builder].
     /// See [MultiblockEvmEnv](crate::MultiblockEvmEnv) for usage examples.
+    ///
+    /// Any execution block configured on this builder (e.g. via [EvmEnvBuilder::block_number]) is
+    /// ignored; the blocks are instead selected via [HostMultiblockEvmEnv::get_or_build]. If an
+    /// explicit commitment target is set, every added block must be strictly before it. With a
+    /// default beacon commitment, the largest added block must not be the chain head.
     pub fn build_multi<N>(self) -> HostMultiblockEvmEnv<'a, N, P, F, C>
     where
         N: Network,
@@ -719,6 +732,19 @@ pub trait InputBuilder<N: Network, P: Provider<N>, F: EvmFactory>: Send {
         self,
         env: HostEvmEnv<ProviderDb<N, P>, F, ()>,
     ) -> impl Future<Output = Result<EvmInput<F>>> + Send;
+
+    /// Returns the commitment target block number when it is statically known to be an explicit
+    /// number.
+    ///
+    /// Every execution block must precede the commitment block, so [HostMultiblockEvmEnv] uses
+    /// this to reject out-of-range blocks early. Returns `None` when there is no explicit target
+    /// (`()`), or when the target is a hash, tag, or beacon slot that cannot be compared without
+    /// resolving it via RPC.
+    ///
+    /// [HostMultiblockEvmEnv]: crate::multiblock::host::HostMultiblockEvmEnv
+    fn commitment_target_number(&self) -> Option<BlockNumber> {
+        None
+    }
 }
 
 /// Default implementation for non-trivial commitment types: rebuild an empty env from the builder
@@ -729,7 +755,7 @@ macro_rules! build_input {
             let builder = self.block_hash(env.header().seal());
             let empty_env = builder.build().await.context("builder failed")?;
             // merge execution state and verify compatibility
-            let env = empty_env.merge(env)?;
+            let env = empty_env.merge_state(env)?;
 
             env.into_input().await
         }
@@ -747,6 +773,10 @@ where
     <F::Receipt as TryFrom<<N as Network>::ReceiptResponse>>::Error: Display,
 {
     build_input!(ProviderDb<N, P>, F);
+
+    fn commitment_target_number(&self) -> Option<BlockNumber> {
+        self.commitment_config.target.as_number()
+    }
 }
 
 impl<P: Provider<Ethereum>> InputBuilder<Ethereum, P, EthEvmFactory>
@@ -759,6 +789,13 @@ impl<P: Provider<Ethereum>> InputBuilder<Ethereum, P, EthEvmFactory>
     for EvmEnvBuilder<P, EthEvmFactory, &EthChainSpec, History>
 {
     build_input!(ProviderDb<Ethereum, P>, EthEvmFactory);
+
+    fn commitment_target_number(&self) -> Option<BlockNumber> {
+        match &self.commitment_config.target {
+            CommitmentTarget::Block(block) => block.as_number(),
+            CommitmentTarget::Slot(_) => None,
+        }
+    }
 }
 
 impl<N, P, F> InputBuilder<N, P, F> for EvmEnvBuilder<P, F, &ChainSpec<F::SpecId>, ()>
@@ -788,6 +825,17 @@ mod tests {
     use lighthouse_types::ExecPayload;
     use test_log::test;
     use tree_hash::TreeHash;
+
+    #[test]
+    fn has_explicit_block() {
+        let builder = EthEvmEnv::builder();
+        // an untouched builder uses the default block, which is not considered explicit
+        assert!(!builder.has_explicit_block());
+        // an explicit number, hash, or tag is
+        assert!(builder.clone().block_number(1_000_000).has_explicit_block());
+        assert!(builder.clone().block_hash(B256::ZERO).has_explicit_block());
+        assert!(builder.block_number_or_tag(BlockNumberOrTag::Finalized).has_explicit_block());
+    }
 
     #[test(tokio::test)]
     #[cfg_attr(

@@ -443,14 +443,16 @@ impl Commitment {
 }
 
 impl Commitment {
+    /// Renders a commitment version code as a human-readable string.
+    pub(crate) fn version_name(version_code: u16) -> String {
+        CommitmentVersion::n(version_code)
+            .map_or_else(|| format!("Unknown({version_code:#x})"), |v| format!("{v:?}"))
+    }
+
     /// Returns the decoded ID and a human-readable version string.
     fn decoded_id_version(&self) -> (U256, String) {
         let (id, version_code) = self.decode_id();
-        let version_str = match CommitmentVersion::n(version_code) {
-            Some(v) => format!("{v:?}"),
-            None => format!("Unknown({version_code:#x})"),
-        };
-        (id, version_str)
+        (id, Self::version_name(version_code))
     }
 }
 

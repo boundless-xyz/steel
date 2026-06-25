@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🛠️ Fixes
 
+- `SteelVerifier` no longer accepts the zero value returned by the EIP-2935 history storage and EIP-4788 beacon roots contracts for ring buffer slots that were never written (the buffers are not backfilled at fork activation). Block commitments whose slot is unset now fall back to BLOCKHASH-style verification, so blocks within the 256-block window remain verifiable on chains that activated EIP-2935 recently.
 - Use `alloy_consensus::TrieAccount` instead of deprecated `alloy_consensus::Account`.
 - Normalize `BeaconClient` endpoint URL to ensure correct path joining. URLs without a trailing slash (e.g., from Quicknode) now work correctly.
 
@@ -31,7 +32,8 @@ All notable changes to this project will be documented in this file.
 
 - The `Steel.sol` library now uses the OpenZeppelin Blockhash library to provide safer access to historical block hashes up to 8,191 blocks.
 - Adapt `SteelVerifier` to use the history storage contract when available, in line with `Steel.validateCommitment`. It now includes optimizations for directly verifying adjacent blocks via the parent hash field.
-- The `EvmEnv::merge` function is now more flexible, allowing environments with different commitments to be merged.
+- `EvmEnv::merge` now also verifies that the chain configuration IDs of the merged environments match.
+- `EvmEnv::into_input` no longer fails when no state access was recorded; it logs a warning instead. This allows commitment-only environments, e.g. in a `MultiblockEvmEnv`, where verification via the parent hash does not access any state. A forgotten `Contract::preflight` now surfaces as a guest panic pointing to the missing preflight.
 - Add a warning log when the provider's chain ID does not match the chain spec configuration.
 - Improved error messages when the execution block incorrectly matches the commitment block for historical commitments.
 - Re-export `op_revm` from `risc0-op-steel`, so users can access OP-specific revm types (e.g. `OpSpecId`) without adding `op-revm` as a direct dependency.

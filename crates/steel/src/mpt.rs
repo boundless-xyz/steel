@@ -154,7 +154,10 @@ impl Node {
                     .and_then(|node| node.get(remaining)),
                 None => None, // branch nodes don't have values in our MPT version
             },
-            Node::Digest(_) => panic!("MPT: Unresolved node access"),
+            Node::Digest(_) => panic!(
+                "MPT: unresolved node access; \
+                the state was not recorded during preflight (forgotten Contract::preflight?)"
+            ),
         }
     }
 

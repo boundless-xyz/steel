@@ -95,15 +95,13 @@ impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
                 let block_hash = if block_number + 1 == header.number() {
                     *header.parent_hash()
                 }
-                // use history storage contract when EIP-2935 was activated
-                else if self.env.spec_id.has_eip2935() {
-                    // history storage contract reverts when `id` id not in allowed history window
-                    HistoryStorageContract::new(self.env).call(id)
+                // use the history storage contract when it contains the block
+                else if let Some(hash) = self.history_storage_hash(id) {
+                    hash
                 }
                 // otherwise emulate the BLOCKHASH opcode
                 else {
-                    validate_history_window(header, block_number, HISTORY_LIMIT)
-                        .expect("Invalid block number");
+                    validate_blockhash_window(header, block_number).expect("Invalid block number");
                     self.env.db().block_hash(block_number)
                 };
                 assert_eq!(block_hash, commitment.digest, "Invalid block hash");
@@ -112,12 +110,29 @@ impl<'a, F: EvmFactory> SteelVerifier<&'a GuestEvmEnv<F>> {
                 assert!(self.env.spec_id.has_eip4788(), "EIP-4788 required");
                 // beacon roots contract reverts when `id` id not in allowed history window
                 let beacon_root = BeaconRootsContract::new(self.env).call(id);
+                // an unset root slot reads as zero and must never validate a commitment
+                assert!(!beacon_root.is_zero(), "Invalid beacon root");
                 assert_eq!(beacon_root, commitment.digest, "Invalid beacon root");
             }
             _ => {
-                unimplemented!("Unsupported version: {:x}", version_code)
+                unimplemented!(
+                    "Unsupported commitment version: {}",
+                    Commitment::version_name(version_code)
+                )
             }
         }
+    }
+
+    /// Returns the block hash for `id` from the EIP-2935 history storage contract, or `None`
+    /// when the contract cannot serve it.
+    fn history_storage_hash(&self, id: U256) -> Option<B256> {
+        if !self.env.spec_id.has_eip2935() {
+            return None;
+        }
+        // the contract reverts when `id` is not in the allowed history window
+        let hash = HistoryStorageContract::new(self.env).call(id);
+        // an unset slot reads as zero, i.e. the block pre-dates the fork activation
+        (!hash.is_zero()).then_some(hash)
     }
 }
 
@@ -159,7 +174,7 @@ mod host {
         /// Preflights the commitment verification on the host against an explicitly provided
         /// configuration ID.
         pub async fn verify_with_config_id(
-            self,
+            mut self,
             commitment: &Commitment,
             config_id: B256,
         ) -> anyhow::Result<()> {
@@ -169,17 +184,19 @@ mod host {
             let (id, version_code) = commitment.decode_id();
             match CommitmentVersion::n(version_code) {
                 Some(CommitmentVersion::Block) => {
-                    let header = self.env.header().inner();
-                    let block_number =
-                        validate_block_number(id, header).context("invalid block number")?;
-                    let block_hash = if block_number + 1 == header.number() {
-                        *header.parent_hash()
-                    } else if self.env.spec_id.has_eip2935() {
-                        validate_history_window(header, block_number, EIP2935_HISTORY_LIMIT)
-                            .context("invalid block number")?;
-                        HistoryStorageContract::preflight(self.env).call(id).await?
-                    } else {
-                        validate_history_window(header, block_number, HISTORY_LIMIT)
+                    let block_number = validate_block_number(id, self.env.header().inner())
+                        .context("invalid block number")?;
+                    // use the header field for a direct parent
+                    let block_hash = if block_number + 1 == self.env.header().inner().number() {
+                        *self.env.header().inner().parent_hash()
+                    }
+                    // use the history storage contract when it contains the block
+                    else if let Some(hash) = self.preflight_history_storage_hash(id).await? {
+                        hash
+                    }
+                    // otherwise emulate the BLOCKHASH opcode
+                    else {
+                        validate_blockhash_window(self.env.header().inner(), block_number)
                             .context("invalid block number")?;
                         self.env
                             .spawn_with_db(move |db| db.block_hash(block_number))
@@ -192,15 +209,37 @@ mod host {
                 Some(CommitmentVersion::Beacon) => {
                     ensure!(self.env.spec_id.has_eip4788(), "EIP-4788 required");
                     let beacon_root = BeaconRootsContract::preflight(self.env).call(id).await?;
+                    // an unset root slot reads as zero and must never validate a commitment
+                    ensure!(!beacon_root.is_zero(), "invalid beacon root");
                     ensure!(beacon_root == commitment.digest, "invalid beacon root");
 
                     Ok(())
                 }
-                version => unimplemented!(
+                _ => unimplemented!(
                     "Unsupported commitment version: {}",
-                    version.map_or(format!("Unknown({version_code:x})"), |v| format!("{v:?}"))
+                    Commitment::version_name(version_code)
                 ),
             }
+        }
+
+        /// Preflights the lookup of the block hash for `id` in the EIP-2935 history storage
+        /// contract, returning `None` when the contract cannot serve it.
+        async fn preflight_history_storage_hash(
+            &mut self,
+            id: U256,
+        ) -> anyhow::Result<Option<B256>> {
+            if !self.env.spec_id.has_eip2935() {
+                return Ok(None);
+            }
+            // the contract reverts when `id` is not in the allowed history window
+            let hash = HistoryStorageContract::preflight(self.env)
+                .call(id)
+                .await
+                .with_context(|| {
+                    format!("only valid for the {EIP2935_HISTORY_LIMIT} most recent blocks")
+                })?;
+            // an unset slot reads as zero, i.e. the block pre-dates the fork activation
+            Ok((!hash.is_zero()).then_some(hash))
         }
     }
 }
@@ -212,14 +251,13 @@ fn validate_block_number(n: U256, header: &impl EvmBlockHeader) -> anyhow::Resul
     }
 }
 
-fn validate_history_window(
+fn validate_blockhash_window(
     header: &impl EvmBlockHeader,
     number: BlockNumber,
-    window: u64,
 ) -> anyhow::Result<()> {
     ensure!(
-        number < header.number() && header.number() - number <= window,
-        "only valid for the {window} most recent blocks"
+        number < header.number() && header.number() - number <= HISTORY_LIMIT,
+        "only valid for the {HISTORY_LIMIT} most recent blocks"
     );
     Ok(())
 }
@@ -235,19 +273,21 @@ mod tests {
     };
     use alloy::{
         consensus::BlockHeader,
-        network::{BlockResponse, primitives::HeaderResponse},
+        network::{BlockResponse, TransactionBuilder, primitives::HeaderResponse},
         providers::{Provider, ProviderBuilder, ext::AnvilApi},
-        rpc::types::BlockNumberOrTag as AlloyBlockNumberOrTag,
+        rpc::types::{BlockNumberOrTag as AlloyBlockNumberOrTag, TransactionRequest},
     };
+    use alloy_eips::eip2935::HISTORY_STORAGE_ADDRESS;
+    use alloy_primitives::{Address, Bytes, address, bytes};
     use revm::primitives::hardfork::SpecId;
     use test_log::test;
 
-    async fn verify_block_commitment(
-        el: impl Provider + 'static,
+    /// Creates a block commitment to the block `n` blocks below the current head.
+    async fn block_commitment(
+        el: &impl Provider,
         chain_spec: &ChainSpec<SpecId>,
         n: u64,
-    ) {
-        // create block commitment to the previous block
+    ) -> Commitment {
         let latest = el.get_block_number().await.unwrap();
         let block = el
             .get_block_by_number((latest - n).into())
@@ -255,12 +295,21 @@ mod tests {
             .expect("eth_getBlockByNumber failed")
             .unwrap();
         let header = block.header();
-        let commit = Commitment::new(
+        Commitment::new(
             CommitmentVersion::Block as u16,
             header.number(),
             header.hash(),
             chain_spec.digest(),
-        );
+        )
+    }
+
+    async fn verify_block_commitment(
+        el: impl Provider + 'static,
+        chain_spec: &ChainSpec<SpecId>,
+        n: u64,
+    ) {
+        // create block commitment to the previous block
+        let commit = block_commitment(&el, chain_spec, n).await;
 
         // preflight the verifier
         let mut env = EthEvmEnv::builder()
@@ -302,6 +351,102 @@ mod tests {
         verify_block_commitment(el.clone(), &chain_spec, 1).await;
         verify_block_commitment(el.clone(), &chain_spec, 2).await;
         verify_block_commitment(el.clone(), &chain_spec, HISTORY_LIMIT).await;
+    }
+
+    /// Sends the given transaction and waits for its inclusion.
+    async fn send(el: &impl Provider, tx: TransactionRequest) {
+        let pending = el.send_transaction(tx).await.unwrap();
+        pending.watch().await.unwrap();
+    }
+
+    /// Funds the canonical deployer and replays the EIP-2935 deployment transaction.
+    ///
+    /// Since anvil does not perform the EIP-2935 system call, this mimics a chain right after
+    /// fork activation: the contract is deployed, but its ring buffer is completely unset.
+    async fn deploy_history_storage(el: &impl Provider) {
+        // canonical deployment transaction (https://eips.ethereum.org/EIPS/eip-2935)
+        const DEPLOYER: Address = address!("0x3462413Af4609098e1E27A490f554f260213D685");
+        static DEPLOY_TX: Bytes = bytes!(
+            "f8838085e8d4a510008303d0908080b85c60538060095f395ff33373fffffffffffffffffffffffffffffffffffffffe14604657602036036042575f35600143038111604257611fff81430311604257611fff9006545f5260205ff35b5f5ffd5b5f35611fff600143030655001b820539930aa12693182426612186309f02cfe8a80a0000"
+        );
+
+        let funder = el.get_accounts().await.unwrap()[0];
+        let tx = TransactionRequest::default()
+            .with_from(funder)
+            .with_to(DEPLOYER)
+            .with_value(U256::from(10u128.pow(18)));
+        send(el, tx).await;
+        let pending = el.send_raw_transaction(&DEPLOY_TX).await.unwrap();
+        pending.watch().await.unwrap();
+
+        let code = el.get_code_at(HISTORY_STORAGE_ADDRESS).await.unwrap();
+        assert!(!code.is_empty(), "deployment failed");
+    }
+
+    /// Records the hash of the latest block in the history storage contract by impersonating
+    /// the EIP-2935 system call and returns the corresponding block number.
+    async fn record_block_hash(el: &impl Provider) -> BlockNumber {
+        const SYSTEM_ADDRESS: Address = address!("0xfffffffffffffffffffffffffffffffffffffffe");
+
+        let funder = el.get_accounts().await.unwrap()[0];
+        let tx = TransactionRequest::default()
+            .with_from(funder)
+            .with_to(SYSTEM_ADDRESS)
+            .with_value(U256::from(10u128.pow(18)));
+        send(el, tx).await;
+        el.anvil_impersonate_account(SYSTEM_ADDRESS).await.unwrap();
+
+        let number = el.get_block_number().await.unwrap();
+        let hash = el
+            .get_block_by_number(number.into())
+            .await
+            .expect("eth_getBlockByNumber failed")
+            .unwrap()
+            .header()
+            .hash();
+        // the call executes in the next block, storing the hash in its ring buffer slot
+        let tx = TransactionRequest::default()
+            .with_from(SYSTEM_ADDRESS)
+            .with_to(HISTORY_STORAGE_ADDRESS)
+            .with_input(Bytes::copy_from_slice(hash.as_slice()));
+        send(el, tx).await;
+
+        number
+    }
+
+    #[test(tokio::test)]
+    async fn eip2935_activation_verify_block_commitment() {
+        // the PRAGUE chain spec has `has_eip2935`, but we start Anvil with the CANCUN fork, which
+        // does not have the EIP-2935 contract deployed; together with the manual deployment this
+        // mimics a chain shortly after fork activation
+        let chain_spec = ChainSpec::new_single(31337, SpecId::PRAGUE);
+        let el = ProviderBuilder::new().connect_anvil_with_config(|conf| conf.cancun());
+        deploy_history_storage(&el).await;
+        let recorded = record_block_hash(&el).await;
+        el.anvil_mine(Some(HISTORY_LIMIT + 2), None).await.unwrap();
+
+        let latest = el.get_block_number().await.unwrap();
+        assert!(latest - recorded > HISTORY_LIMIT);
+
+        // blocks with an unset slot in the BLOCKHASH window are verified via the fallback
+        verify_block_commitment(el.clone(), &chain_spec, 2).await;
+        verify_block_commitment(el.clone(), &chain_spec, HISTORY_LIMIT).await;
+        // the recorded block is verified via the history storage contract
+        verify_block_commitment(el.clone(), &chain_spec, latest - recorded).await;
+
+        // blocks beyond the BLOCKHASH window cannot be verified while their slot is unset
+        let commit = block_commitment(&el, &chain_spec, latest - recorded + 1).await;
+        let mut env = EthEvmEnv::builder()
+            .provider(el.clone())
+            .chain_spec(&chain_spec)
+            .build()
+            .await
+            .unwrap();
+        let err = SteelVerifier::preflight(&mut env)
+            .verify(&commit)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("invalid block number"), "{err:#}");
     }
 
     #[test(tokio::test)]

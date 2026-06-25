@@ -56,6 +56,14 @@ pub(crate) enum BlockId {
 }
 
 impl BlockId {
+    /// Returns the block number if this id is an explicit number, `None` for hashes or tags.
+    pub(crate) fn as_number(&self) -> Option<BlockNumber> {
+        match self {
+            BlockId::Number(BlockNumberOrTag::Number(n)) => Some(*n),
+            _ => None,
+        }
+    }
+
     /// Converts the `BlockId` into the corresponding RPC type.
     async fn into_rpc_type<N, P>(self, provider: P) -> Result<AlloyBlockId>
     where
@@ -232,6 +240,8 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
 
     /// Extends the environment with the contents of another compatible environment.
     ///
+    /// The resulting environment keeps `self`'s commitment.
+    ///
     /// ### Errors
     ///
     /// It returns an error if the environments are inconsistent, specifically if:
@@ -283,7 +293,13 @@ impl<D, F: EvmFactory, C> HostEvmEnv<D, F, C> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn merge<C2>(self, mut other: HostEvmEnv<D, F, C2>) -> Result<Self> {
+    pub fn merge(self, other: Self) -> Result<Self> {
+        self.merge_state(other)
+    }
+
+    /// Extends the environment with the recorded state of another compatible environment of any
+    /// commitment type, keeping `self`'s commitment and discarding `other`'s.
+    pub(crate) fn merge_state<C2>(self, mut other: HostEvmEnv<D, F, C2>) -> Result<Self> {
         let Self {
             mut db,
             chain_id,

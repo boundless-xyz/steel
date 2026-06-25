@@ -107,6 +107,8 @@ impl<H: EvmBlockHeader> BlockHeaderCommit<H> for HistoryCommit<H> {
             let execution_hash = HistoryStorageContract::new(&mut state_commit.state)
                 .and_then(|mut c| c.get_unchecked(block_number))
                 .expect("History storage contract failed");
+            // an unset slot reads as zero and must never link the chain
+            assert!(!execution_hash.is_zero(), "Invalid execution hash");
             assert_eq!(execution_hash, header.seal(), "Execution hash mismatch");
 
             header = state_header;
