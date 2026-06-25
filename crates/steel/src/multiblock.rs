@@ -477,7 +477,8 @@ mod tests {
                 .err()
                 .expect("expected an error");
             assert!(
-                err.to_string().contains("is not before the commitment target"),
+                err.to_string()
+                    .contains("is not before the commitment target"),
                 "{err:#}"
             );
         }

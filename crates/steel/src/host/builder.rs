@@ -834,7 +834,11 @@ mod tests {
         // an explicit number, hash, or tag is
         assert!(builder.clone().block_number(1_000_000).has_explicit_block());
         assert!(builder.clone().block_hash(B256::ZERO).has_explicit_block());
-        assert!(builder.block_number_or_tag(BlockNumberOrTag::Finalized).has_explicit_block());
+        assert!(
+            builder
+                .block_number_or_tag(BlockNumberOrTag::Finalized)
+                .has_explicit_block()
+        );
     }
 
     #[test(tokio::test)]

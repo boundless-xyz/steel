@@ -445,8 +445,10 @@ impl Commitment {
 impl Commitment {
     /// Renders a commitment version code as a human-readable string.
     pub(crate) fn version_name(version_code: u16) -> String {
-        CommitmentVersion::n(version_code)
-            .map_or_else(|| format!("Unknown({version_code:#x})"), |v| format!("{v:?}"))
+        CommitmentVersion::n(version_code).map_or_else(
+            || format!("Unknown({version_code:#x})"),
+            |v| format!("{v:?}"),
+        )
     }
 
     /// Returns the decoded ID and a human-readable version string.
