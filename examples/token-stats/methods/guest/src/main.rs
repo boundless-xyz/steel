@@ -32,7 +32,10 @@ fn main() {
     // Require at least two samples so the committed APR is a genuine average over a positive
     // number of days, rather than a single instantaneous rate.
     let numbers: Vec<_> = envs.block_numbers().collect();
-    assert!(numbers.len() >= 2, "at least two sampled blocks are required");
+    assert!(
+        numbers.len() >= 2,
+        "at least two sampled blocks are required"
+    );
     // Check that the EVM states are exactly BLOCK_INTERVAL blocks apart.
     for window in numbers.windows(2) {
         assert_eq!(window[1] - window[0], BLOCK_INTERVAL);
